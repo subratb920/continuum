@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./logo-full.png" width="480" alt="Continuum Bridge Spine" />
+  <img src="/logo-full.png" width="480" alt="Continuum Bridge Spine" />
 </p>
 
 <p align="center">
