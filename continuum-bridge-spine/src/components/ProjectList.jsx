@@ -1,10 +1,31 @@
-export default function ProjectList() {
+import React from "react";
+import "./ProjectList.css";
+
+export default function ProjectList({ projects, activeProject }) {
   return (
-    <>
-      <h4>PROJECTS</h4>
-      <p>Continuum</p>
-      <p>Nexus</p>
-      <p>Personal</p>
-    </>
+    <div className="project-pane">
+      <div className="project-pane-title">
+        Projects
+      </div>
+
+      <div className="project-cards">
+        {projects.map((project) => {
+          const isActive =
+            activeProject &&
+            project._id === activeProject._id;
+
+          return (
+            <div
+              key={project._id}
+              className={`project-card ${
+                isActive ? "active" : ""
+              }`}
+            >
+              {project.name}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }

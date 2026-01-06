@@ -1,11 +1,21 @@
 import ProjectList from "../components/ProjectList";
 import BridgeSpine from "../components/BridgeSpine";
 
-export default function ThreePanelLayout({ children }) {
+export default function ThreePanelLayout({
+  projects,
+  activeProject,
+  activeBridge,
+  bridgeRevision,
+  onSelectBridge,
+  children,
+}) {
   return (
     <div className="app">
       <aside className="left">
-        <ProjectList />
+        <ProjectList
+          projects={projects}
+          activeProject={activeProject}
+        />
       </aside>
 
       <main className="center">
@@ -13,7 +23,11 @@ export default function ThreePanelLayout({ children }) {
       </main>
 
       <aside className="right">
-        <BridgeSpine />
+        <BridgeSpine
+          activeProject={activeProject}
+          bridgeRevision={bridgeRevision}
+          onSelectBridge={onSelectBridge}
+        />
       </aside>
     </div>
   );

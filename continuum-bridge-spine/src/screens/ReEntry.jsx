@@ -1,17 +1,14 @@
-import { useState } from "react";
+import React from "react";
 import IntervalSetup from "./IntervalSetup";
-import ActiveBridgeModal from "../components/ActiveBridgeModal";
 
-export default function ReEntry() {
-  const [showBridge, setShowBridge] = useState(true);
-
+export default function ReEntry({
+  activeProject,
+  onIntervalStarted,
+}) {
   return (
-    <>
-      {showBridge && (
-        <ActiveBridgeModal onClose={() => setShowBridge(false)} />
-      )}
-
-      {!showBridge && <IntervalSetup />}
-    </>
+    <IntervalSetup
+      activeProject={activeProject}
+      onIntervalStarted={onIntervalStarted}
+    />
   );
 }

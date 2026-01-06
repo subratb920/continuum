@@ -1,0 +1,48 @@
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.project-list-header {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #999;
+  margin-bottom: 8px;
+}
+
+.project-item {
+  font-size: 14px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  color: #666;
+}
+
+.project-item.active {
+  color: #111;
+  font-weight: 600;
+  background: #f7f7f7;
+}
+
+.project-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.project-pane-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #f0f0f0;
+}
+
+.project-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

@@ -1,13 +1,14 @@
 version: "3.8"
 
 services:
+
   mongo:
     image: mongo:7.0
     container_name: continuum-mongo
     restart: unless-stopped
 
     ports:
-      - "27017:27017"
+      - "27000:27017"
 
     volumes:
       - ../continuum-dbvolume:/data/db
@@ -16,3 +17,23 @@ services:
       MONGO_INITDB_DATABASE: continuum
 
     command: ["mongod", "--bind_ip_all"]
+  
+  continuum-api:
+    build: ../continuum-api
+    container_name: continuum-api
+    ports:
+      - "3101:4000"
+    environment:
+      MONGO_URL: mongodb://mongo:27017/continuum
+    depends_on:
+      - mongo
+
+  continuum-ui:
+    build: ../continuum-bridge-spine
+    container_name: continuum-ui
+    ports:
+      - "3100:5173"
+    environment:
+      VITE_API_BASE_URL: http://continuum-api:4000
+    depends_on:
+      - continuum-api

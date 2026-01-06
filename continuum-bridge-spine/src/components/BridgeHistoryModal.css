@@ -1,0 +1,101 @@
+/* ------------------------------
+   Backdrop
+------------------------------ */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* ------------------------------
+   Modal Window
+------------------------------ */
+
+.modal-window {
+  background: #ffffff;
+  width: 480px;
+  max-width: 90%;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+/* ------------------------------
+   Sections
+------------------------------ */
+
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-meta {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 16px;
+}
+
+.modal-body h3 {
+  margin-top: 0;
+  font-size: 14px;
+}
+
+/* ------------------------------
+   Goals
+------------------------------ */
+
+.goal-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.goal-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 14px;
+}
+
+.goal-status {
+  font-size: 11px;
+  text-transform: capitalize;
+  color: #6b7280;
+}
+
+.goal-status.completed {
+  color: #16a34a;
+}
+
+.goal-status.incomplete {
+  color: #dc2626;
+}
+
+/* ------------------------------
+   Footer
+------------------------------ */
+
+.modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modal-footer button {
+  padding: 6px 12px;
+}

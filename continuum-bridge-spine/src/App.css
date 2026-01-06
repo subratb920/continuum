@@ -40,3 +40,29 @@
 .read-the-docs {
   color: #888;
 }
+
+.app {
+  display: grid;
+  grid-template-columns: 220px 1fr 260px;
+  height: 100vh;
+}
+
+.left {
+  border-right: 1px solid #eaeaea;
+  background: #fafafa;
+  padding: 16px 12px;
+}
+
+.center {
+  padding: 24px 32px;
+}
+
+.right {
+  border-left: 1px solid #eee;
+  padding: 12px;
+}
+.bridge-spine {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
