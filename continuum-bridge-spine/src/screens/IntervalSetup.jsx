@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { startInterval } from "../api";
+import "./IntervalSetup.css";
 
 export default function IntervalSetup({
   activeProject,
@@ -58,7 +59,7 @@ export default function IntervalSetup({
       {/* Interval Mode */}
       <section>
         <h3>Interval Mode</h3>
-        {["Build", "Refactor", "Explore", "Stabilize"].map((m) => (
+        {["Decision", "Execution", "Continuity", "Alignment"].map((m) => (
           <label key={m} style={{ marginRight: "12px" }}>
             <input
               type="radio"
@@ -76,23 +77,36 @@ export default function IntervalSetup({
         <h3>Session Goals</h3>
 
         <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
-          <input
-            type="text"
+          <textarea
+            className="goal-textarea"
             value={goalInput}
             onChange={(e) => setGoalInput(e.target.value)}
-            placeholder="Add a session goal"
+            placeholder="Describe what you want to achieve in this interval…"
+            rows={5}
           />
           <button type="button" onClick={addGoal}>
-            Add
+            Add Goal
           </button>
         </div>
 
         {goals.length > 0 && (
-          <ul>
-            {goals.map((g) => (
-              <li key={g.id}>{g.text}</li>
+          <ol className="session-goals">
+            {goals.map((g, index) => (
+              <li key={g.id} className="session-goal-item">
+                <span className="goal-text">{g.text}</span>
+
+                <button
+                  className="goal-remove"
+                  onClick={() =>
+                    setGoals(goals.filter((goal) => goal.id !== g.id))
+                  }
+                  aria-label={`Remove goal ${index + 1}`}
+                >
+                  ×
+                </button>
+              </li>
             ))}
-          </ul>
+          </ol>
         )}
       </section>
 

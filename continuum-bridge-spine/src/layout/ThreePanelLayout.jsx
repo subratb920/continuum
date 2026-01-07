@@ -7,6 +7,7 @@ export default function ThreePanelLayout({
   activeBridge,
   bridgeRevision,
   onSelectBridge,
+  onCreateProject,
   children,
 }) {
   return (
@@ -15,6 +16,7 @@ export default function ThreePanelLayout({
         <ProjectList
           projects={projects}
           activeProject={activeProject}
+          onCreateProject={onCreateProject}
         />
       </aside>
 

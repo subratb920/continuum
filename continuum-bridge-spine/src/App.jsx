@@ -10,7 +10,6 @@ import BridgeHistoryModal from "./components/BridgeHistoryModal";
 
 import {
   fetchProjects,
-  fetchBridges,
   finalizeBridge,
 } from "./api";
 
@@ -22,14 +21,11 @@ export default function App() {
   const [projects, setProjects] = useState([]);
   const [activeProject, setActiveProject] = useState(null);
 
-  // Runtime-only (current interval)
   const [activeBridge, setActiveBridge] = useState(null);
-
-  // User-selected historical bridge (read-only)
   const [selectedBridge, setSelectedBridge] = useState(null);
 
-  // Used to trigger bridge spine reloads
   const [bridgeRevision, setBridgeRevision] = useState(0);
+  const [showCreateProject, setShowCreateProject] = useState(false);
 
   const [loading, setLoading] = useState(true);
 
@@ -42,13 +38,10 @@ export default function App() {
       const projectList = await fetchProjects();
       setProjects(projectList);
 
-      if (projectList.length === 0) {
-        setLoading(false);
-        return;
+      if (projectList.length > 0) {
+        setActiveProject(projectList[0]); // single-project invariant
       }
 
-      // 🔒 Single-project invariant
-      setActiveProject(projectList[0]);
       setLoading(false);
     }
 
@@ -59,9 +52,7 @@ export default function App() {
   // State Gates
   // ------------------------------
 
-  if (loading) {
-    return null;
-  }
+  if (loading) return null;
 
   if (projects.length === 0) {
     return (
@@ -81,17 +72,33 @@ export default function App() {
   return (
     <>
       {/* =====================================================
-          Draft Bridge Modal (ACTIVE INTERVAL ONLY)
+          Create Project Modal (STRUCTURAL)
+          ===================================================== */}
+      {showCreateProject && (
+        <div className="modal-backdrop">
+          <div className="modal-window">
+            <CreateProject
+              onCreated={(project) => {
+                setProjects((prev) => [...prev, project]);
+                setShowCreateProject(false);
+              }}
+              onClose={() => setShowCreateProject(false)}
+            />
+            
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================
+          Draft Bridge Modal (ACTIVE INTERVAL)
           ===================================================== */}
       {activeBridge && (
         <BridgeDraftModal
           bridge={activeBridge}
           onClose={async () => {
-            // Closing modal = ending interval
             await finalizeBridge(activeBridge._id);
-
             setActiveBridge(null);
-            setBridgeRevision((r) => r + 1); // refresh spine
+            setBridgeRevision((r) => r + 1);
           }}
         />
       )}
@@ -112,6 +119,7 @@ export default function App() {
         activeBridge={activeBridge}
         bridgeRevision={bridgeRevision}
         onSelectBridge={setSelectedBridge}
+        onCreateProject={() => setShowCreateProject(true)}
       >
         <Routes>
           <Route

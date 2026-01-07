@@ -1,27 +1,36 @@
 import React from "react";
 import "./ProjectList.css";
 
-export default function ProjectList({ projects, activeProject }) {
+export default function ProjectList({
+  projects,
+  activeProject,
+  onCreateProject,
+}) {
   return (
     <div className="project-pane">
-      <div className="project-pane-title">
-        Projects
+      <div className="project-pane-header">
+        <span className="project-pane-title">Projects</span>
+        <button
+          className="project-add"
+          onClick={onCreateProject}
+          title="Create project"
+        >
+          +
+        </button>
       </div>
 
-      <div className="project-cards">
+      <div className="project-list">
         {projects.map((project) => {
           const isActive =
-            activeProject &&
-            project._id === activeProject._id;
+            activeProject && project._id === activeProject._id;
 
           return (
             <div
               key={project._id}
-              className={`project-card ${
-                isActive ? "active" : ""
-              }`}
+              className={`project-item ${isActive ? "active" : ""}`}
             >
-              {project.name}
+              {isActive && <span className="active-indicator" />}
+              <span className="project-name">{project.name}</span>
             </div>
           );
         })}

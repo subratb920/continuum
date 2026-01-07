@@ -149,12 +149,12 @@ Select the next story to work on.
 Perform work defined by Session Goals.  
 Planning is prohibited.
 
-🟪 **Bridge Capture Mode**  
+🟪 **Continuity Mode**  
 Record execution state.  
 No new intent allowed.
 
 🟪 **Alignment Mode**  
-Reassess structure, priorities, and assumptions.
+Reassess structure, priorities, and assumptions. Incules Planning and Checkpoints.
 
 Only **one mode** may be active at a time.
 
