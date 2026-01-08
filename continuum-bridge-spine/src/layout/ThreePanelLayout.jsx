@@ -4,8 +4,10 @@ import BridgeSpine from "../components/BridgeSpine";
 export default function ThreePanelLayout({
   projects,
   activeProject,
+  selectedProject,
   activeBridge,
   bridgeRevision,
+  onSelectProject,
   onSelectBridge,
   onCreateProject,
   children,
@@ -16,6 +18,8 @@ export default function ThreePanelLayout({
         <ProjectList
           projects={projects}
           activeProject={activeProject}
+          selectedProject={selectedProject}
+          onSelectProject={onSelectProject}
           onCreateProject={onCreateProject}
         />
       </aside>
@@ -26,7 +30,7 @@ export default function ThreePanelLayout({
 
       <aside className="right">
         <BridgeSpine
-          activeProject={activeProject}
+          selectedProject={selectedProject}
           bridgeRevision={bridgeRevision}
           onSelectBridge={onSelectBridge}
         />

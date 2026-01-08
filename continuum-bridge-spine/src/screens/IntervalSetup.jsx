@@ -2,19 +2,37 @@ import React, { useState } from "react";
 import { startInterval } from "../api";
 import "./IntervalSetup.css";
 
+/**
+ * IntervalSetup
+ * -------------
+ * Execution gatekeeper for Continuum.
+ *
+ * Rules:
+ * - Interval can ONLY be started for the active project
+ * - Viewing ≠ Activation
+ * - UI must clearly explain disabled state
+ */
 export default function IntervalSetup({
   activeProject,
+  selectedProject,
   onIntervalStarted,
 }) {
   const [goalInput, setGoalInput] = useState("");
   const [goals, setGoals] = useState([]);
-  const [mode, setMode] = useState("Build");
+  const [mode, setMode] = useState("Execution");
   const [duration, setDuration] = useState(30);
 
-  // ------------------------------
-  // Session Goal Handling
-  // ------------------------------
+  // --------------------------------------------------
+  // Execution invariant
+  // --------------------------------------------------
+  const isExecutable =
+    activeProject &&
+    selectedProject &&
+    activeProject._id === selectedProject._id;
 
+  // --------------------------------------------------
+  // Session Goals
+  // --------------------------------------------------
   function addGoal() {
     if (!goalInput.trim()) return;
 
@@ -29,12 +47,16 @@ export default function IntervalSetup({
     setGoalInput("");
   }
 
-  // ------------------------------
-  // Interval Start
-  // ------------------------------
+  function removeGoal(id) {
+    setGoals((prev) => prev.filter((g) => g.id !== id));
+  }
 
+  // --------------------------------------------------
+  // Start Interval
+  // --------------------------------------------------
   async function handleStartInterval() {
-    // 🔒 Hard guard (model invariant)
+    // 🔒 UI guard (backend also enforces)
+    if (!isExecutable) return;
     if (goals.length === 0) return;
 
     const bridge = await startInterval({
@@ -44,101 +66,124 @@ export default function IntervalSetup({
       sessionGoals: goals.map((g) => g.text),
     });
 
-    // 🔑 Propagate to App
+    // Reset local state after interval creation
+    setGoals([]);
+    setGoalInput("");
+
     onIntervalStarted(bridge);
   }
 
-  // ------------------------------
+  // --------------------------------------------------
   // UI
-  // ------------------------------
-
+  // --------------------------------------------------
   return (
-    <div className="content">
-      <h2>INTERVAL SETUP</h2>
-
-      {/* Interval Mode */}
-      <section>
-        <h3>Interval Mode</h3>
-        {["Decision", "Execution", "Continuity", "Alignment"].map((m) => (
-          <label key={m} style={{ marginRight: "12px" }}>
-            <input
-              type="radio"
-              name="mode"
-              checked={mode === m}
-              onChange={() => setMode(m)}
-            />
-            {m}
-          </label>
-        ))}
-      </section>
-
-      {/* Session Goals */}
-      <section>
-        <h3>Session Goals</h3>
-
-        <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
-          <textarea
-            className="goal-textarea"
-            value={goalInput}
-            onChange={(e) => setGoalInput(e.target.value)}
-            placeholder="Describe what you want to achieve in this interval…"
-            rows={5}
-          />
-          <button type="button" onClick={addGoal}>
-            Add Goal
-          </button>
-        </div>
-
-        {goals.length > 0 && (
-          <ol className="session-goals">
-            {goals.map((g, index) => (
-              <li key={g.id} className="session-goal-item">
-                <span className="goal-text">{g.text}</span>
-
-                <button
-                  className="goal-remove"
-                  onClick={() =>
-                    setGoals(goals.filter((goal) => goal.id !== g.id))
-                  }
-                  aria-label={`Remove goal ${index + 1}`}
-                >
-                  ×
-                </button>
-              </li>
-            ))}
-          </ol>
+    <div className="interval-setup">
+      <h2 className="interval-title">
+        Interval Setup
+        {!isExecutable && selectedProject && (
+          <span className="inactive-tag"> · inactive project</span>
         )}
-      </section>
+      </h2>
 
-      {/* Interval Length */}
-      <section>
-        <h3>Interval Length</h3>
-        {[30, 45].map((d) => (
-          <label key={d} style={{ marginRight: "12px" }}>
-            <input
-              type="radio"
-              name="duration"
-              checked={duration === d}
-              onChange={() => setDuration(d)}
+      {/* --------------------------------------------------
+          Disabled wrapper when not executable
+         -------------------------------------------------- */}
+      <fieldset
+        disabled={!isExecutable}
+        className={!isExecutable ? "disabled" : ""}
+      >
+        {/* -------- Interval Mode -------- */}
+        <section className="interval-section">
+          <h3>Interval Mode</h3>
+          {["Decision", "Execution", "Continuity", "Alignment"].map((m) => (
+            <label key={m} className="radio">
+              <input
+                type="radio"
+                name="mode"
+                checked={mode === m}
+                onChange={() => setMode(m)}
+              />
+              {m}
+            </label>
+          ))}
+        </section>
+
+        {/* -------- Session Goals -------- */}
+        <section className="interval-section">
+          <h3>Session Goals</h3>
+
+          <div className="goal-input-row">
+            <textarea
+              className="goal-textarea"
+              value={goalInput}
+              onChange={(e) => setGoalInput(e.target.value)}
+              placeholder="Describe what you want to achieve in this interval…"
+              rows={4}
             />
-            {d} min
-          </label>
-        ))}
-      </section>
+            <button type="button" onClick={addGoal}>
+              Add
+            </button>
+          </div>
 
-      {/* Guidance */}
-      {goals.length === 0 && (
-        <p className="hint">
-          Add at least one session goal to start an interval
+          {goals.length > 0 && (
+            <ol className="session-goals">
+              {goals.map((g, index) => (
+                <li key={g.id} className="session-goal-item">
+                  <span className="goal-text">{g.text}</span>
+                  <button
+                    className="goal-remove"
+                    onClick={() => removeGoal(g.id)}
+                    aria-label={`Remove goal ${index + 1}`}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+
+        {/* -------- Interval Length -------- */}
+        <section className="interval-section">
+          <h3>Interval Length</h3>
+          {[30, 45].map((d) => (
+            <label key={d} className="radio">
+              <input
+                type="radio"
+                name="duration"
+                checked={duration === d}
+                onChange={() => setDuration(d)}
+              />
+              {d} min
+            </label>
+          ))}
+        </section>
+      </fieldset>
+
+      {/* --------------------------------------------------
+          Guidance
+         -------------------------------------------------- */}
+      {!isExecutable && selectedProject && (
+        <p className="hint warning">
+          This project is not currently active.
+          Activate it to start a new interval.
         </p>
       )}
 
-      {/* Start Interval */}
+      {isExecutable && goals.length === 0 && (
+        <p className="hint">
+          Add at least one session goal to start an interval.
+        </p>
+      )}
+
+      {/* --------------------------------------------------
+          Action
+         -------------------------------------------------- */}
       <button
         type="button"
         className="primary"
         onClick={handleStartInterval}
-        disabled={goals.length === 0}
+        disabled={!isExecutable || goals.length === 0}
       >
         Start Interval
       </button>

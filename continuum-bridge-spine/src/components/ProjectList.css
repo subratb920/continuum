@@ -8,6 +8,16 @@
   gap: 12px;
 }
 
+/* ----------------------------------
+   Header
+---------------------------------- */
+
+.project-pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .project-pane-title {
   font-size: 13px;
   font-weight: 600;
@@ -15,6 +25,23 @@
   padding: 6px 8px;
   border-radius: 6px;
   background: #f0f0f0;
+}
+
+/* Add Project Button */
+
+.project-add {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+  color: #777;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.project-add:hover {
+  background: #eaeaea;
+  color: #111;
 }
 
 /* ----------------------------------
@@ -27,17 +54,8 @@
   gap: 6px;
 }
 
-.project-list-header {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #999;
-  margin-bottom: 8px;
-}
-
 /* ----------------------------------
-   Project Item
+   Project Item (Button)
 ---------------------------------- */
 
 .project-item {
@@ -45,18 +63,35 @@
   align-items: center;
   gap: 8px;
 
-  font-size: 14px;
+  width: 100%;
   padding: 8px 10px;
+
+  font-size: 14px;
+  text-align: left;
+
+  border: none;
   border-radius: 6px;
+  background: transparent;
 
   color: #666;
-  background: transparent;
+  cursor: pointer;
 }
 
-.project-item.active {
+.project-item:hover {
+  background: #f4f4f5;
+}
+
+/* Selected = viewing / navigation */
+
+.project-item.selected {
+  background: #eef2ff;
   color: #111;
+}
+
+/* Active = currently working project */
+
+.project-item.active {
   font-weight: 600;
-  background: #f7f7f7;
 }
 
 /* ----------------------------------
@@ -67,15 +102,16 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  flex-shrink: 0;
 
   background-color: #4caf50;
 
   box-shadow: 0 0 0 rgba(76, 175, 80, 0.6);
   animation: pulse 1.6s infinite;
-  flex-shrink: 0;
 }
 
 /* Soft breathing pulse */
+
 @keyframes pulse {
   0% {
     box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.6);
@@ -97,23 +133,4 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-
-.project-pane-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.project-add {
-  border: none;
-  background: transparent;
-  font-size: 18px;
-  cursor: pointer;
-  color: #777;
-}
-
-.project-add:hover {
-  color: #111;
 }

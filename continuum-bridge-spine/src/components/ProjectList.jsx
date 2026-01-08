@@ -4,10 +4,13 @@ import "./ProjectList.css";
 export default function ProjectList({
   projects,
   activeProject,
+  selectedProject,
+  onSelectProject,
   onCreateProject,
 }) {
   return (
     <div className="project-pane">
+      {/* Header */}
       <div className="project-pane-header">
         <span className="project-pane-title">Projects</span>
         <button
@@ -19,19 +22,40 @@ export default function ProjectList({
         </button>
       </div>
 
+      {/* Project List */}
       <div className="project-list">
         {projects.map((project) => {
           const isActive =
-            activeProject && project._id === activeProject._id;
+            activeProject &&
+            project._id === activeProject._id;
+
+          const isSelected =
+            selectedProject &&
+            project._id === selectedProject._id;
 
           return (
-            <div
+            <button
               key={project._id}
-              className={`project-item ${isActive ? "active" : ""}`}
+              type="button"
+              onClick={() => onSelectProject(project)}
+              className={`
+                project-item
+                ${isSelected ? "selected" : ""}
+                ${isActive ? "active" : ""}
+              `}
             >
-              {isActive && <span className="active-indicator" />}
-              <span className="project-name">{project.name}</span>
-            </div>
+              {/* Active indicator = working */}
+              {isActive && (
+                <span
+                  className="active-indicator"
+                  title="Active project"
+                />
+              )}
+
+              <span className="project-name">
+                {project.name}
+              </span>
+            </button>
           );
         })}
       </div>

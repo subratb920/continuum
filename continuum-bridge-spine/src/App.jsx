@@ -20,6 +20,7 @@ export default function App() {
 
   const [projects, setProjects] = useState([]);
   const [activeProject, setActiveProject] = useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
 
   const [activeBridge, setActiveBridge] = useState(null);
   const [selectedBridge, setSelectedBridge] = useState(null);
@@ -40,6 +41,7 @@ export default function App() {
 
       if (projectList.length > 0) {
         setActiveProject(projectList[0]); // single-project invariant
+        setSelectedProject(projectList[0]);    // viewing same initially
       }
 
       setLoading(false);
@@ -116,8 +118,10 @@ export default function App() {
       <ThreePanelLayout
         projects={projects}
         activeProject={activeProject}
+        selectedProject={selectedProject}
         activeBridge={activeBridge}
         bridgeRevision={bridgeRevision}
+        onSelectProject={setSelectedProject}
         onSelectBridge={setSelectedBridge}
         onCreateProject={() => setShowCreateProject(true)}
       >
@@ -128,6 +132,7 @@ export default function App() {
               <ReEntry
                 key={activeBridge ? activeBridge._id : "idle"}
                 activeProject={activeProject}
+                selectedProject={selectedProject}
                 onIntervalStarted={(bridge) => {
                   setActiveBridge(bridge);
                   setBridgeRevision((r) => r + 1);

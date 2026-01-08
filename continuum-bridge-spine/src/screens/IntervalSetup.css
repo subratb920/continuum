@@ -1,19 +1,102 @@
+.interval-setup {
+  padding: 24px;
+  max-width: 720px;
+}
+
+.interval-title {
+  font-size: 20px;
+  margin-bottom: 16px;
+}
+
+.inactive-tag {
+  font-size: 12px;
+  font-weight: normal;
+  color: #999;
+}
+
+.interval-section {
+  margin-bottom: 20px;
+}
+
+.interval-section h3 {
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: #444;
+}
+
+/* ---------------- Radios ---------------- */
+
+.radio {
+  margin-right: 14px;
+  font-size: 14px;
+}
+
+/* ---------------- Goals ---------------- */
+
+.goal-input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
 .goal-textarea {
   flex: 1;
   resize: vertical;
-
-  min-height: 110px;   /* ⬅ matches center panel rhythm */
-  max-height: 240px;   /* ⬅ prevents runaway growth */
-
-  padding: 12px 14px;
+  padding: 10px;
   font-size: 14px;
-  line-height: 1.5;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
 
-  background: #111;
-  color: #eee;
+.session-goals {
+  margin-top: 8px;
+  padding-left: 20px;
+}
 
-  border: 1px solid #2a2a2a;
-  border-radius: 8px;
+.session-goal-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+}
 
-  outline: none;
+.goal-text {
+  flex: 1;
+}
+
+.goal-remove {
+  border: none;
+  background: none;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: #999;
+}
+
+.goal-remove:hover {
+  color: #111;
+}
+
+/* ---------------- Hints ---------------- */
+
+.hint {
+  font-size: 13px;
+  color: #777;
+  margin-bottom: 12px;
+}
+
+.hint.warning {
+  color: #b45309;
+}
+
+/* ---------------- Action ---------------- */
+
+button.primary {
+  padding: 10px 16px;
+  font-size: 14px;
+}
+
+button.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

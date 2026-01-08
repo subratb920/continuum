@@ -3,7 +3,7 @@ import { fetchBridges } from "../api";
 import "./BridgeSpine.css";
 
 export default function BridgeSpine({
-  activeProject,
+  selectedProject,
   activeBridge,
   bridgeRevision,
   onSelectBridge,
@@ -11,9 +11,10 @@ export default function BridgeSpine({
   const [bridges, setBridges] = useState([]);
 
   useEffect(() => {
-    if (!activeProject) return;
-    fetchBridges(activeProject._id).then(setBridges);
-  }, [activeProject, bridgeRevision]);
+  if (!selectedProject) return;
+
+  fetchBridges(selectedProject._id).then(setBridges);
+}, [selectedProject, bridgeRevision]);
 
   // Oldest → newest
   const orderedBridges = [...bridges].sort(
