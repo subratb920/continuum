@@ -9,6 +9,7 @@ import BridgeDraftModal from "./components/BridgeDraftModal";
 import BridgeHistoryModal from "./components/BridgeHistoryModal";
 
 import {
+  fetchActiveProject,
   fetchProjects,
   finalizeBridge,
 } from "./api";
@@ -39,16 +40,35 @@ export default function App() {
       const projectList = await fetchProjects();
       setProjects(projectList);
 
-      if (projectList.length > 0) {
-        setActiveProject(projectList[0]); // single-project invariant
-        setSelectedProject(projectList[0]);    // viewing same initially
-      }
+      const { activeProject } = await fetchActiveProject();
+      console.log("ACTIVE PROJECT ID:", activeProject?._id);
+      console.log("PROJECT LIST:", projectList);
 
+      const active =
+        projectList.find(p => p._id === activeProject?._id) || null;
+      console.log("RESOLVED ACTIVE PROJECT:", active);
+      setActiveProject(active);
+
+      // Default selection = active project OR first project
+      setSelectedProject(active || projectList[0] || null);
+
+      console.log("1. SelectedProject set to:", active || projectList[0] || null);
+      console.log("2. SelectedProject set to:", selectedProject);
       setLoading(false);
     }
 
     load();
   }, []);
+
+  useEffect(() => {
+  if (activeProject && !selectedProject) {
+    setSelectedProject(activeProject);
+  }
+}, [activeProject]);
+
+
+
+
 
   // ------------------------------
   // State Gates
@@ -86,7 +106,7 @@ export default function App() {
               }}
               onClose={() => setShowCreateProject(false)}
             />
-            
+
           </div>
         </div>
       )}

@@ -84,3 +84,23 @@ export async function fetchProjects() {
   const res = await fetch(`${API_BASE}/projects`);
   return await res.json();
 }
+
+// ----------------------------------
+// Execution State
+// ----------------------------------
+
+export async function fetchActiveProject() {
+  const res = await fetch(`${API_BASE}/execution/active-project`);
+  if (!res.ok) throw new Error("Failed to fetch active project");
+  return res.json();
+}
+
+export async function activateProject(projectId) {
+  const res = await fetch(`${API_BASE}/execution/activate-project`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ projectId }),
+  });
+
+  if (!res.ok) throw new Error("Failed to activate project");
+}

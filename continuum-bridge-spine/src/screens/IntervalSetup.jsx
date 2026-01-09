@@ -2,16 +2,6 @@ import React, { useState } from "react";
 import { startInterval } from "../api";
 import "./IntervalSetup.css";
 
-/**
- * IntervalSetup
- * -------------
- * Execution gatekeeper for Continuum.
- *
- * Rules:
- * - Interval can ONLY be started for the active project
- * - Viewing ≠ Activation
- * - UI must clearly explain disabled state
- */
 export default function IntervalSetup({
   activeProject,
   selectedProject,
@@ -22,26 +12,23 @@ export default function IntervalSetup({
   const [mode, setMode] = useState("Execution");
   const [duration, setDuration] = useState(30);
 
-  // --------------------------------------------------
-  // Execution invariant
-  // --------------------------------------------------
+  /* --------------------------------------------------
+     Execution Gate
+  -------------------------------------------------- */
   const isExecutable =
     activeProject &&
     selectedProject &&
     activeProject._id === selectedProject._id;
 
-  // --------------------------------------------------
-  // Session Goals
-  // --------------------------------------------------
+  /* --------------------------------------------------
+     Session Goals
+  -------------------------------------------------- */
   function addGoal() {
     if (!goalInput.trim()) return;
 
     setGoals((prev) => [
       ...prev,
-      {
-        id: crypto.randomUUID(),
-        text: goalInput.trim(),
-      },
+      { id: crypto.randomUUID(), text: goalInput.trim() },
     ]);
 
     setGoalInput("");
@@ -51,13 +38,11 @@ export default function IntervalSetup({
     setGoals((prev) => prev.filter((g) => g.id !== id));
   }
 
-  // --------------------------------------------------
-  // Start Interval
-  // --------------------------------------------------
+  /* --------------------------------------------------
+     Start Interval
+  -------------------------------------------------- */
   async function handleStartInterval() {
-    // 🔒 UI guard (backend also enforces)
-    if (!isExecutable) return;
-    if (goals.length === 0) return;
+    if (!isExecutable || goals.length === 0) return;
 
     const bridge = await startInterval({
       projectId: activeProject._id,
@@ -66,18 +51,19 @@ export default function IntervalSetup({
       sessionGoals: goals.map((g) => g.text),
     });
 
-    // Reset local state after interval creation
     setGoals([]);
     setGoalInput("");
-
     onIntervalStarted(bridge);
   }
 
-  // --------------------------------------------------
-  // UI
-  // --------------------------------------------------
+  /* --------------------------------------------------
+     UI
+  -------------------------------------------------- */
   return (
-    <div className="interval-setup">
+    <div
+      className={`interval-setup ${!isExecutable ? "interval-locked" : ""
+        }`}
+    >
       <h2 className="interval-title">
         Interval Setup
         {!isExecutable && selectedProject && (
@@ -85,14 +71,11 @@ export default function IntervalSetup({
         )}
       </h2>
 
-      {/* --------------------------------------------------
-          Disabled wrapper when not executable
-         -------------------------------------------------- */}
       <fieldset
         disabled={!isExecutable}
         className={!isExecutable ? "disabled" : ""}
       >
-        {/* -------- Interval Mode -------- */}
+        {/* Interval Mode */}
         <section className="interval-section">
           <h3>Interval Mode</h3>
           {["Decision", "Execution", "Continuity", "Alignment"].map((m) => (
@@ -108,7 +91,7 @@ export default function IntervalSetup({
           ))}
         </section>
 
-        {/* -------- Session Goals -------- */}
+        {/* Session Goals */}
         <section className="interval-section">
           <h3>Session Goals</h3>
 
@@ -128,22 +111,24 @@ export default function IntervalSetup({
           {goals.length > 0 && (
             <ol className="session-goals">
               {goals.map((g, index) => (
-                <li key={g.id} className="session-goal-item">
-                  <span className="goal-text">{g.text}</span>
-                  <button
-                    className="goal-remove"
-                    onClick={() => removeGoal(g.id)}
-                    aria-label={`Remove goal ${index + 1}`}
-                  >
-                    ×
-                  </button>
+                <li key={g.id}>
+                  <div className="session-goal-item">
+                    <span className="goal-text">{g.text}</span>
+                    <button
+                      className="goal-remove"
+                      onClick={() => removeGoal(g.id)}
+                      aria-label={`Remove goal ${index + 1}`}
+                    >
+                      ×
+                    </button>
+                  </div>
                 </li>
               ))}
             </ol>
           )}
         </section>
 
-        {/* -------- Interval Length -------- */}
+        {/* Interval Length */}
         <section className="interval-section">
           <h3>Interval Length</h3>
           {[30, 45].map((d) => (
@@ -160,13 +145,9 @@ export default function IntervalSetup({
         </section>
       </fieldset>
 
-      {/* --------------------------------------------------
-          Guidance
-         -------------------------------------------------- */}
       {!isExecutable && selectedProject && (
         <p className="hint warning">
-          This project is not currently active.
-          Activate it to start a new interval.
+          This project is not active. Activate it to start an interval.
         </p>
       )}
 
@@ -176,9 +157,6 @@ export default function IntervalSetup({
         </p>
       )}
 
-      {/* --------------------------------------------------
-          Action
-         -------------------------------------------------- */}
       <button
         type="button"
         className="primary"

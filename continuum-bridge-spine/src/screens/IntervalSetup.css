@@ -1,18 +1,26 @@
+/* ----------------------------------
+   Layout
+---------------------------------- */
+
 .interval-setup {
-  padding: 24px;
   max-width: 720px;
 }
 
 .interval-title {
   font-size: 20px;
+  font-weight: 600;
   margin-bottom: 16px;
 }
 
 .inactive-tag {
-  font-size: 12px;
-  font-weight: normal;
-  color: #999;
+  font-size: 13px;
+  font-weight: 500;
+  color: #dc2626;
 }
+
+/* ----------------------------------
+   Sections
+---------------------------------- */
 
 .interval-section {
   margin-bottom: 20px;
@@ -21,43 +29,47 @@
 .interval-section h3 {
   font-size: 14px;
   margin-bottom: 8px;
-  color: #444;
+  color: #333;
 }
 
-/* ---------------- Radios ---------------- */
+/* ----------------------------------
+   Radios
+---------------------------------- */
 
 .radio {
-  margin-right: 14px;
+  margin-right: 16px;
   font-size: 14px;
+  cursor: pointer;
 }
 
-/* ---------------- Goals ---------------- */
+/* ----------------------------------
+   Goals
+---------------------------------- */
 
 .goal-input-row {
   display: flex;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .goal-textarea {
   flex: 1;
   resize: vertical;
-  padding: 10px;
+  padding: 8px;
   font-size: 14px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
 }
 
 .session-goals {
-  margin-top: 8px;
-  padding-left: 20px;
+  margin-bottom: 6px;
 }
+
 
 .session-goal-item {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 6px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  /* margin-bottom: 6px;  <-- Remove this */
 }
 
 .goal-text {
@@ -66,9 +78,8 @@
 
 .goal-remove {
   border: none;
-  background: none;
+  background: transparent;
   font-size: 18px;
-  line-height: 1;
   cursor: pointer;
   color: #999;
 }
@@ -77,26 +88,55 @@
   color: #111;
 }
 
-/* ---------------- Hints ---------------- */
+/* ----------------------------------
+   Disabled State
+---------------------------------- */
+
+fieldset.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ----------------------------------
+   Guidance
+---------------------------------- */
 
 .hint {
   font-size: 13px;
-  color: #777;
-  margin-bottom: 12px;
+  color: #666;
+  margin-bottom: 10px;
 }
 
 .hint.warning {
-  color: #b45309;
+  color: #dc2626;
 }
 
-/* ---------------- Action ---------------- */
+/* ----------------------------------
+   Primary Button
+---------------------------------- */
 
 button.primary {
-  padding: 10px 16px;
+  padding: 10px 18px;
   font-size: 14px;
 }
 
 button.primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ----------------------------------
+   Locked State (visual only)
+---------------------------------- */
+
+.interval-locked {
+  position: relative;
+}
+
+.interval-locked::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
 }

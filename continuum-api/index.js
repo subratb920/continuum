@@ -35,6 +35,21 @@ const bridges = db.collection("bridges");
 const executionState = db.collection("execution_state");
 
 /* --------------------------------------------------
+   BOOTSTRAP EXECUTION STATE (SINGLETON)
+-------------------------------------------------- */
+
+await executionState.updateOne(
+  { _id: "continuum" },
+  {
+    $setOnInsert: {
+      activeProjectId: null,
+      updatedAt: new Date(),
+    },
+  },
+  { upsert: true }
+);
+
+/* --------------------------------------------------
    PROJECTS
 -------------------------------------------------- */
 
@@ -48,7 +63,6 @@ app.post("/projects", async (req, res) => {
   const project = {
     name: name.trim(),
     createdAt: new Date(),
-    activeBridgeId: null,
     bridgeCount: 0,
   };
 
@@ -61,19 +75,40 @@ app.get("/projects", async (req, res) => {
   res.json(list);
 });
 
+app.get("/projects/:id", async (req, res) => {
+  const { id } = req.params;
+
+  const project = await projects.findOne({
+    _id: new ObjectId(id),
+  });
+
+  if (!project) {
+    return res.status(404).json({ error: "Project not found" });
+  }
+
+  res.json(project);
+});
+
 /* --------------------------------------------------
    EXECUTION STATE (SINGLE USER CONTINUUM)
 -------------------------------------------------- */
 
 /**
- * Get currently active project
+ * Get currently active project (full object)
  */
 app.get("/execution/active-project", async (req, res) => {
   const state = await executionState.findOne({ _id: "continuum" });
 
-  res.json({
-    activeProjectId: state?.activeProjectId || null,
+  if (!state?.activeProjectId) {
+    console.log("No active project");
+    return res.json({ activeProject: null });
+  }
+
+  const project = await projects.findOne({
+    _id: state.activeProjectId,
   });
+  console.log("Active project:", project);
+  res.json({ activeProject: project || null });
 });
 
 /**
@@ -101,17 +136,38 @@ app.post("/execution/activate-project", async (req, res) => {
         activeProjectId: project._id,
         updatedAt: new Date(),
       },
-    },
-    { upsert: true }
+    }
+  );
+
+  res.sendStatus(204);
+});
+
+/**
+ * Deactivate current project
+ */
+app.post("/execution/deactivate-project", async (req, res) => {
+  await executionState.updateOne(
+    { _id: "continuum" },
+    {
+      $set: {
+        activeProjectId: null,
+        updatedAt: new Date(),
+      },
+    }
   );
 
   res.sendStatus(204);
 });
 
 /* --------------------------------------------------
-   BRIDGES
+   BRIDGES (INTERVALS)
 -------------------------------------------------- */
 
+/**
+ * Start a new interval (bridge)
+ * 🔒 Only active project may start
+ * 🔒 Only one draft at a time
+ */
 app.post("/bridges/start", async (req, res) => {
   const { projectId, interval, sessionGoals } = req.body;
 
@@ -127,9 +183,6 @@ app.post("/bridges/start", async (req, res) => {
     return res.status(404).json({ error: "Project not found" });
   }
 
-  /* 🔒 EXECUTION INVARIANT
-     Only the active project may start an interval
-  */
   const state = await executionState.findOne({ _id: "continuum" });
 
   if (
@@ -141,7 +194,18 @@ app.post("/bridges/start", async (req, res) => {
     });
   }
 
-  // Sequential bridge index per project
+  // 🔒 Prevent multiple active drafts
+  const existingDraft = await bridges.findOne({
+    projectId: project._id,
+    status: "draft",
+  });
+
+  if (existingDraft) {
+    return res.status(409).json({
+      error: "An active interval already exists",
+    });
+  }
+
   const count = await bridges.countDocuments({
     projectId: project._id,
   });
@@ -171,20 +235,16 @@ app.post("/bridges/start", async (req, res) => {
 
   const result = await bridges.insertOne(bridge);
 
-  // Persist continuity
   await projects.updateOne(
     { _id: project._id },
-    {
-      $set: { activeBridgeId: result.insertedId },
-      $inc: { bridgeCount: 1 },
-    }
+    { $inc: { bridgeCount: 1 } }
   );
 
   res.json({ ...bridge, _id: result.insertedId });
 });
 
 /**
- * Update bridge (draft → finalized, goal statuses, etc.)
+ * Update bridge (finalize, goal updates, etc.)
  */
 app.patch("/bridges/:id", async (req, res) => {
   const { id } = req.params;
