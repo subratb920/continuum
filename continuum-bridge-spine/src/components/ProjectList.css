@@ -55,7 +55,7 @@
 }
 
 /* ----------------------------------
-   Project Item (Button)
+   Project Item
 ---------------------------------- */
 
 .project-item {
@@ -81,33 +81,48 @@
   background: #f4f4f5;
 }
 
-/* Selected = viewing / navigation */
+/* Selected = viewing */
 
 .project-item.selected {
   background: #eef2ff;
   color: #111;
 }
 
-/* Active = currently working project */
+/* Active = execution project */
 
 .project-item.active {
   font-weight: 600;
 }
 
 /* ----------------------------------
-   Active Project Indicator
+   Status Indicator (ALWAYS PRESENT)
 ---------------------------------- */
 
-.active-indicator {
+.project-indicator {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+}
 
+/* 🟢 Active project */
+
+.indicator-active {
   background-color: #4caf50;
-
   box-shadow: 0 0 0 rgba(76, 175, 80, 0.6);
   animation: pulse 1.6s infinite;
+}
+
+/* 🟡 Selected but inactive */
+
+.indicator-selected {
+  background-color: #facc15;
+}
+
+/* ⚫ Inactive */
+
+.indicator-inactive {
+  background-color: #9ca3af;
 }
 
 /* Soft breathing pulse */

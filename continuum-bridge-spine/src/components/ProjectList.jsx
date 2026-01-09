@@ -42,13 +42,6 @@ export default function ProjectList({
           const isActive =
             activeProject?._id === project._id;
 
-            console.log(
-    "PROJECT:",
-    project.name,
-    "isActive:",
-    isActive
-  );
-
           const isSelected =
             selectedProject?._id === project._id;
 
@@ -66,14 +59,18 @@ export default function ProjectList({
                 .join(" ")}
               aria-current={isSelected}
             >
-              {/* 🔒 Active execution indicator (backend truth) */}
-              {isActive && (
-                <span
-                  className="active-indicator"
-                  title="Currently active project"
-                  aria-hidden="true"
-                />
-              )}
+              {/* Status indicator — ALWAYS rendered */}
+              <span
+                className={[
+                  "project-indicator",
+                  isActive && "indicator-active",
+                  !isActive && isSelected && "indicator-selected",
+                  !isActive && !isSelected && "indicator-inactive",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                aria-hidden="true"
+              />
 
               <span className="project-name">
                 {project.name}
