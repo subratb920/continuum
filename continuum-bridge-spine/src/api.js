@@ -104,3 +104,14 @@ export async function activateProject(projectId) {
 
   if (!res.ok) throw new Error("Failed to activate project");
 }
+
+export async function deleteProject(projectId) {
+  const res = await fetch(
+    `${API_BASE}/projects/${projectId}`,
+    { method: "DELETE" }
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to delete project");
+  }
+}

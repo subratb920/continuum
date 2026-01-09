@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { MongoClient, ObjectId } from "mongodb";
+import { connectToDB } from "./config/db.js";
 
 const app = express();
 
@@ -22,13 +23,8 @@ app.use(express.json());
    MongoDB
 -------------------------------------------------- */
 
-const mongoUrl =
-  process.env.MONGO_URL || "mongodb://localhost:27000/continuum";
 
-const client = new MongoClient(mongoUrl);
-await client.connect();
-
-const db = client.db("continuum");
+const db = await connectToDB();
 
 const projects = db.collection("projects");
 const bridges = db.collection("bridges");
@@ -50,7 +46,7 @@ await executionState.updateOne(
 );
 
 /* --------------------------------------------------
-   PROJECTS
+   Create a new PROJECT
 -------------------------------------------------- */
 
 app.post("/projects", async (req, res) => {
@@ -158,6 +154,52 @@ app.post("/execution/deactivate-project", async (req, res) => {
 
   res.sendStatus(204);
 });
+
+
+/* --------------------------------------------------
+   DELETE PROJECT (CASCADE)
+-------------------------------------------------- */
+
+app.delete("/projects/:id", async (req, res) => {
+  const { id } = req.params;
+
+  let projectId;
+  try {
+    projectId = new ObjectId(id);
+  } catch {
+    return res.status(400).json({ error: "Invalid project id" });
+  }
+
+  const project = await projects.findOne({ _id: projectId });
+  if (!project) {
+    return res.status(404).json({ error: "Project not found" });
+  }
+
+  // 1️⃣ Delete all bridges for this project
+  await bridges.deleteMany({ projectId });
+
+  // 2️⃣ Delete the project itself
+  await projects.deleteOne({ _id: projectId });
+
+  // 3️⃣ Clear execution state if this project was active
+  const state = await executionState.findOne({ _id: "continuum" });
+
+  if (state?.activeProjectId?.equals(projectId)) {
+    await executionState.updateOne(
+      { _id: "continuum" },
+      {
+        $set: {
+          activeProjectId: null,
+          updatedAt: new Date(),
+        },
+      }
+    );
+  }
+
+  res.sendStatus(204);
+});
+
+
 
 /* --------------------------------------------------
    BRIDGES (INTERVALS)
