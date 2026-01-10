@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { MongoClient, ObjectId } from "mongodb";
-import { connectToDB } from "./config/db.js";
+import { connectToDB } from "./src/config/db.js";
 
 const app = express();
 

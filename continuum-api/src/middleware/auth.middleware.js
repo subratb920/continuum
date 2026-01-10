@@ -1,4 +1,4 @@
-import { verifyToken } from "../utils/jwt.js";
+import { verifyToken } from "../utils/jwt.js"; // ✅
 import { ENV } from "../config/env.js";
 
 export function authMiddleware(req, res, next) {
