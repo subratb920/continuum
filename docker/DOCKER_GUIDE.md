@@ -224,11 +224,8 @@ That is all.
 1. Start mongoDb container as an independant container.
 
 (Only one time activity)...
-docker run -d \ 
-  --name continuum-mongo \
-  -p 27000:27017 \
-  -v $(pwd)/continuum-dbvolume:/data/db \
-  mongo:7.0
+docker run -d --name continuum-mongo -p 27000:27017 -v "$(pwd)/continuum-dbvolume:/data/db" mongo:7.0
+
 
  (Stop the container....)
  docker container continuum-mongo

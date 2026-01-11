@@ -5,52 +5,68 @@ import "dotenv/config";
 
 import app from "./app.js";
 import { ENV } from "./config/env.js";
-import { connectToDB } from "./config/db.js";
+import { connectToDB, closeDB } from "./config/db.js";
 import { bootstrapSystem } from "./bootstrap/bootstrap.js";
+import { withSystemContext } from "./logging/childLogger.js";
 
 let server;
 
+/**
+ * Application entry point
+ */
 async function startServer() {
+  const log = withSystemContext("startup");
+
   try {
-    // 2️⃣ Connect to database
+    // 2️⃣ Connect to MongoDB (fatal on failure)
     const db = await connectToDB();
 
-    // 3️⃣ Bootstrap application invariants / setup
+    // 3️⃣ Bootstrap database structure & invariants
     await bootstrapSystem(db);
 
     // 4️⃣ Start HTTP server
     server = app.listen(ENV.PORT, () => {
-      console.log(`🚀 Server running on port ${ENV.PORT}`);
+      log.info(
+        {
+          port: ENV.PORT,
+          env: ENV.NODE_ENV,
+        },
+        "CONTINUUM is now up and running"
+      );
     });
   } catch (err) {
-    console.error("❌ Server startup failed:", err);
-    process.exit(1);
+    // Startup failure is unrecoverable
+    log.fatal({ err }, "Server startup failed");
   }
 }
 
-// 5️⃣ Graceful shutdown (SIGTERM, SIGINT)
+/**
+ * Graceful shutdown handler
+ */
 async function shutdown(signal) {
-  console.log(`\n🛑 Received ${signal}. Shutting down gracefully...`);
+  const log = withSystemContext("shutdown");
+
+  log.warn({ signal }, "Shutdown signal received");
 
   try {
     if (server) {
       await new Promise((resolve) => server.close(resolve));
-      console.log("✅ HTTP server closed");
+      log.info("HTTP server closed");
     }
 
-    // If later you add DB client close logic, it goes here
-    // await closeDB();
+    await closeDB();
+    log.info("Database connection closed");
 
+    log.info("Shutdown complete");
     process.exit(0);
   } catch (err) {
-    console.error("❌ Error during shutdown:", err);
-    process.exit(1);
+    log.fatal({ err }, "Error during shutdown");
   }
 }
 
-// 6️⃣ Handle process signals
+// 5️⃣ Handle process signals
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 
-// 7️⃣ Start the server
+// 6️⃣ Start server
 startServer();

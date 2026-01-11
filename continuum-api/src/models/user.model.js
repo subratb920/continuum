@@ -1,58 +1,20 @@
-import mongoose from "mongoose";
+import { ObjectId } from "mongodb";
 
-const { Schema } = mongoose;
+export const USER_COLLECTION = "users";
 
 /**
- * User represents a SINGLE human execution context.
- * A user owns projects and has exactly one execution state.
- * This model intentionally stays minimal.
+ * Create a new User document
+ * Execution state is created separately during bootstrap or signup
  */
+export function createUserDoc({ email, passwordHash }) {
+  return {
+    email: email.toLowerCase().trim(),
+    passwordHash,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
 
-const UserSchema = new Schema(
-  {
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-    },
-
-    passwordHash: {
-      type: String,
-      required: true,
-    },
-
-    // --- Execution linkage ---
-    // This does NOT store execution rules.
-    // It only links the user to their execution state.
-    executionStateId: {
-      type: Schema.Types.ObjectId,
-      ref: "ExecutionState",
-      required: true,
-    },
-
-    // --- Metadata ---
-    createdAt: {
-      type: Date,
-      default: Date.now,
-      immutable: true,
-    },
-
-    updatedAt: {
-      type: Date,
-      default: Date.now,
-    },
-  },
-  {
-    versionKey: false,
-  }
-);
-
-// Keep updatedAt honest
-UserSchema.pre("save", function (next) {
-  this.updatedAt = new Date();
-  next();
-});
-
-export default mongoose.model("User", UserSchema);
+export function toUserId(id) {
+  return typeof id === "string" ? new ObjectId(id) : id;
+}

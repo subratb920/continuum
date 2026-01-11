@@ -1,9 +1,23 @@
+import { verifyToken } from "../utils/jwt.js";
+
 export function requireAuth(req, res, next) {
-  if (!req.user) {
-    return res.status(401).json({
-      error: "Authentication required",
-    });
+  const header = req.headers.authorization;
+
+  if (!header || !header.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
-  next();
+  const token = header.split(" ")[1];
+
+  try {
+    const payload = verifyToken(token);
+
+    req.user = {
+      id: payload.userId,
+    };
+
+    next();
+  } catch {
+    return res.status(401).json({ error: "Invalid token" });
+  }
 }

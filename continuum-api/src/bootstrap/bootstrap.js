@@ -1,26 +1,34 @@
-// src/bootstrap/bootstrap.js
-
 import { ensureCollections } from "./ensureCollections.js";
 import { ensureIndexes } from "./ensureIndexes.js";
+import { validateInvariants } from "./validateInvariants.js";
+import { withSystemContext } from "../logging/childLogger.js";
 
-/**
- * Bootstraps Continuum into a valid, enforceable state.
- * This runs on EVERY server start.
- *
- * MongoDB is assumed to be disposable.
- * The application is the source of truth.
- */
 export async function bootstrapSystem(db) {
-  console.log("🧠 Continuum bootstrap starting...");
+  const log = withSystemContext("bootstrap");
+  
+  log.info("Bootstrap starting");
 
-  // 1. Ensure collections exist
-  await ensureCollections(db);
+  const colResult = await ensureCollections(db);
+  const idxResult = await ensureIndexes(db);
+  const invResult = await validateInvariants(db);
 
-  // 2. Ensure indexes (DB-level invariants)
-  await ensureIndexes(db);
+  const didWork =
+    colResult.created > 0 ||
+    idxResult.created > 0 ||
+    invResult.repaired > 0;
 
-  // 3. (Later) Validate invariants / repair if needed
-  // await validateInvariants(db);
+  if (!didWork) {
+    log.info(
+      {
+        collectionsCreated: colResult.created,
+        indexesCreated: idxResult.created,
+        invariantsRepaired: invResult.repaired,
+      },
+      "Bootstrap completed with repairs"
+    );
+  } else {
+    log.info("🧠 Bootstrap mode: REPAIR / INITIALIZE");
+  }
 
-  console.log("✅ Continuum bootstrap complete");
+  log.info("Bootstrap completed (NOOP)");
 }

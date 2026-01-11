@@ -1,4 +1,3 @@
-import { Routes, Route } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 import ThreePanelLayout from "./layout/ThreePanelLayout";
@@ -41,19 +40,13 @@ export default function App() {
       setProjects(projectList);
 
       const { activeProject } = await fetchActiveProject();
-      console.log("ACTIVE PROJECT ID:", activeProject?._id);
-      console.log("PROJECT LIST:", projectList);
 
       const active =
         projectList.find(p => p._id === activeProject?._id) || null;
-      console.log("RESOLVED ACTIVE PROJECT:", active);
-      setActiveProject(active);
 
-      // Default selection = active project OR first project
+      setActiveProject(active);
       setSelectedProject(active || projectList[0] || null);
 
-      console.log("1. SelectedProject set to:", active || projectList[0] || null);
-      console.log("2. SelectedProject set to:", selectedProject);
       setLoading(false);
     }
 
@@ -61,14 +54,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-  if (activeProject && !selectedProject) {
-    setSelectedProject(activeProject);
-  }
-}, [activeProject]);
-
-
-
-
+    if (activeProject && !selectedProject) {
+      setSelectedProject(activeProject);
+    }
+  }, [activeProject]);
 
   // ------------------------------
   // State Gates
@@ -93,9 +82,6 @@ export default function App() {
 
   return (
     <>
-      {/* =====================================================
-          Create Project Modal (STRUCTURAL)
-          ===================================================== */}
       {showCreateProject && (
         <div className="modal-backdrop">
           <div className="modal-window">
@@ -106,14 +92,10 @@ export default function App() {
               }}
               onClose={() => setShowCreateProject(false)}
             />
-
           </div>
         </div>
       )}
 
-      {/* =====================================================
-          Draft Bridge Modal (ACTIVE INTERVAL)
-          ===================================================== */}
       {activeBridge && (
         <BridgeDraftModal
           bridge={activeBridge}
@@ -125,9 +107,6 @@ export default function App() {
         />
       )}
 
-      {/* =====================================================
-          History Bridge Modal (READ-ONLY)
-          ===================================================== */}
       {selectedBridge && (
         <BridgeHistoryModal
           bridge={selectedBridge}
@@ -145,22 +124,15 @@ export default function App() {
         onSelectBridge={setSelectedBridge}
         onCreateProject={() => setShowCreateProject(true)}
       >
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <ReEntry
-                key={activeBridge ? activeBridge._id : "idle"}
-                activeProject={activeProject}
-                selectedProject={selectedProject}
-                onIntervalStarted={(bridge) => {
-                  setActiveBridge(bridge);
-                  setBridgeRevision((r) => r + 1);
-                }}
-              />
-            }
-          />
-        </Routes>
+        <ReEntry
+          key={activeBridge ? activeBridge._id : "idle"}
+          activeProject={activeProject}
+          selectedProject={selectedProject}
+          onIntervalStarted={(bridge) => {
+            setActiveBridge(bridge);
+            setBridgeRevision((r) => r + 1);
+          }}
+        />
       </ThreePanelLayout>
     </>
   );

@@ -1,28 +1,36 @@
+import { withSystemContext } from "../logging/childLogger.js";
+
 export async function ensureIndexes(db) {
-  // users
-  await db.collection("users").createIndex(
-    { email: 1 },
-    { unique: true }
-  );
+  const log = withSystemContext("bootstrap");
+  log.debug("🧱 Checking indexes...");
 
-  // projects
-  await db.collection("projects").createIndex(
-    { userId: 1 }
-  );
+  let created = 0;
 
-  // bridges
-  await db.collection("bridges").createIndex(
-    { projectId: 1, index: 1 },
-    { unique: true }
-  );
+  const users = db.collection("users");
+  const existingUserIndexes = await users.indexes();
 
-  await db.collection("bridges").createIndex(
-    { projectId: 1, status: 1 }
-  );
+  if (!existingUserIndexes.find(i => i.key.email)) {
+    await users.createIndex({ email: 1 }, { unique: true });
+    log.info("🧱 Created index: users.email (unique)");
+    created++;
+  } else {
+    log.debug("🧾 Index exists: users.email");
+  }
 
-  // execution_state
-  await db.collection("execution_state").createIndex(
-    { userId: 1 },
-    { unique: true }
-  );
+  const execution = db.collection("execution_state");
+  const executionIndexes = await execution.indexes();
+
+  if (!executionIndexes.find(i => i.key.userId)) {
+    await execution.createIndex({ userId: 1 }, { unique: true });
+    log.info("🧱 Created index: execution_state.userId (unique)");
+    created++;
+  } else {
+    log.debug("🧾 Index exists: execution_state.userId");
+  }
+
+  if (created === 0) {
+    log.info("✅ All indexes already exist");
+  }
+
+  return { created };
 }

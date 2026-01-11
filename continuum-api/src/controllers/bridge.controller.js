@@ -9,6 +9,15 @@ export async function startBridge(req, res) {
 
   const { projectId, interval, sessionGoals } = req.body;
 
+  req.log.info(
+    {
+      userId: req.user.id,
+      projectId,
+      interval,
+    },
+    "Starting bridge"
+  );
+
   // 🔒 Enforce execution law FIRST
   await executionService.assertCanStartBridge(
     req.user.id,
@@ -21,6 +30,14 @@ export async function startBridge(req, res) {
     sessionGoals
   );
 
+  req.log.info(
+    {
+      bridgeId,
+      projectId,
+    },
+    "Bridge started"
+  );
+
   res.status(201).json({ bridgeId });
 }
 
@@ -28,9 +45,26 @@ export async function updateBridge(req, res) {
   const db = getDB();
   const bridgeService = createBridgeService(db);
 
+  const bridgeId = req.params.id;
+
+  req.log.info(
+    {
+      userId: req.user.id,
+      bridgeId,
+    },
+    "Updating bridge"
+  );
+
   await bridgeService.updateBridge(
-    req.params.id,
+    bridgeId,
     req.body
+  );
+
+  req.log.info(
+    {
+      bridgeId,
+    },
+    "Bridge updated"
   );
 
   res.json({ success: true });
@@ -40,7 +74,25 @@ export async function getProjectBridges(req, res) {
   const db = getDB();
   const bridgeService = createBridgeService(db);
 
-  const bridges = await bridgeService.listBridges(req.params.id);
+  const projectId = req.params.id;
+
+  req.log.debug(
+    {
+      userId: req.user.id,
+      projectId,
+    },
+    "Listing project bridges"
+  );
+
+  const bridges = await bridgeService.listBridges(projectId);
+
+  req.log.info(
+    {
+      projectId,
+      count: bridges.length,
+    },
+    "Project bridges retrieved"
+  );
 
   res.json(bridges);
 }
