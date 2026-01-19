@@ -1,0 +1,41 @@
+.activate-modal {
+  width: 420px;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.project-select {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.active-indicator {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 16px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.btn-primary {
+  background: #4f6ef7;
+  color: white;
+}
+
+.btn-danger {
+  background: #d33;
+  color: white;
+}
+
+.btn-secondary {
+  background: #eee;
+}

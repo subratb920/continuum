@@ -8,6 +8,11 @@ import { withSystemContext } from "../logging/childLogger.js";
  * Execution Service
  * This is the LAW of Continuum.
  * Controllers ask. This decides.
+ *
+ * Bridge statuses:
+ * - draft      → active interval
+ * - final      → completed normally
+ * - abandoned  → interrupted / superseded
  */
 export function createExecutionService(db) {
   const log = withSystemContext("execution");
@@ -24,10 +29,7 @@ export function createExecutionService(db) {
     const state = await executionCol.findOne({ userId });
 
     if (!state) {
-      log.error(
-        { userId },
-        "Execution state missing"
-      );
+      log.error({ userId }, "Execution state missing");
       throw new Error("Execution state missing for user");
     }
 
@@ -40,10 +42,7 @@ export function createExecutionService(db) {
   async function getActiveProject(userId) {
     const uid = new ObjectId(userId);
 
-    log.debug(
-      { userId: uid },
-      "Fetching active project"
-    );
+    log.debug({ userId: uid }, "Fetching active project");
 
     const state = await getExecutionState(uid);
     return state.activeProjectId || null;
@@ -109,10 +108,7 @@ export function createExecutionService(db) {
   async function deactivateProject(userId) {
     const uid = new ObjectId(userId);
 
-    log.debug(
-      { userId: uid },
-      "Deactivating active project"
-    );
+    log.debug({ userId: uid }, "Deactivating active project");
 
     const result = await executionCol.updateOne(
       { userId: uid },
@@ -132,15 +128,14 @@ export function createExecutionService(db) {
       throw new Error("Execution state update failed");
     }
 
-    log.info(
-      { userId: uid },
-      "Active project deactivated"
-    );
+    log.info({ userId: uid }, "Active project deactivated");
   }
 
   /**
    * Can a bridge be started?
    * Enforces ALL execution invariants.
+   *
+   * ✅ AUTO-ARCHIVES any existing draft bridge
    */
   async function assertCanStartBridge(userId, projectId) {
     const uid = new ObjectId(userId);
@@ -155,10 +150,7 @@ export function createExecutionService(db) {
 
     if (!state.activeProjectId) {
       log.warn(
-        {
-          userId: uid,
-          reason: "no_active_project",
-        },
+        { userId: uid, reason: "no_active_project" },
         "Bridge start rejected"
       );
       throw new Error("No active project");
@@ -177,22 +169,33 @@ export function createExecutionService(db) {
       throw new Error("Project is not active");
     }
 
-    const draftExists = await bridgeCol.findOne({
+    // 🔁 AUTO-ARCHIVE EXISTING DRAFT (KEY FIX)
+    const existingDraft = await bridgeCol.findOne({
       projectId: pid,
       status: "draft",
     });
 
-    if (draftExists) {
+    if (existingDraft) {
       log.warn(
         {
           userId: uid,
           projectId: pid,
-          bridgeId: draftExists._id,
-          reason: "draft_already_exists",
+          bridgeId: existingDraft._id,
+          reason: "auto_abandon_previous_draft",
         },
-        "Bridge start rejected"
+        "Auto-archiving previous draft bridge"
       );
-      throw new Error("Draft bridge already exists");
+
+      await bridgeCol.updateOne(
+        { _id: existingDraft._id },
+        {
+          $set: {
+            status: "abandoned",
+            abandonedAt: new Date(),
+            updatedAt: new Date(),
+          },
+        }
+      );
     }
 
     log.debug(

@@ -7,7 +7,7 @@ if (!API_BASE) {
 
 /**
  * --------------------------------------------------
- * Core request helper
+ * Core request helper (SINGLE SOURCE OF TRUTH)
  * --------------------------------------------------
  */
 async function request(method, path, body) {
@@ -27,11 +27,9 @@ async function request(method, path, body) {
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  // 🔒 Auth collapse
+  // 🔒 Auth failure (handled upstream)
   if (res.status === 401) {
-    localStorage.removeItem(TOKEN_KEY);
-    window.location.reload();
-    return;
+    throw new Error("UNAUTHORIZED");
   }
 
   if (!res.ok) {
@@ -103,9 +101,38 @@ export async function deleteProject(projectId) {
    ================================================== */
 
 export async function fetchActiveProject() {
-  return request("GET", "/execution/active-project");
+  const token = localStorage.getItem("continuum_token");
+
+  const res = await fetch(
+    `${API_BASE}/execution/active-project`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  // ✅ 304 = no change, no body
+  if (res.status === 304) {
+    return { activeProject: null };
+  }
+
+  if (res.status === 401) {
+    throw new Error("UNAUTHORIZED");
+  }
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch active project");
+  }
+
+  return res.json();
 }
+
 
 export async function activateProject(projectId) {
   await request("POST", "/execution/activate-project", { projectId });
+}
+
+export async function deactivateProject() {
+  await request("POST", "/execution/deactivate-project");
 }

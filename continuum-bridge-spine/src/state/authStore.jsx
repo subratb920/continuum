@@ -1,56 +1,62 @@
 import { createContext, useContext, useEffect, useState } from "react";
-
-const AuthContext = createContext(null);
+import { jwtDecode } from "jwt-decode";
 
 const TOKEN_KEY = "continuum_token";
 
+const AuthContext = createContext(null);
+
 export function AuthProvider({ children }) {
-  const [status, setStatus] = useState("checking"); 
-  // "checking" | "unauthenticated" | "authenticated"
-  const [token, setToken] = useState(null);
+  const [status, setStatus] = useState("checking"); // checking | authenticated | unauthenticated
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem(TOKEN_KEY);
+    const token = localStorage.getItem(TOKEN_KEY);
 
-    if (storedToken) {
-      setToken(storedToken);
+    if (!token) {
+      setStatus("unauthenticated");
+      return;
+    }
+
+    try {
+      const decoded = jwtDecode(token);
+
+      setUser({
+        id: decoded.userId,
+        email: decoded.email,
+      });
+
       setStatus("authenticated");
-    } else {
+    } catch {
+      localStorage.removeItem(TOKEN_KEY);
       setStatus("unauthenticated");
     }
   }, []);
 
-  function login(newToken) {
-    localStorage.setItem(TOKEN_KEY, newToken);
-    setToken(newToken);
+  function login(token) {
+    localStorage.setItem(TOKEN_KEY, token);
+
+    const decoded = jwtDecode(token);
+    setUser({
+      id: decoded.userId,
+      email: decoded.email,
+    });
+
     setStatus("authenticated");
   }
 
   function logout() {
     localStorage.removeItem(TOKEN_KEY);
-    setToken(null);
+    setUser(null);
     setStatus("unauthenticated");
   }
 
   return (
-    <AuthContext.Provider
-      value={{
-        status,
-        token,
-        isAuthenticated: status === "authenticated",
-        login,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={{ status, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error("useAuth must be used inside AuthProvider");
-  }
-  return ctx;
+  return useContext(AuthContext);
 }

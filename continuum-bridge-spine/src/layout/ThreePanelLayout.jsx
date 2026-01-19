@@ -14,9 +14,6 @@ export default function ThreePanelLayout({
 }) {
   return (
     <div className="app">
-      {/* ---------------------------------
-          LEFT PANEL — Projects
-         --------------------------------- */}
       <aside className="left">
         <ProjectList
           projects={projects}
@@ -27,16 +24,10 @@ export default function ThreePanelLayout({
         />
       </aside>
 
-      {/* ---------------------------------
-          CENTER PANEL — Execution Surface
-         --------------------------------- */}
       <main className="center">
         {children}
       </main>
 
-      {/* ---------------------------------
-          RIGHT PANEL — Bridge Spine
-         --------------------------------- */}
       <aside className="right">
         <BridgeSpine
           selectedProject={selectedProject}

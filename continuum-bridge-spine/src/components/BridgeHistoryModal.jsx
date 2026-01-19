@@ -3,11 +3,13 @@ import "./BridgeHistoryModal.css";
 export default function BridgeHistoryModal({ bridge, onClose }) {
   if (!bridge) return null;
 
+  const goals = bridge.sessionGoals ?? [];
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
         className="modal-window"
-        onClick={(e) => e.stopPropagation()} // prevent close on click inside
+        onClick={(e) => e.stopPropagation()}
       >
         <header className="modal-header">
           <h2>{bridge.name}</h2>
@@ -19,16 +21,23 @@ export default function BridgeHistoryModal({ bridge, onClose }) {
           </p>
 
           <h3>Session Goals</h3>
-          <ul className="goal-list">
-            {bridge.sessionGoals.map((g) => (
-              <li key={g.id}>
-                <span>{g.text}</span>
-                <span className={`goal-status ${g.status}`}>
-                  {g.status}
-                </span>
-              </li>
-            ))}
-          </ul>
+
+          {goals.length === 0 ? (
+            <p className="empty-goals">
+              No session goals were recorded for this interval.
+            </p>
+          ) : (
+            <ul className="goal-list">
+              {goals.map((g, index) => (
+                <li key={g.id ?? `${index}-${g.text}`}>
+                  <span>{g.text}</span>
+                  <span className={`goal-status ${g.status}`}>
+                    {g.status}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         <footer className="modal-footer">

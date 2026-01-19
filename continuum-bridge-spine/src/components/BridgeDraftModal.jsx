@@ -1,54 +1,55 @@
 import { useEffect, useState } from "react";
-import { patchBridge } from "../api";
 
-export default function BridgeDraftModal({ bridge, onClose }) {
+export default function BridgeDraftModal({
+  bridge,
+  onUpdate,
+  onClose,
+}) {
+  // ✅ Local, authoritative copy
   const [localBridge, setLocalBridge] = useState(bridge);
 
-  // Sync when a different bridge opens
+  // ✅ Resync if a different bridge opens
   useEffect(() => {
     setLocalBridge(bridge);
   }, [bridge]);
 
-  // Auto-persist on any change
-  useEffect(() => {
-    if (!localBridge?._id) return;
+  if (!localBridge) return null;
 
-    const timeout = setTimeout(() => {
-      patchBridge(localBridge._id, {
-        sessionGoals: localBridge.sessionGoals,
-      });
-    }, 300); // gentle debounce
-
-    return () => clearTimeout(timeout);
-  }, [localBridge]);
+  const sessionGoals = localBridge.sessionGoals ?? [];
 
   function updateGoalStatus(id, status) {
-    setLocalBridge((prev) => ({
-      ...prev,
-      sessionGoals: prev.sessionGoals.map((g) =>
+    const updated = {
+      ...localBridge,
+      sessionGoals: sessionGoals.map((g) =>
         g.id === id ? { ...g, status } : g
       ),
-    }));
+    };
+
+    // 1️⃣ Update UI immediately
+    setLocalBridge(updated);
+
+    // 2️⃣ Bubble change upward (App will persist)
+    onUpdate(updated);
   }
 
   return (
     <div className="modal-backdrop">
       <div className="modal">
-        <h2>Bridge Draft</h2>
+        <h2>{localBridge.name ?? "Bridge Draft"}</h2>
 
         <p className="subtle">
           Mark what happened in this interval.
         </p>
 
         <ul className="goals">
-          {localBridge.sessionGoals.map((goal) => (
-            <li key={goal.id}>
-              <span>{goal.text}</span>
+          {sessionGoals.map((g) => (
+            <li key={g.id}>
+              <span>{g.text}</span>
 
               <select
-                value={goal.status}
+                value={g.status}
                 onChange={(e) =>
-                  updateGoalStatus(goal.id, e.target.value)
+                  updateGoalStatus(g.id, e.target.value)
                 }
               >
                 <option value="untouched">Untouched</option>

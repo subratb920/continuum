@@ -28,7 +28,11 @@ export default function IntervalSetup({
 
     setGoals((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), text: goalInput.trim() },
+      {
+        id: crypto.randomUUID(),
+        text: goalInput.trim(),
+        status: "untouched",
+      },
     ]);
 
     setGoalInput("");
@@ -48,12 +52,23 @@ export default function IntervalSetup({
       projectId: activeProject._id,
       mode,
       duration,
-      sessionGoals: goals.map((g) => g.text),
+      sessionGoals: goals.map((g) => ({
+        id: g.id,
+        text: g.text,
+        status: g.status,
+      })),
     });
 
     setGoals([]);
     setGoalInput("");
-    onIntervalStarted(bridge);
+    onIntervalStarted({
+      ...bridge,
+      sessionGoals: goals.map(g => ({
+        id: g.id,
+        text: g.text,
+        status: "untouched",
+      })),
+    });
   }
 
   /* --------------------------------------------------

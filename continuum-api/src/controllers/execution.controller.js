@@ -22,7 +22,10 @@ export async function getActiveProject(req, res) {
     "Active project retrieved"
   );
 
-  res.json({ activeProjectId });
+  res
+  .set("Cache-Control", "no-store")
+  .set("Pragma", "no-cache")
+  .json({ activeProjectId });
 }
 
 export async function activateProject(req, res) {

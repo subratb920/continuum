@@ -1,12 +1,8 @@
 import { ObjectId } from "mongodb";
+import crypto from "crypto";
 import { BRIDGE_COLLECTION } from "../models/bridge.model.js";
 import { withSystemContext } from "../logging/childLogger.js";
 
-/**
- * Bridge Service
- * Owns execution interval (bridge) lifecycle.
- * Execution law (who/when allowed) is enforced by execution service.
- */
 export function createBridgeService(db) {
   const log = withSystemContext("bridge");
   const bridgeCol = db.collection(BRIDGE_COLLECTION);
@@ -30,13 +26,20 @@ export function createBridgeService(db) {
 
     const index = count + 1;
 
+    // ✅ Normalize session goals (BACKEND LAW)
+    const sessionGoals = (goals ?? []).map((text) => ({
+      id: crypto.randomUUID(),
+      text,
+      status: "untouched",
+    }));
+
     const doc = {
       projectId: pid,
       index,
       name: `bridge-${index}`,
       status: "draft",
       interval,
-      sessionGoals: goals,
+      sessionGoals,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -52,7 +55,11 @@ export function createBridgeService(db) {
       "Bridge started"
     );
 
-    return insertedId;
+    // ✅ RETURN FULL BRIDGE OBJECT
+    return {
+      ...doc,
+      _id: insertedId,
+    };
   }
 
   /**

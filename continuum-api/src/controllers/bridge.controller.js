@@ -24,7 +24,8 @@ export async function startBridge(req, res) {
     projectId
   );
 
-  const bridgeId = await bridgeService.startBridge(
+  // 🔹 Start bridge and get FULL document
+  const bridge = await bridgeService.startBridge(
     projectId,
     interval,
     sessionGoals
@@ -32,14 +33,16 @@ export async function startBridge(req, res) {
 
   req.log.info(
     {
-      bridgeId,
+      bridgeId: bridge._id,
       projectId,
     },
     "Bridge started"
   );
 
-  res.status(201).json({ bridgeId });
+  // ✅ MUST return full bridge
+  res.status(201).json(bridge);
 }
+
 
 export async function updateBridge(req, res) {
   const db = getDB();

@@ -1,0 +1,34 @@
+/* ShellHeader.css */
+
+.shell-header {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid #eee;
+  background: #fff;
+}
+
+.shell-title {
+  font-weight: 600;
+}
+
+.shell-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.shell-email {
+  font-size: 13px;
+  color: #555;
+}
+
+.shell-signout {
+  font-size: 12px;
+  background: none;
+  border: none;
+  color: #0066cc;
+  cursor: pointer;
+}
