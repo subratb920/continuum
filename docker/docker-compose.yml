@@ -1,5 +1,4 @@
 services:
-
   mongo:
     image: mongo:7.0
     container_name: continuum-mongo
@@ -14,11 +13,10 @@ services:
     environment:
       MONGO_INITDB_DATABASE: continuum
       MONGO_INITDB_ROOT_USERNAME: continuum_admin
-      MONGO_INITDB_ROOT_PASSWORD: K8^mQZ!4yD3#LrV9@S2E%pN6CwA$H
+      MONGO_INITDB_ROOT_PASSWORD: continuum_dev_pw
 
     command: ["mongod", "--bind_ip_all"]
 
-    # ✅ AUTH-AWARE readiness check
     healthcheck:
       test:
         [
@@ -27,7 +25,7 @@ services:
           "-u",
           "continuum_admin",
           "-p",
-          "K8^mQZ!4yD3#LrV9@S2E%pN6CwA$H",
+          "continuum_dev_pw",
           "--authenticationDatabase",
           "admin",
           "--quiet",
@@ -36,8 +34,8 @@ services:
         ]
       interval: 5s
       timeout: 5s
-      retries: 12
-      start_period: 15s
+      retries: 10
+      start_period: 10s
 
 
   continuum-api:
@@ -56,7 +54,7 @@ services:
       DB_NAME: continuum
       JWT_SECRET: dev-secret
       CLIENT_ORIGIN: http://localhost:45173
-      MONGO_URI: mongodb://continuum_admin:K8%5EmQZ!4yD3%23LrV9%40S2E%25pN6CwA%24H@mongo:27017/continuum?authSource=admin
+      MONGO_URI: mongodb://continuum_admin:continuum_dev_pw@mongo:27017/continuum?authSource=admin
 
     depends_on:
       mongo:

@@ -7,6 +7,7 @@ RUN npm install
 
 COPY . .
 
-EXPOSE 4000
+# Copy source
+COPY . .
 
-CMD ["node", "index.js"]
+CMD ["node", "src/server.js"]
