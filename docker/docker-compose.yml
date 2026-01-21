@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
 
     ports:
-      - "45171:27017"
+      - "45171:45171"
 
     volumes:
       - mongo_data:/data/db
