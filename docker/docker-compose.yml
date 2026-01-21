@@ -15,7 +15,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: continuum_admin
       MONGO_INITDB_ROOT_PASSWORD: continuum_dev_pw
 
-    command: ["mongod", "--bind_ip_all"]
+    command: ["mongod", "--bind_ip_all", "--port", "45171"]
 
     healthcheck:
       test:
