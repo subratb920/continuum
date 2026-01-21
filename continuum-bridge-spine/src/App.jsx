@@ -44,7 +44,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   // ---------------------------------
-  // 🔁 Initial Load (AUTH ONLY)
+  // 🔁 Initial Load (AUTH + CONTEXT)
   // ---------------------------------
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -54,8 +54,7 @@ export default function App() {
         const projectList = await fetchProjects();
         setProjects(projectList);
 
-        const { activeProjectId } =
-          await fetchActiveProject();
+        const { activeProjectId } = await fetchActiveProject();
 
         const active =
           projectList.find(p => p._id === activeProjectId) || null;
@@ -84,6 +83,9 @@ export default function App() {
       setSelectedProject(activeProject);
     }
   }, [activeProject]);
+
+  const isContextReady = !loading && projects.length > 0;
+  const hasActiveProject = !!activeProject;
 
   // ---------------------------------
   // 🔒 AUTH GATE
@@ -122,7 +124,6 @@ export default function App() {
     });
   }
 
-
   function handleDeactivate() {
     setActiveProject(null);
     setSelectedProject(null); // ✅ avoid stale selection
@@ -145,15 +146,21 @@ export default function App() {
         onSelectBridge={setSelectedBridge}
         onCreateProject={() => setShowProjectActionMenu(true)}
       >
-        <ReEntry
-          key={activeBridge ? activeBridge._id : "idle"}
-          activeProject={activeProject}
-          selectedProject={selectedProject}
-          onIntervalStarted={(bridge) => {
-            setActiveBridge(bridge);
-            setBridgeRevision(r => r + 1);
-          }}
-        />
+        {isContextReady && hasActiveProject ? (
+          <ReEntry
+            key={activeBridge ? activeBridge._id : "idle"}
+            activeProject={activeProject}
+            selectedProject={selectedProject}
+            onIntervalStarted={(bridge) => {
+              setActiveBridge(bridge);
+              setBridgeRevision(r => r + 1);
+            }}
+          />
+        ) : (
+          <div className="empty-state">
+            <p>Activate a project to start an interval.</p>
+          </div>
+        )}
       </ThreePanelLayout>
 
       {/* Project Action Menu */}
