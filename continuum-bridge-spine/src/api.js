@@ -1,3 +1,6 @@
+import { logger } from "./utils/logger";
+import { normalizeProject } from "./models/project";
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 const TOKEN_KEY = "continuum_token";
 
@@ -15,11 +18,10 @@ async function request(method, path, body) {
 
   const headers = {
     "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
   };
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
+  logger.api("REQUEST", { method, path, body });
 
   const res = await fetch(`${API_BASE}${path}`, {
     method,
@@ -27,23 +29,32 @@ async function request(method, path, body) {
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  // 🔒 Auth failure (handled upstream)
+  let data = null;
+
+  if (res.status !== 204) {
+    try {
+      data = await res.json();   // ✅ READ ONCE
+    } catch {
+      data = null;
+    }
+  }
+
+  logger.api("RESPONSE", {
+    method,
+    path,
+    status: res.status,
+    data,
+  });
+
   if (res.status === 401) {
     throw new Error("UNAUTHORIZED");
   }
 
   if (!res.ok) {
-    let message = "Request failed";
-    try {
-      const err = await res.json();
-      message = err.error || message;
-    } catch {}
-    throw new Error(message);
+    throw new Error(data?.error || "Request failed");
   }
 
-  if (res.status === 204) return null;
-
-  return res.json();
+  return data; // ✅ RETURN SAME OBJECT
 }
 
 /* ==================================================
@@ -85,11 +96,19 @@ export async function patchBridge(id, data) {
    ================================================== */
 
 export async function createProject(name) {
-  return request("POST", "/projects", { name });
+  const res = await request("POST", "/projects", { name });
+
+  // Normalize immediately
+  return normalizeProject({
+    ...res,
+    name, // backend currently doesn't return name
+  });
 }
 
 export async function fetchProjects() {
-  return request("GET", "/projects");
+  const res = await request("GET", "/projects");
+
+  return res.map(normalizeProject);
 }
 
 export async function deleteProject(projectId) {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createProject } from "../api";
 import "./BridgeHistoryModal.css"; // reuse same modal CSS
+import { logger } from "../utils/logger";
 
 export default function CreateProject({ onCreated, onClose }) {
   const [name, setName] = useState("");
@@ -8,9 +9,10 @@ export default function CreateProject({ onCreated, onClose }) {
 
   async function handleCreate() {
     if (!name.trim() || creating) return;
-
+    logger.ui("CreateProject submit clicked", { name });
     setCreating(true);
     const project = await createProject(name.trim());
+     logger.ui("CreateProject API returned", project);
     onCreated(project);
   }
 

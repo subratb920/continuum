@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { assertProject } from "./utils/assertions";
+
 
 import { useAuth } from "./state/authStore";
 import AuthGate from "./auth/AuthGate";
@@ -22,10 +24,13 @@ import {
   patchBridge,
 } from "./api";
 
+import { logger } from "./utils/logger";
+
 export default function App() {
-  // ---------------------------------
-  // 🔒 ALL HOOKS MUST COME FIRST
-  // ---------------------------------
+  /* =========================================================
+     🔒 AUTH + CORE STATE
+     ========================================================= */
+
   const { status, logout } = useAuth();
 
   const [projects, setProjects] = useState([]);
@@ -43,24 +48,58 @@ export default function App() {
 
   const [loading, setLoading] = useState(true);
 
-  // ---------------------------------
-  // 🔁 Initial Load (AUTH + CONTEXT)
-  // ---------------------------------
+  useEffect(() => {
+  projects.forEach(assertProject);
+}, [projects]);
+
+  /* =========================================================
+     🧠 APPLICATION LIFECYCLE LOGGING
+     Purpose:
+     - Detect refresh vs first load
+     - Observe full React remounts
+     ========================================================= */
+
+  useEffect(() => {
+    logger.lifecycle("App mounted");
+
+    const nav = performance.getEntriesByType("navigation")[0];
+    if (nav?.type === "reload") {
+      logger.lifecycle("Page refresh detected");
+    } else {
+      logger.lifecycle("Initial navigation detected");
+    }
+
+    return () => {
+      logger.lifecycle("App unmounted");
+    };
+  }, []);
+
+  /* =========================================================
+     🔁 INITIAL DATA LOAD (AUTHENTICATED CONTEXT)
+     ========================================================= */
+
   useEffect(() => {
     if (status !== "authenticated") return;
 
     async function load() {
       try {
+        logger.ui("Initial load started");
+
+        // 1️⃣ Fetch canonical project list from backend
         const projectList = await fetchProjects();
+        logger.ui("fetchProjects returned", projectList);
         setProjects(projectList);
 
+        // 2️⃣ Fetch active project reference
         const { activeProjectId } = await fetchActiveProject();
+        logger.ui("fetchActiveProject returned", { activeProjectId });
 
+        // 3️⃣ Resolve active project object from list
         const active =
           projectList.find(p => p._id === activeProjectId) || null;
 
         setActiveProject(active);
-        setSelectedProject(active); // ✅ single source of truth
+        setSelectedProject(active); // single source of truth
       } catch (err) {
         if (err.message === "UNAUTHORIZED") {
           logout();
@@ -75,63 +114,83 @@ export default function App() {
     load();
   }, [status, logout]);
 
-  // ---------------------------------
-  // ✅ HARD INVARIANT ENFORCEMENT
-  // ---------------------------------
+  /* =========================================================
+     ✅ INVARIANT: selectedProject mirrors activeProject
+     ========================================================= */
+
   useEffect(() => {
     if (activeProject) {
       setSelectedProject(activeProject);
     }
   }, [activeProject]);
 
-  const isContextReady = !loading && projects.length > 0;
-  const hasActiveProject = !!activeProject;
+  /* =========================================================
+     🔍 STATE CHANGE LOGGING (DEBUG VISIBILITY)
+     ========================================================= */
 
-  // ---------------------------------
-  // 🔒 AUTH GATE
-  // ---------------------------------
+  useEffect(() => {
+    logger.state("projects state updated", projects);
+  }, [projects]);
+
+  useEffect(() => {
+    logger.state("activeProject updated", activeProject);
+  }, [activeProject]);
+
+  useEffect(() => {
+    logger.state("selectedProject updated", selectedProject);
+  }, [selectedProject]);
+
+  /* =========================================================
+     🔒 AUTH GATES
+     ========================================================= */
+
   if (status === "checking") return null;
   if (status === "unauthenticated") return <AuthGate />;
   if (loading) return null;
 
-  // ---------------------------------
-  // Empty State
-  // ---------------------------------
+  /* =========================================================
+     📭 EMPTY STATE — NO PROJECTS EXIST
+     ========================================================= */
+
   if (projects.length === 0) {
     return (
       <CreateProject
         onCreated={(project) => {
+          logger.ui("onCreated received project", project);
           setProjects([project]);
-          setActiveProject(project);
           setSelectedProject(project);
         }}
       />
     );
   }
 
-  // ---------------------------------
-  // Execution Handlers
-  // ---------------------------------
+  /* =========================================================
+     🎮 EXECUTION HANDLERS
+     ========================================================= */
+
   function handleActivate(project) {
-    setActiveProject(project); // selectedProject syncs automatically
+    setActiveProject(project);
+  }
+
+  function handleDeactivate() {
+    setActiveProject(null);
+    setSelectedProject(null);
   }
 
   function handleUpdateActiveBridge(updatedBridge) {
     setActiveBridge(updatedBridge);
-
     patchBridge(updatedBridge._id, {
       sessionGoals: updatedBridge.sessionGoals,
     });
   }
 
-  function handleDeactivate() {
-    setActiveProject(null);
-    setSelectedProject(null); // ✅ avoid stale selection
-  }
+  const isContextReady = !loading && projects.length > 0;
+  const hasActiveProject = !!activeProject;
 
-  // ---------------------------------
-  // UI
-  // ---------------------------------
+  /* =========================================================
+     🖥️ UI
+     ========================================================= */
+
   return (
     <div className="shell">
       <ShellHeader />
@@ -163,7 +222,7 @@ export default function App() {
         )}
       </ThreePanelLayout>
 
-      {/* Project Action Menu */}
+      {/* Project Actions */}
       {showProjectActionMenu && (
         <ProjectActionMenu
           onCreate={() => {
@@ -184,6 +243,7 @@ export default function App() {
           <div className="modal-window">
             <CreateProject
               onCreated={(project) => {
+                logger.ui("modal onCreated received project", project);
                 setProjects(prev => [...prev, project]);
                 setSelectedProject(project);
                 setShowCreateProject(false);
@@ -194,7 +254,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Activate / Deactivate Modal */}
+      {/* Activate / Deactivate */}
       {showActivateProject && (
         <ActivateProjectModal
           projects={projects}
