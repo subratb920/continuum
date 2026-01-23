@@ -22,20 +22,15 @@ services:
         [
           "CMD",
           "mongosh",
-          "-u",
-          "continuum_admin",
-          "-p",
-          "continuum_dev_pw",
-          "--authenticationDatabase",
-          "admin",
+          "mongodb://continuum_admin:continuum_dev_pw@localhost:45171/admin",
           "--quiet",
           "--eval",
           "db.runCommand({ ping: 1 })"
         ]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 10s
+      start_period: 30s
 
 
   continuum-api:
@@ -54,7 +49,7 @@ services:
       DB_NAME: continuum
       JWT_SECRET: dev-secret
       CLIENT_ORIGIN: http://localhost:45173
-      MONGO_URI: mongodb://continuum_admin:continuum_dev_pw@mongo:27017/continuum?authSource=admin
+      MONGO_URI: mongodb://continuum_admin:continuum_dev_pw@continuum-mongo:45171/continuum?authSource=admin
 
     depends_on:
       mongo:
