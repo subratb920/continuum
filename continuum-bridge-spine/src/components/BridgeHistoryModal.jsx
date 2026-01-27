@@ -3,7 +3,12 @@ import "./BridgeHistoryModal.css";
 export default function BridgeHistoryModal({ bridge, onClose }) {
   if (!bridge) return null;
 
-  const goals = bridge.sessionGoals ?? [];
+  const goals = Array.isArray(bridge.sessionGoals)
+    ? bridge.sessionGoals
+    : bridge.sessionGoals
+      ? [bridge.sessionGoals]
+      : [];
+
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -28,14 +33,26 @@ export default function BridgeHistoryModal({ bridge, onClose }) {
             </p>
           ) : (
             <ul className="goal-list">
-              {goals.map((g, index) => (
-                <li key={g.id ?? `${index}-${g.text}`}>
-                  <span>{g.text}</span>
-                  <span className={`goal-status ${g.status}`}>
-                    {g.status}
-                  </span>
-                </li>
-              ))}
+              {goals.map((g, index) => {
+                const text =
+                  typeof g.text === "string"
+                    ? g.text
+                    : g.text?.text ?? JSON.stringify(g.text);
+
+                const status =
+                  typeof g.status === "string"
+                    ? g.status
+                    : g.status?.status ?? "untouched";
+
+                return (
+                  <li key={g.id ?? `${index}-${text}`}>
+                    <span>{text}</span>
+                    <span className={`goal-status ${status}`}>
+                      {status}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>

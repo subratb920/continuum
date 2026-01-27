@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { assertProject } from "./utils/assertions";
 
-
 import { useAuth } from "./state/authStore";
 import AuthGate from "./auth/AuthGate";
 
@@ -13,8 +12,6 @@ import CreateProject from "./screens/CreateProject";
 
 import BridgeDraftModal from "./components/BridgeDraftModal";
 import BridgeHistoryModal from "./components/BridgeHistoryModal";
-
-import ProjectActionMenu from "./components/ProjectActionMenu";
 import ActivateProjectModal from "./components/ActivateProjectModal";
 
 import {
@@ -43,20 +40,20 @@ export default function App() {
   const [bridgeRevision, setBridgeRevision] = useState(0);
 
   const [showCreateProject, setShowCreateProject] = useState(false);
-  const [showProjectActionMenu, setShowProjectActionMenu] = useState(false);
   const [showActivateProject, setShowActivateProject] = useState(false);
 
   const [loading, setLoading] = useState(true);
 
+  /* =========================================================
+     🧱 INVARIANT ENFORCEMENT
+     ========================================================= */
+
   useEffect(() => {
-  projects.forEach(assertProject);
-}, [projects]);
+    projects.forEach(assertProject);
+  }, [projects]);
 
   /* =========================================================
      🧠 APPLICATION LIFECYCLE LOGGING
-     Purpose:
-     - Detect refresh vs first load
-     - Observe full React remounts
      ========================================================= */
 
   useEffect(() => {
@@ -85,7 +82,7 @@ export default function App() {
       try {
         logger.ui("Initial load started");
 
-        // 1️⃣ Fetch canonical project list from backend
+        // 1️⃣ Fetch canonical project list
         const projectList = await fetchProjects();
         logger.ui("fetchProjects returned", projectList);
         setProjects(projectList);
@@ -94,12 +91,12 @@ export default function App() {
         const { activeProjectId } = await fetchActiveProject();
         logger.ui("fetchActiveProject returned", { activeProjectId });
 
-        // 3️⃣ Resolve active project object from list
+        // 3️⃣ Resolve active project object
         const active =
           projectList.find(p => p._id === activeProjectId) || null;
 
         setActiveProject(active);
-        setSelectedProject(active); // single source of truth
+        setSelectedProject(active);
       } catch (err) {
         if (err.message === "UNAUTHORIZED") {
           logout();
@@ -125,7 +122,7 @@ export default function App() {
   }, [activeProject]);
 
   /* =========================================================
-     🔍 STATE CHANGE LOGGING (DEBUG VISIBILITY)
+     🔍 STATE CHANGE LOGGING
      ========================================================= */
 
   useEffect(() => {
@@ -149,7 +146,7 @@ export default function App() {
   if (loading) return null;
 
   /* =========================================================
-     📭 EMPTY STATE — NO PROJECTS EXIST
+     📭 EMPTY STATE — NO PROJECTS
      ========================================================= */
 
   if (projects.length === 0) {
@@ -203,7 +200,8 @@ export default function App() {
         bridgeRevision={bridgeRevision}
         onSelectProject={setSelectedProject}
         onSelectBridge={setSelectedBridge}
-        onCreateProject={() => setShowProjectActionMenu(true)}
+        onCreateProject={() => setShowCreateProject(true)}
+        onActivateProject={() => setShowActivateProject(true)}
       >
         {isContextReady && hasActiveProject ? (
           <ReEntry
@@ -222,22 +220,9 @@ export default function App() {
         )}
       </ThreePanelLayout>
 
-      {/* Project Actions */}
-      {showProjectActionMenu && (
-        <ProjectActionMenu
-          onCreate={() => {
-            setShowProjectActionMenu(false);
-            setShowCreateProject(true);
-          }}
-          onActivate={() => {
-            setShowProjectActionMenu(false);
-            setShowActivateProject(true);
-          }}
-          onClose={() => setShowProjectActionMenu(false)}
-        />
-      )}
-
-      {/* Create Project Modal */}
+      {/* ============================
+          Create Project Modal
+         ============================ */}
       {showCreateProject && (
         <div className="modal-backdrop">
           <div className="modal-window">
@@ -254,7 +239,9 @@ export default function App() {
         </div>
       )}
 
-      {/* Activate / Deactivate */}
+      {/* ============================
+          Activate / Deactivate Modal
+         ============================ */}
       {showActivateProject && (
         <ActivateProjectModal
           projects={projects}
@@ -271,7 +258,9 @@ export default function App() {
         />
       )}
 
-      {/* Bridge Modals */}
+      {/* ============================
+          Bridge Modals
+         ============================ */}
       {activeBridge && (
         <BridgeDraftModal
           bridge={activeBridge}

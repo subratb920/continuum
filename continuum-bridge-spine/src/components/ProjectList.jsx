@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import "./ProjectList.css";
 
 /**
@@ -7,6 +7,7 @@ import "./ProjectList.css";
  * - Selecting a project ≠ activating it
  * - Active project is driven ONLY by backend execution state
  * - Selected project controls what is being viewed
+ * - Project action menu is locally anchored (no portals)
  */
 export default function ProjectList({
   projects,
@@ -14,7 +15,27 @@ export default function ProjectList({
   selectedProject,
   onSelectProject,
   onCreateProject,
+  onActivateProject,
 }) {
+  const [showMenu, setShowMenu] = useState(false);
+
+  /* ---------------------------------------------------------
+     Close menu on outside click
+     --------------------------------------------------------- */
+  useEffect(() => {
+    if (!showMenu) return;
+
+    function handleOutsideClick(e) {
+      if (!e.target.closest(".project-menu-anchor")) {
+        setShowMenu(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () =>
+      document.removeEventListener("mousedown", handleOutsideClick);
+  }, [showMenu]);
+
   return (
     <div className="project-pane">
       {/* ----------------------------------
@@ -23,15 +44,63 @@ export default function ProjectList({
       <div className="project-pane-header">
         <span className="project-pane-title">Projects</span>
 
-        <button
-          type="button"
-          className="project-add"
-          onClick={onCreateProject}
-          title="Create project"
-          aria-label="Create project"
-        >
-          +
-        </button>
+        <div className="project-menu-anchor">
+          <button
+            type="button"
+            className="project-add"
+            onClick={() => setShowMenu(true)}
+            title="Project actions"
+            aria-label="Project actions"
+            aria-haspopup="menu"
+            aria-expanded={showMenu}
+          >
+            +
+          </button>
+
+          {showMenu && (
+            <div
+              className="project-action-menu"
+              role="menu"
+            >
+              <button
+                role="menuitem"
+                onClick={() => {
+                  setShowMenu(false);
+                  onCreateProject();
+                }}
+              >
+                Create Project
+              </button>
+
+              <button disabled role="menuitem">
+                Edit Project
+              </button>
+
+              <button disabled role="menuitem">
+                Delete Project
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowMenu(false);
+                  onActivateProject(selectedProject);
+                }}
+              >
+                Activate Project
+              </button>
+
+
+              <hr />
+
+              <button
+                role="menuitem"
+                onClick={() => setShowMenu(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ----------------------------------
