@@ -10,6 +10,7 @@ export default function ThreePanelLayout({
   onSelectProject,
   onSelectBridge,
   onCreateProject,
+  onActivateProject,
   children,
 }) {
   return (
@@ -21,6 +22,7 @@ export default function ThreePanelLayout({
           selectedProject={selectedProject}
           onSelectProject={onSelectProject}
           onCreateProject={onCreateProject}
+          onActivateProject={onActivateProject}
         />
       </aside>
 
