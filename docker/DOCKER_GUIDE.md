@@ -1,16 +1,7 @@
 # Continuum — Docker Reference Guide to run the entire continuum with a single docker command.
 
-This document is the **single source of truth** for running Continuum
+This document is the guide for running Continuum
 (UI + API + MongoDB) using Docker.
-
-It is written to be:
-- boring
-- explicit
-- repeatable
-- safe after long breaks
-
-No steps are implicit.
-
 ---
 
 ## 0. Prerequisites (Once)
@@ -245,7 +236,15 @@ npm run dev
 
 4. Open mongdb-sh in the terminal to query and view the database, collections, and documents.
 
-docker exec -it continuum-mongo mongosh
+mongosh "mongodb://continuum_admin:continuum_dev_pw@localhost:45171/continuum?authSource=admin"
+
+or
+
+docker exec -it continuum-mongo mongosh \
+  --port 45171 \
+  -u continuum_admin \
+  -p continuum_dev_pw \
+  --authenticationDatabase admin
 
 
 ## 🔒 Why This File Matters
