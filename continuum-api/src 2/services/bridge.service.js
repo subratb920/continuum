@@ -38,12 +38,7 @@ export function createBridgeService(db) {
       index,
       name: `bridge-${index}`,
       status: "draft",
-      interval: {
-        mode: interval?.mode,
-        duration: interval?.duration,
-        startedAt: new Date(),
-        endedAt: null
-      },
+      interval,
       sessionGoals,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -70,61 +65,40 @@ export function createBridgeService(db) {
   /**
    * Update an existing bridge
    */
-  // async function updateBridge(bridgeId, updates) {
-  //   const bid = new ObjectId(bridgeId);
-
-  //   log.debug(
-  //     { bridgeId: bid },
-  //     "Updating bridge"
-  //   );
-
-  //   const result = await bridgeCol.updateOne(
-  //     { _id: bid },
-  //     {
-  //       $set: {
-  //         ...updates,
-  //         updatedAt: new Date(),
-  //       },
-  //     }
-  //   );
-
-  //   if (result.matchedCount === 0) {
-  //     log.warn(
-  //       {
-  //         bridgeId: bid,
-  //         reason: "bridge_not_found",
-  //       },
-  //       "Bridge update rejected"
-  //     );
-  //     throw new Error("Bridge not found");
-  //   }
-
-  //   log.info(
-  //     { bridgeId: bid },
-  //     "Bridge updated"
-  //   );
-  // }
-
   async function updateBridge(bridgeId, updates) {
-  const bid = new ObjectId(bridgeId);
+    const bid = new ObjectId(bridgeId);
 
-  const updateDoc = {
-    updatedAt: new Date(),
-  };
+    log.debug(
+      { bridgeId: bid },
+      "Updating bridge"
+    );
 
-  if (updates.status) {
-    updateDoc.status = updates.status;
+    const result = await bridgeCol.updateOne(
+      { _id: bid },
+      {
+        $set: {
+          ...updates,
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    if (result.matchedCount === 0) {
+      log.warn(
+        {
+          bridgeId: bid,
+          reason: "bridge_not_found",
+        },
+        "Bridge update rejected"
+      );
+      throw new Error("Bridge not found");
+    }
+
+    log.info(
+      { bridgeId: bid },
+      "Bridge updated"
+    );
   }
-
-  if (updates.ended) {
-    updateDoc["interval.endedAt"] = new Date();
-  }
-
-  await bridgeCol.updateOne(
-    { _id: bid },
-    { $set: updateDoc }
-  );
-}
 
   /**
    * List all bridges for a project (chronological order)

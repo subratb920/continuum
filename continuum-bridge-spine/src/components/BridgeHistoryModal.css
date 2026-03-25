@@ -85,6 +85,7 @@
   color: #dc2626;
 }
 
+
 /* ------------------------------
    Footer
 ------------------------------ */
@@ -98,4 +99,30 @@
 
 .modal-footer button {
   padding: 6px 12px;
+}
+
+.bridge-times {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bridge-time-row {
+  display: grid;
+  grid-template-columns: 80px auto;
+  align-items: center;
+}
+
+.bridge-time-label {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.bridge-time-value {
+  font-size: 13px;
+  color: #111827;
 }
