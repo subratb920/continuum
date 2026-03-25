@@ -1,4 +1,5 @@
 import "./BridgeHistoryModal.css";
+import { formatDateTime } from "../utils/time";
 
 export default function BridgeHistoryModal({ bridge, onClose }) {
   if (!bridge) return null;
@@ -9,6 +10,7 @@ export default function BridgeHistoryModal({ bridge, onClose }) {
       ? [bridge.sessionGoals]
       : [];
 
+  console.log("Bridge interval:", bridge.interval);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -55,7 +57,25 @@ export default function BridgeHistoryModal({ bridge, onClose }) {
               })}
             </ul>
           )}
+          <div className="bridge-times">
+          <div className="bridge-time-row">
+            <span className="bridge-time-label">Started</span>
+            <span className="bridge-time-value">
+              {formatDateTime(bridge.interval?.startedAt || bridge.createdAt)}
+            </span>
+          </div>
+          <div className="bridge-time-row">
+            <span className="bridge-time-label">Closed</span>
+            <span className="bridge-time-value">
+              {formatDateTime(
+                bridge.interval?.endedAt || bridge.updatedAt
+              )}
+            </span>
+          </div>
+        </div>
         </section>
+
+        
 
         <footer className="modal-footer">
           <button onClick={onClose}>Close</button>

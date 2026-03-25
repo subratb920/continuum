@@ -54,7 +54,7 @@ export function assertBridge(bridge) {
       throw new Error(`Goal.text invalid at index ${i}`);
     }
 
-    if (!["untouched", "completed", "failed"].includes(g.status)) {
+    if (!["untouched", "completed", "incomplete"].includes(g.status)) {
       throw new Error(`Invalid goal status at index ${i}`);
     }
   });
