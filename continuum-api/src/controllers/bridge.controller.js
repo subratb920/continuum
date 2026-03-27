@@ -7,13 +7,14 @@ export async function startBridge(req, res) {
   const bridgeService = createBridgeService(db);
   const executionService = createExecutionService(db);
 
-  const { projectId, interval, sessionGoals } = req.body;
+  const { projectId, interval, sessionGoals, ticketUrl } = req.body;
 
   req.log.info(
     {
       userId: req.user.id,
       projectId,
       interval,
+      ticketUrl,
     },
     "Starting bridge"
   );
@@ -28,7 +29,8 @@ export async function startBridge(req, res) {
   const bridge = await bridgeService.startBridge(
     projectId,
     interval,
-    sessionGoals
+    sessionGoals,
+    ticketUrl
   );
 
   req.log.info(

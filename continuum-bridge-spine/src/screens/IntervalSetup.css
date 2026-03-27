@@ -140,3 +140,38 @@ button.primary:disabled {
   background: rgba(255, 255, 255, 0.4);
   pointer-events: none;
 }
+
+/* --------------------------------
+   Ticket / Story Link
+-------------------------------- */
+
+.interval-label {
+  display: block;
+  margin-top: 16px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.interval-input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box; 
+}
+
+.interval-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2);
+}
+
+.interval-hint {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+}

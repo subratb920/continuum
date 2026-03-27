@@ -126,3 +126,23 @@
   font-size: 13px;
   color: #111827;
 }
+
+.bridge-ticket {
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+
+.ticket-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #eef2ff;
+  color: #4338ca;
+  border-radius: 6px;
+  font-size: 12px;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.ticket-badge:hover {
+  background: #e0e7ff;
+}

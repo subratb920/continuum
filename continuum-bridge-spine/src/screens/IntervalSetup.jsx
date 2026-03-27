@@ -7,6 +7,7 @@ export default function IntervalSetup({
   selectedProject,
   onIntervalStarted,
 }) {
+  const [ticketUrl, setTicketUrl] = useState("");
   const [goalInput, setGoalInput] = useState("");
   const [goals, setGoals] = useState([]);
   const [mode, setMode] = useState("Execution");
@@ -52,6 +53,7 @@ export default function IntervalSetup({
       projectId: activeProject._id,
       mode,
       duration,
+      ticketUrl,
       sessionGoals: goals.map((g) => ({
         id: g.id,
         text: g.text,
@@ -104,6 +106,18 @@ export default function IntervalSetup({
               {m}
             </label>
           ))}
+        </section>
+
+        <section className="interval-section">
+          <h3>Ticket / Story Link</h3>
+
+          <input
+            type="url"
+            placeholder="Paste a GitHub issue, Jira ticket, or story link."
+            value={ticketUrl}
+            onChange={(e) => setTicketUrl(e.target.value)}
+            className="interval-input"
+          />
         </section>
 
         {/* Session Goals */}

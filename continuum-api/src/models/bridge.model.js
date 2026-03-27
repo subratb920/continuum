@@ -25,6 +25,7 @@ export function createBridgeDoc({
   index,
   interval = {},
   sessionGoals = [],
+  ticketUrl = null
 }) {
   return {
     // Persist projectId as ObjectId (or leave as-is if already one)
@@ -41,6 +42,9 @@ export function createBridgeDoc({
 
     // lifecycle status (explicit)
     status: "draft",
+
+    // Link to GitHub / Jira / ticket system
+    ticketUrl: ticketUrl ?? null,
 
     // Historical snapshot of the interval settings
     interval: {
