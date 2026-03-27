@@ -11,7 +11,7 @@ export function createBridgeService(db) {
    * Start a new bridge (draft)
    * Assumes execution law has already been enforced.
    */
-  async function startBridge(projectId, interval, goals) {
+  async function startBridge(projectId, interval, goals = [], ticketUrl) {
     const pid = new ObjectId(projectId);
 
     log.debug(
@@ -19,18 +19,44 @@ export function createBridgeService(db) {
       "Starting bridge"
     );
 
-    // Determine next bridge index (chronological spine)
-    const count = await bridgeCol.countDocuments({
-      projectId: pid,
+    console.log("START BRIDGE:", {
+      projectId,
+      ticketUrl,
+      time: new Date().toISOString()
     });
 
-    const index = count + 1;
+    // Determine next bridge index (chronological spine)
+    const counters = db.collection("bridge_counters");
 
+    const result = await counters.findOneAndUpdate(
+      { projectId: pid },
+      { $inc: { seq: 1 } },
+      {
+        upsert: true,
+        returnDocument: "after",
+      }
+    );
+
+    // 🔥 ALWAYS handle undefined/null
+    let index;
+
+    if (result?.value?.seq != null) {
+      index = result.value.seq;
+    } else {
+      // Fallback: fetch manually
+      const doc = await counters.findOne({ projectId: pid });
+
+      if (!doc || typeof doc.seq !== "number") {
+        throw new Error("Failed to generate bridge index");
+      }
+
+      index = doc.seq;
+    }
     // ✅ Normalize session goals (BACKEND LAW)
-    const sessionGoals = (goals ?? []).map((text) => ({
-      id: crypto.randomUUID(),
-      text,
-      status: "untouched",
+    const sessionGoals = (goals ?? []).map((g) => ({
+      id: g?.id ?? crypto.randomUUID(),
+      text: typeof g === "string" ? g : g?.text ?? "",
+      status: g?.status ?? "untouched",
     }));
 
     const doc = {
@@ -38,6 +64,7 @@ export function createBridgeService(db) {
       index,
       name: `bridge-${index}`,
       status: "draft",
+      ticketUrl,
       interval: {
         mode: interval?.mode,
         duration: interval?.duration,
@@ -106,25 +133,33 @@ export function createBridgeService(db) {
   // }
 
   async function updateBridge(bridgeId, updates) {
-  const bid = new ObjectId(bridgeId);
+    const bid = new ObjectId(bridgeId);
 
-  const updateDoc = {
-    updatedAt: new Date(),
-  };
+    const updateDoc = {
+      updatedAt: new Date(),
+    };
 
-  if (updates.status) {
-    updateDoc.status = updates.status;
+    if (updates.status) {
+      updateDoc.status = updates.status;
+    }
+
+    if (updates.ended) {
+      updateDoc["interval.endedAt"] = new Date();
+    }
+
+    if ("sessionGoals" in updates) {
+      updateDoc.sessionGoals = updates.sessionGoals;
+    }
+
+    if (updates.ticketUrl) {
+      updateDoc.ticketUrl = updates.ticketUrl;
+    }
+
+    await bridgeCol.updateOne(
+      { _id: bid },
+      { $set: updateDoc }
+    );
   }
-
-  if (updates.ended) {
-    updateDoc["interval.endedAt"] = new Date();
-  }
-
-  await bridgeCol.updateOne(
-    { _id: bid },
-    { $set: updateDoc }
-  );
-}
 
   /**
    * List all bridges for a project (chronological order)
@@ -145,6 +180,7 @@ export function createBridgeService(db) {
     log.info(
       {
         projectId: pid,
+        ticketUrl: bridges.length > 0 ? bridges[0].ticketUrl : null,
         count: bridges.length,
       },
       "Bridges retrieved"

@@ -20,47 +20,34 @@ export default function BridgeSpine({
      - Prevent malformed legacy data from entering UI
      ========================================================= */
   useEffect(() => {
-    if (!selectedProject) return;
+  if (!selectedProject) return;
 
-    let cancelled = false;
+  let currentRequest = true;
 
-    async function loadBridges() {
-      try {
-        const data = await fetchBridges(selectedProject._id);
-        console.log("RAW BRIDGES FROM API:", data);
+  async function loadBridges() {
+    try {
+      const data = await fetchBridges(selectedProject._id);
 
-        // 🧱 NORMALIZATION BOUNDARY (SINGLE SOURCE OF TRUTH)
-        const normalized = data.map((bridge) => {
-          console.log("Before normalize:", bridge);
-          const result = normalizeBridge(bridge);
-          console.log("After normalize:", result);
-          return result;
-        });
+      if (!currentRequest) return; // 🔥 ignore stale response
 
-        // 🔒 HARD CONTRACT ASSERTION (DEV SAFETY)
-        normalized.forEach((bridge) => {
-          try {
-            assertBridge(bridge);
-          } catch (err) {
-            console.error("Bridge assertion failed for:", bridge);
-            throw err;
-          }
-        });
+      const normalized = data.map((bridge) =>
+        normalizeBridge(bridge)
+      );
 
-        if (!cancelled) {
-          setBridges(normalized);
-        }
-      } catch (err) {
-        console.error("Failed to load bridges", err);
-      }
+      normalized.forEach(assertBridge);
+
+      setBridges(normalized);
+    } catch (err) {
+      console.error("Failed to load bridges", err);
     }
+  }
 
-    loadBridges();
+  loadBridges();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedProject, bridgeRevision]);
+  return () => {
+    currentRequest = false; // 🔥 invalidate previous request
+  };
+}, [selectedProject, bridgeRevision]);
 
   /* =========================================================
      📐 Stable ordering (oldest → newest)

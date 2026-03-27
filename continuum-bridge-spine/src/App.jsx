@@ -266,7 +266,11 @@ export default function App() {
           bridge={activeBridge}
           onUpdate={handleUpdateActiveBridge}
           onClose={async () => {
-            await finalizeBridge(activeBridge._id);
+            await finalizeBridge(
+              activeBridge._id,
+              activeBridge.sessionGoals
+            );
+
             setActiveBridge(null);
             setBridgeRevision(r => r + 1);
           }}

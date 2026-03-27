@@ -66,20 +66,23 @@ export async function startInterval({
   mode,
   duration,
   sessionGoals,
+  ticketUrl,
 }) {
   return request("POST", "/bridges/start", {
     projectId,
     interval: { mode, duration },
     sessionGoals,
+    ticketUrl,
   });
 }
 
-export async function finalizeBridge(bridgeId) {
+export async function finalizeBridge(bridgeId, sessionGoals) {
   if (!bridgeId) return;
 
   await request("PATCH", `/bridges/${bridgeId}`, {
     status: "finalized",
-    "interval.endedAt": new Date().toISOString(),
+    ended: true,
+    sessionGoals,
   });
 }
 

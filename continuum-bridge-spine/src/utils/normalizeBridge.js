@@ -22,6 +22,7 @@ export function normalizeBridge(raw) {
       : [],
 
     status: raw.status ?? "draft",
+    ticketUrl: raw.ticketUrl ?? null, 
 
     createdAt: raw.createdAt ?? new Date().toISOString(),
     updatedAt: raw.updatedAt ?? null,

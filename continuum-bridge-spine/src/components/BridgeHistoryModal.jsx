@@ -1,5 +1,6 @@
 import "./BridgeHistoryModal.css";
 import { formatDateTime } from "../utils/time";
+import { extractTicketKey } from "../utils/ticket";
 
 export default function BridgeHistoryModal({ bridge, onClose }) {
   if (!bridge) return null;
@@ -10,7 +11,7 @@ export default function BridgeHistoryModal({ bridge, onClose }) {
       ? [bridge.sessionGoals]
       : [];
 
-  console.log("Bridge interval:", bridge.interval);
+  console.log("Goals data:", bridge.sessionGoals);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -26,6 +27,20 @@ export default function BridgeHistoryModal({ bridge, onClose }) {
           <p className="modal-meta">
             {bridge.interval.mode} · {bridge.interval.duration} min
           </p>
+
+          {bridge.ticketUrl && (
+            <p className="bridge-ticket">
+              <strong>Ticket:</strong>{" "}
+              <a
+                href={bridge.ticketUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ticket-badge"
+              >
+                {extractTicketKey(bridge.ticketUrl)}
+              </a>
+            </p>
+          )}
 
           <h3>Session Goals</h3>
 
@@ -58,24 +73,24 @@ export default function BridgeHistoryModal({ bridge, onClose }) {
             </ul>
           )}
           <div className="bridge-times">
-          <div className="bridge-time-row">
-            <span className="bridge-time-label">Started</span>
-            <span className="bridge-time-value">
-              {formatDateTime(bridge.interval?.startedAt || bridge.createdAt)}
-            </span>
+            <div className="bridge-time-row">
+              <span className="bridge-time-label">Started</span>
+              <span className="bridge-time-value">
+                {formatDateTime(bridge.interval?.startedAt || bridge.createdAt)}
+              </span>
+            </div>
+            <div className="bridge-time-row">
+              <span className="bridge-time-label">Closed</span>
+              <span className="bridge-time-value">
+                {formatDateTime(
+                  bridge.interval?.endedAt || bridge.updatedAt
+                )}
+              </span>
+            </div>
           </div>
-          <div className="bridge-time-row">
-            <span className="bridge-time-label">Closed</span>
-            <span className="bridge-time-value">
-              {formatDateTime(
-                bridge.interval?.endedAt || bridge.updatedAt
-              )}
-            </span>
-          </div>
-        </div>
         </section>
 
-        
+
 
         <footer className="modal-footer">
           <button onClick={onClose}>Close</button>
