@@ -13,6 +13,7 @@ import CreateProject from "./screens/CreateProject";
 import BridgeDraftModal from "./components/BridgeDraftModal";
 import BridgeHistoryModal from "./components/BridgeHistoryModal";
 import ActivateProjectModal from "./components/ActivateProjectModal";
+import AuthCallback from "./pages/AuthCallback";
 
 import {
   fetchActiveProject,
@@ -142,6 +143,9 @@ export default function App() {
      ========================================================= */
 
   if (status === "checking") return null;
+  if (window.location.pathname === "/auth/callback") {
+    return <AuthCallback />;
+  }
   if (status === "unauthenticated") return <AuthGate />;
   if (loading) return null;
 

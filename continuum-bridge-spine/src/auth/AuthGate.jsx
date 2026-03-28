@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "../state/authStore";
+import { FaGithub, FaGoogle } from "react-icons/fa";
 import "./AuthGate.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
@@ -73,10 +74,39 @@ export default function AuthGate() {
             {loading
               ? "Please wait…"
               : mode === "login"
-              ? "Sign In"
-              : "Create Account"}
+                ? "Sign In"
+                : "Create Account"}
           </button>
         </form>
+
+        <div className="auth-divider">
+          <span>or</span>
+        </div>
+
+        <div className="auth-social">
+          <button
+            type="button"
+            className="social-btn github"
+            onClick={() => {
+              window.location.href = `${API_BASE}/auth/github`;
+            }}
+          >
+            <FaGithub className="icon" />
+            Continue with GitHub
+          </button>
+
+          <button
+            type="button"
+            className="social-btn google"
+            onClick={() => {
+              console.log("GITHUB CLICKED");
+              window.location.href = `${API_BASE}/auth/google`;
+            }}
+          >
+            <FaGoogle className="icon" />
+            Continue with Google
+          </button>
+        </div>
 
         <div className="auth-switch">
           {mode === "login" ? (
