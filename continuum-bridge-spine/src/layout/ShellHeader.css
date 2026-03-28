@@ -32,3 +32,55 @@
   color: #0066cc;
   cursor: pointer;
 }
+
+/* ============================= */
+/* Create Project Menu */
+/* ============================= */
+
+.create-project-menu {
+  position: relative;
+}
+
+.menu-trigger {
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #f9f9f9;
+  cursor: pointer;
+}
+
+.menu-trigger:hover {
+  background: #f0f0f0;
+}
+
+.menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: 32px;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  min-width: 200px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  z-index: 100;
+}
+
+.menu-dropdown button {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-dropdown button:hover {
+  background: #f5f5f5;
+}
+
+.menu-dropdown button:disabled {
+  color: #999;
+  cursor: not-allowed;
+}
