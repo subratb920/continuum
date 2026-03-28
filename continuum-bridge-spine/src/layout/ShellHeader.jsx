@@ -15,6 +15,11 @@ export default function ShellHeader({ onManualCreate }) {
     setOpen(false);
   }
 
+  function handleExternalCreate() {
+  window.open("http://localhost:3000/create", "_blank");
+  setOpen(false);
+}
+
   function handleManual() {
     onManualCreate?.();
     setOpen(false);
@@ -33,7 +38,7 @@ export default function ShellHeader({ onManualCreate }) {
 
           {open && (
             <div className="menu-dropdown">
-              <button onClick={handleBackstage}>
+              <button onClick={handleExternalCreate}>
                 🚀 Create via Backstage
               </button>
 
