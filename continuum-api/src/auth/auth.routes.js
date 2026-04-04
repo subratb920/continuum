@@ -25,16 +25,11 @@ router.get("/github", (req, res) => {
 
 /**
  * Step 2: GitHub OAuth callback
- *
- * IMPORTANT:
- * - DB is accessed ONLY at runtime (after bootstrap)
- * - Ensures system lifecycle correctness
  */
 router.get("/github/callback", async (req, res) => {
     const { code } = req.query;
 
     try {
-        // ✅ SAFE: DB accessed after initialization
         const db = getDB();
         const users = db.collection("users");
         const sessions = db.collection("sessions");
@@ -44,14 +39,17 @@ router.get("/github/callback", async (req, res) => {
         const JWT_SECRET = process.env.JWT_SECRET;
 
         /**
-         * 1️⃣ Exchange GitHub code → access token
+         * 1️⃣ Exchange code → access token
          */
         const tokenRes = await fetch(
             "https://github.com/login/oauth/access_token",
             {
                 method: "POST",
-                headers: { Accept: "application/json" },
-                body: JSON.stringify({
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: new URLSearchParams({
                     client_id: CLIENT_ID,
                     client_secret: CLIENT_SECRET,
                     code,
@@ -60,10 +58,16 @@ router.get("/github/callback", async (req, res) => {
         );
 
         const tokenData = await tokenRes.json();
+
+        if (!tokenData.access_token) {
+            console.error("TOKEN ERROR:", tokenData);
+            return res.status(400).send("GitHub token exchange failed");
+        }
+
         const access_token = tokenData.access_token;
 
         /**
-         * 2️⃣ Fetch GitHub user profile
+         * 2️⃣ Fetch GitHub user
          */
         const userRes = await fetch("https://api.github.com/user", {
             headers: {
@@ -74,9 +78,10 @@ router.get("/github/callback", async (req, res) => {
 
         const githubUser = await userRes.json();
 
+        console.log("GITHUB USER:", githubUser);
+
         /**
-         * 3️⃣ Fetch user emails
-         * GitHub may not include email in profile
+         * 3️⃣ Fetch emails
          */
         const emailRes = await fetch(
             "https://api.github.com/user/emails",
@@ -94,7 +99,7 @@ router.get("/github/callback", async (req, res) => {
 
         if (Array.isArray(emails)) {
             primaryEmail =
-                emails.find(e => e.primary)?.email ||
+                emails.find((e) => e.primary)?.email ||
                 emails[0]?.email;
         } else {
             console.error("EMAIL FETCH FAILED:", emails);
@@ -106,23 +111,60 @@ router.get("/github/callback", async (req, res) => {
          */
         let dbUser = await users.findOne({ githubId: githubUser.id });
 
+        const execution = db.collection("execution_state");
+
         if (!dbUser) {
+            // 1️⃣ Create user
             const result = await users.insertOne({
                 githubId: githubUser.id,
                 email: primaryEmail,
                 createdAt: new Date(),
+                updatedAt: new Date(),
             });
 
+            const userId = result.insertedId;
+
+            // 2️⃣ Create execution state
+            const executionStateDoc = {
+                userId,
+                activeProjectId: null,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            };
+
+            const { insertedId: executionStateId } =
+                await execution.insertOne(executionStateDoc);
+
+            // 3️⃣ Link execution state to user
+            await users.updateOne(
+                { _id: userId },
+                {
+                    $set: { executionStateId },
+                }
+            );
+
             dbUser = {
-                _id: result.insertedId,
+                _id: userId,
                 githubId: githubUser.id,
                 email: primaryEmail,
+                executionStateId,
             };
         }
 
         /**
-         * 5️⃣ Check existing session
-         * Reuse token if still valid
+         * 5️⃣ Store GitHub access token
+         */
+        await users.updateOne(
+            { _id: dbUser._id },
+            {
+                $set: {
+                    githubAccessToken: access_token,
+                },
+            }
+        );
+
+        /**
+         * 6️⃣ Check existing session
          */
         const existingSession = await sessions.findOne({
             userId: dbUser._id,
@@ -130,32 +172,31 @@ router.get("/github/callback", async (req, res) => {
 
         if (existingSession) {
             try {
-                // ✅ Validate token expiry
                 jwt.verify(existingSession.token, JWT_SECRET);
 
                 return res.redirect(
                     `http://localhost:45173/auth/callback?token=${existingSession.token}`
                 );
             } catch {
-                // Token expired → proceed to create new
+                // expired → continue
             }
         }
 
         /**
-         * 6️⃣ Generate new JWT token
+         * 7️⃣ Generate JWT
          */
         const token = jwt.sign(
-            { 
-                userId: dbUser._id, 
-                email: primaryEmail, 
-                authProvider: "github" 
+            {
+                userId: dbUser._id,
+                email: primaryEmail,
+                authProvider: "github",
             },
             JWT_SECRET,
             { expiresIn: "7d" }
         );
 
         /**
-         * 7️⃣ Store session (single active session per user)
+         * 8️⃣ Store session
          */
         await sessions.updateOne(
             { userId: dbUser._id },
@@ -169,7 +210,7 @@ router.get("/github/callback", async (req, res) => {
         );
 
         /**
-         * 8️⃣ Redirect to frontend with token
+         * 9️⃣ Redirect to frontend
          */
         res.redirect(
             `http://localhost:45173/auth/callback?token=${token}`
