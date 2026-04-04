@@ -1,48 +1,73 @@
-/* Root container */
 .github-import-root {
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
   background-color: #0d1117;
-  color: #c9d1d9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 999;
+}
 
+.github-import-card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 420px;
+  padding: 40px 32px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-
-  padding: 40px;
   text-align: center;
+  gap: 16px;
 }
 
-/* Title */
-.github-import-root h1 {
-  font-size: 28px;
+.github-import-card h1 {
+  font-size: 24px;
   font-weight: 600;
-  margin-bottom: 12px;
   color: #f0f6fc;
 }
 
-/* Subtitle */
-.github-import-root p {
+.github-import-card p {
   font-size: 14px;
   color: #8b949e;
-  margin-bottom: 30px;
-  max-width: 400px;
+  line-height: 1.5;
+  max-width: 320px;
 }
 
-/* GitHub Auth Button */
-.github-auth-btn {
-  display: inline-block;
-  padding: 12px 20px;
-  margin-bottom: 20px;
+.btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-top: 10px;
+}
 
-  background-color: #238636;
-  color: #ffffff;
+.github-auth-btn,
+.skip-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: 42px;
+  padding: 0 16px;
+
+  font-size: 14px;
+  font-weight: 500;
 
   border-radius: 6px;
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 14px;
+  cursor: pointer;
 
+  box-sizing: border-box;
+}
+
+.github-auth-btn {
+  background-color: #238636;
+  color: #ffffff;
+  text-decoration: none;
+  border: 1px solid #238636;
   transition: background 0.2s ease, transform 0.1s ease;
 }
 
@@ -54,27 +79,11 @@
   transform: scale(0.97);
 }
 
-/* Divider */
-.github-import-root hr {
-  width: 200px;
-  border: none;
-  border-top: 1px solid #30363d;
-  margin: 20px 0;
-}
-
-/* Skip Button */
 .skip-btn {
   background: transparent;
   border: 1px solid #30363d;
-
   color: #c9d1d9;
-  padding: 10px 16px;
-  border-radius: 6px;
-
-  font-size: 14px;
-  cursor: pointer;
-
-  transition: background 0.2s ease, border 0.2s ease;
+  transition: background 0.2s ease, border 0.2s ease, transform 0.1s ease;
 }
 
 .skip-btn:hover {
@@ -82,16 +91,22 @@
   border-color: #8b949e;
 }
 
-/* Focus styles */
+.skip-btn:active {
+  transform: scale(0.97);
+}
+
 .skip-btn:focus,
 .github-auth-btn:focus {
   outline: 2px solid #2f81f7;
   outline-offset: 2px;
 }
 
-.github-import-root > div {
-  background: #161b22;
-  padding: 30px;
-  border-radius: 10px;
-  border: 1px solid #30363d;
+@media (max-width: 480px) {
+  .github-import-card {
+    padding: 30px 20px;
+  }
+
+  .github-import-card h1 {
+    font-size: 20px;
+  }
 }
