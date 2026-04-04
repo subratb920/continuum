@@ -53,7 +53,11 @@ export function createAuthService(db) {
     );
 
     // 4️⃣ Issue JWT
-    const token = signToken({ userId });
+    const token = signToken({
+      userId,
+      email,
+      authProvider: "local", // 🔥 ADD
+    });
 
     return { token };
   }
@@ -74,7 +78,11 @@ export function createAuthService(db) {
       throw new Error("Invalid credentials");
     }
 
-    const token = signToken({ userId: user._id });
+    const token = signToken({
+      userId: user._id,
+      email: user.email,
+      authProvider: "local", // 🔥 ADD
+    });
 
     return { token };
   }
