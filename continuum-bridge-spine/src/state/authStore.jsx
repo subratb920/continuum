@@ -8,6 +8,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [status, setStatus] = useState("checking"); // checking | authenticated | unauthenticated
   const [user, setUser] = useState(null);
+  const [authProvider, setAuthProvider] = useState("local"); 
 
   useEffect(() => {
     const token = localStorage.getItem(TOKEN_KEY);
@@ -24,6 +25,8 @@ export function AuthProvider({ children }) {
         id: decoded.userId,
         email: decoded.email,
       });
+
+      setAuthProvider(decoded.authProvider || "local");
 
       setStatus("authenticated");
     } catch {
@@ -47,11 +50,25 @@ export function AuthProvider({ children }) {
   function logout() {
     localStorage.removeItem(TOKEN_KEY);
     setUser(null);
+    setAuthProvider("local");
     setStatus("unauthenticated");
   }
 
+  function overrideAuthProvider(provider) {
+    setAuthProvider(provider);
+  }
+
   return (
-    <AuthContext.Provider value={{ status, user, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        status,
+        user,
+        authProvider,
+        login,
+        logout,
+        overrideAuthProvider,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -81,3 +81,83 @@
   cursor: pointer;
   padding: 0;
 }
+/* ========================= */
+/* Divider */
+/* ========================= */
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  margin: 18px 0;
+  font-size: 12px;
+  color: #666;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #2a2f3a;
+}
+
+.auth-divider span {
+  margin: 0 10px;
+}
+
+/* ========================= */
+/* Social Buttons */
+/* ========================= */
+
+.auth-social {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 40px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* GitHub */
+.social-btn.github {
+  background: #1f2937;
+  color: #fff;
+  border: none;
+}
+
+.social-btn.github:hover {
+  background: #111827;
+}
+
+/* Google */
+.social-btn.google {
+  background: #1f2937;   /* same as GitHub */
+  color: #fff;
+  border: none;
+}
+
+.social-btn.google:hover {
+  background: #111827;
+}
+
+.icon {
+  font-size: 16px;
+}
+
+.social-btn.github .icon {
+  color: #fff;
+}
+
+.social-btn.google .icon {
+  color: #ea4335;  /* Google red accent */
+}

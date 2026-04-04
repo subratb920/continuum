@@ -13,6 +13,8 @@ import CreateProject from "./screens/CreateProject";
 import BridgeDraftModal from "./components/BridgeDraftModal";
 import BridgeHistoryModal from "./components/BridgeHistoryModal";
 import ActivateProjectModal from "./components/ActivateProjectModal";
+import AuthCallback from "./pages/AuthCallback";
+import GithubImport from "./screens/GithubImport";
 
 import {
   fetchActiveProject,
@@ -28,7 +30,7 @@ export default function App() {
      🔒 AUTH + CORE STATE
      ========================================================= */
 
-  const { status, logout } = useAuth();
+  const { status, logout, authProvider } = useAuth();
 
   const [projects, setProjects] = useState([]);
   const [activeProject, setActiveProject] = useState(null);
@@ -142,12 +144,19 @@ export default function App() {
      ========================================================= */
 
   if (status === "checking") return null;
+  if (window.location.pathname === "/auth/callback") {
+    return <AuthCallback />;
+  }
   if (status === "unauthenticated") return <AuthGate />;
   if (loading) return null;
 
   /* =========================================================
      📭 EMPTY STATE — NO PROJECTS
      ========================================================= */
+
+  if (authProvider === "github") {
+    return <GithubImport />;
+  }
 
   if (projects.length === 0) {
     return (
