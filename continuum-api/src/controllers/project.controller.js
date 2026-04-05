@@ -4,8 +4,10 @@ import { createAuditService } from "../audit/audit.service.js";
 import { AUDIT_EVENTS } from "../audit/audit.types.js";
 
 export async function getProjects(req, res) {
+  console.log("USER ID TYPE:", typeof req.user.id);
+  console.log("USER ID VALUE:", req.user.id);
   const db = getDB();
-  const projectService = createProjectService(db);
+  const projectService = await createProjectService(db);
 
   req.log.debug(
     {
@@ -29,7 +31,7 @@ export async function getProjects(req, res) {
 
 export async function createProject(req, res) {
   const db = getDB();
-  const projectService = createProjectService(db);
+  const projectService = await createProjectService(db);
   const audit = createAuditService(db);
 
   const { name } = req.body;
@@ -70,7 +72,7 @@ export async function createProject(req, res) {
 
 export async function deleteProject(req, res) {
   const db = getDB();
-  const projectService = createProjectService(db);
+  const projectService = await createProjectService(db);
   const audit = createAuditService(db);
 
   const projectId = req.params.id;

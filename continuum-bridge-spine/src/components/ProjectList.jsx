@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./ProjectList.css";
+import { getProjectMeta } from "../models/project";
 
 /**
  * ProjectList
@@ -141,9 +142,27 @@ export default function ProjectList({
                 aria-hidden="true"
               />
 
-              <span className="project-name">
-                {project.name}
-              </span>
+              <div className="project-content">
+                <span className="project-name">
+                  {project.name}
+                </span>
+
+                <span className="project-meta">
+                  {getProjectMeta(project).icon}{" "}
+                  {getProjectMeta(project).label}
+                </span>
+              </div>
+              {project.githubRepoUrl && (
+                <a
+                  href={project.githubRepoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="project-link"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  ↗
+                </a>
+              )}
             </button>
           );
         })}

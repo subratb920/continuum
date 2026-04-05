@@ -4,14 +4,35 @@ import { ObjectId } from "mongodb";
 export const PROJECT_COLLECTION = "projects";
 
 /**
- * Create a new Project document
+ * Create a new Project document (Unified schema)
  */
-export function createProjectDoc({ name, userId }) {
+export function createProjectDoc({
+  name,
+  userId,
+  source = "local",
+  githubRepoId = null,
+  githubRepoUrl = null,
+  visibility = null,
+  fullName = null,
+}) {
   return {
     name: name.trim(),
-    userId: typeof userId === "string" ? new ObjectId(userId) : userId, 
+
+    userId:
+      typeof userId === "string"
+        ? new ObjectId(userId)
+        : userId,
+    source,
+    githubRepoId,
+    githubRepoUrl,
+    visibility,
+    fullName,
+
+    // Existing fields
     createdAt: new Date(),
-    bridgeCount: 0, 
+    updatedAt: new Date(),
+
+    bridgeCount: 0,
   };
 }
 

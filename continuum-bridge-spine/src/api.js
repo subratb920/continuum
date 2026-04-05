@@ -33,7 +33,7 @@ async function request(method, path, body) {
 
   if (res.status !== 204) {
     try {
-      data = await res.json();   // ✅ READ ONCE
+      data = await res.json();
     } catch {
       data = null;
     }
@@ -54,7 +54,7 @@ async function request(method, path, body) {
     throw new Error(data?.error || "Request failed");
   }
 
-  return data; // ✅ RETURN SAME OBJECT
+  return data;
 }
 
 /* ==================================================
@@ -101,10 +101,9 @@ export async function patchBridge(id, data) {
 export async function createProject(name) {
   const res = await request("POST", "/projects", { name });
 
-  // Normalize immediately
   return normalizeProject({
     ...res,
-    name, // backend currently doesn't return name
+    name, // backend may not return name
   });
 }
 
@@ -123,33 +122,14 @@ export async function deleteProject(projectId) {
    ================================================== */
 
 export async function fetchActiveProject() {
-  const token = localStorage.getItem("continuum_token");
+  const data = await request("GET", "/execution/active-project");
 
-  const res = await fetch(
-    `${API_BASE}/execution/active-project`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-
-  // ✅ 304 = no change, no body
-  if (res.status === 304) {
-    return { activeProject: null };
-  }
-
-  if (res.status === 401) {
-    throw new Error("UNAUTHORIZED");
-  }
-
-  if (!res.ok) {
-    throw new Error("Failed to fetch active project");
-  }
-
-  return res.json();
+  return {
+    activeProject: data?.activeProject
+      ? normalizeProject(data.activeProject)
+      : null,
+  };
 }
-
 
 export async function activateProject(projectId) {
   await request("POST", "/execution/activate-project", { projectId });
