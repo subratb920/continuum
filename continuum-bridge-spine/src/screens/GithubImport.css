@@ -49,17 +49,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-
   width: 100%;
   height: 42px;
   padding: 0 16px;
-
   font-size: 14px;
   font-weight: 500;
-
   border-radius: 6px;
   cursor: pointer;
-
   box-sizing: border-box;
 }
 
@@ -99,6 +95,49 @@
 .github-auth-btn:focus {
   outline: 2px solid #2f81f7;
   outline-offset: 2px;
+}
+
+.repo-list {
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+}
+
+.repo-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #c9d1d9;
+  border-bottom: 1px solid #21262d;
+  transition: background 0.15s ease;
+}
+
+.repo-item:last-child {
+  border-bottom: none;
+}
+
+.repo-item:hover {
+  background: #161b22;
+}
+
+.repo-item.selected {
+  background: #1f6feb22;
+}
+
+.repo-item input {
+  accent-color: #2ea043;
+  cursor: pointer;
+}
+
+.repo-item span {
+  flex: 1;
+  text-align: left;
 }
 
 @media (max-width: 480px) {

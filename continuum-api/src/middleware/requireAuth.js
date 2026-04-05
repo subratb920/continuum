@@ -1,4 +1,5 @@
 import { verifyToken } from "../utils/jwt.js";
+import { ObjectId } from "mongodb";
 
 export function requireAuth(req, res, next) {
   const header = req.headers.authorization;
@@ -13,8 +14,11 @@ export function requireAuth(req, res, next) {
     const payload = verifyToken(token);
 
     req.user = {
-      id: payload.userId,
-    };
+  id:
+    typeof payload.userId === "string"
+      ? new ObjectId(payload.userId)
+      : payload.userId,
+};
 
     next();
   } catch {
