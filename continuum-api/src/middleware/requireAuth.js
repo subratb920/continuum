@@ -14,11 +14,19 @@ export function requireAuth(req, res, next) {
     const payload = verifyToken(token);
 
     req.user = {
-  id:
-    typeof payload.userId === "string"
-      ? new ObjectId(payload.userId)
-      : payload.userId,
-};
+      id:
+        typeof payload.userId === "string"
+          ? new ObjectId(payload.userId)
+          : payload.userId,
+    };
+
+    // ✅ LOG AFTER user is set
+    req.log.info(
+      {
+        userId: req.user.id,
+      },
+      "Authenticated request"
+    );
 
     next();
   } catch {

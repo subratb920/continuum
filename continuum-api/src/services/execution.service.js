@@ -79,10 +79,12 @@ export function createExecutionService(db) {
       { userId: uid },
       {
         $set: {
+          userId: uid,
           activeProjectId: pid,
           updatedAt: new Date(),
         },
-      }
+      },
+      { upsert: true }
     );
 
     if (result.matchedCount === 0) {

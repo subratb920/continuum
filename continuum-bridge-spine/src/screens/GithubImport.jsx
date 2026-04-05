@@ -9,6 +9,11 @@ export default function GithubImport() {
     const [loading, setLoading] = useState(false);
     const [repos, setRepos] = useState([]);
     const [selected, setSelected] = useState([]);
+    const [search, setSearch] = useState("");
+
+    const filteredRepos = repos.filter((repo) =>
+        repo.name.toLowerCase().includes(search.toLowerCase())
+    );
 
     const handleSkip = () => {
         overrideAuthProvider("local");
@@ -53,13 +58,17 @@ export default function GithubImport() {
         }
     };
 
-    const toggleRepo = (name) => {
+    const toggleRepo = (id) => {
         setSelected((prev) =>
-            prev.includes(name)
-                ? prev.filter((n) => n !== name)
-                : [...prev, name]
+            prev.includes(id)
+                ? prev.filter((n) => n !== id)
+                : [...prev, id]
         );
     };
+
+    const selectedRepos = repos.filter((r) =>
+        selected.includes(r.id)
+    );
 
     return (
         <div className="github-import-root">
@@ -82,30 +91,61 @@ export default function GithubImport() {
                     )}
 
                     {repos.length > 0 && (
-                        <div className="repo-list">
-                            {repos.map((repo) => (
-                                <div
-                                    key={repo.id}
-                                    className={`repo-item ${selected.includes(repo.name) ? "selected" : ""
-                                        }`}
-                                    onClick={() => toggleRepo(repo.name)}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={selected.includes(repo.name)}
-                                        readOnly
-                                    />
-                                    <span>{repo.name}</span>
-                                </div>
-                            ))}
-                    <button
-                        onClick={handleImport}
-                        className="github-auth-btn"
-                    >
-                        Import Selected Repositories
-                    </button>
-                        </div>
+                        <>
+                            <input
+                                type="text"
+                                placeholder="Search repositories..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="repo-search"
+                            />
 
+                            <div className="repo-actions">
+                                <button onClick={() => setSelected(repos.map(r => r.id))}>
+                                    Select All
+                                </button>
+
+                                <button onClick={() => setSelected([])}>
+                                    Clear
+                                </button>
+                            </div>
+
+                            <div className="repo-list">
+                                {filteredRepos.map((repo) => (
+                                    <div
+                                        key={repo.id}
+                                        className={`repo-item ${selected.includes(repo.id) ? "selected" : ""
+                                            }`}
+                                        onClick={() => toggleRepo(repo.id)}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={selected.includes(repo.id)}
+                                            readOnly
+                                        />
+
+                                        <span className="repo-name">{repo.name}</span>
+
+                                        <span
+                                            className={`repo-badge ${repo.private ? "private" : "public"
+                                                }`}
+                                        >
+                                            {repo.private ? "Private" : "Public"}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <button
+                                onClick={handleImport}
+                                disabled={selected.length === 0}
+                                className="github-auth-btn"
+                            >
+                                {selected.length === 0
+                                    ? "Select repositories to import"
+                                    : `Import (${selected.length})`}
+                            </button>
+                        </>
                     )}
                     <button onClick={handleSkip} className="skip-btn">
                         Skip and use local projects

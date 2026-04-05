@@ -90,15 +90,15 @@ export default function App() {
         setProjects(projectList);
 
         // 2️⃣ Fetch active project reference
-        const { activeProjectId } = await fetchActiveProject();
-        logger.ui("fetchActiveProject returned", { activeProjectId });
+        const { activeProject } = await fetchActiveProject();
+        logger.ui("fetchActiveProject returned", { activeProject });
 
         // 3️⃣ Resolve active project object
         const active =
-          projectList.find(p => p._id === activeProjectId) || null;
+          projectList.find(p => p._id === activeProject?._id) || null;
 
-        setActiveProject(active);
-        setSelectedProject(active);
+        setActiveProject(activeProject);
+        setSelectedProject(activeProject);
       } catch (err) {
         if (err.message === "UNAUTHORIZED") {
           logout();

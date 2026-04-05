@@ -14,7 +14,15 @@ export async function login(req, res) {
   const { email, password } = req.body;
   const auth = createAuthService(getDB());
 
-  const { token } = await auth.login(email, password);
+  const { token, user } = await auth.login(email, password);
+
+  req.log.info(
+    {
+      userId: user._id,
+      email: user.email,
+    },
+    "User login successful"
+  );
 
   res.json({ token });
 }

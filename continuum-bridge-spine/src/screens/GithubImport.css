@@ -149,3 +149,70 @@
     font-size: 20px;
   }
 }
+
+.repo-search {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #30363d;
+  background: #0d1117;
+  color: #c9d1d9;
+  font-size: 14px;
+  box-sizing: border-box;
+  margin-bottom: 10px;
+}
+
+.repo-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.repo-actions button {
+  background: transparent;
+  border: none;
+  color: #58a6ff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.repo-name {
+  flex: 1;
+  text-align: left;
+}
+
+.repo-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 12px;
+}
+
+.repo-badge.public {
+  background: #1f6feb22;
+  color: #58a6ff;
+}
+
+.repo-badge.private {
+  background: #da363322;
+  color: #ff7b72;
+}
+
+.repo-actions {
+  margin-bottom: 8px;
+}
+
+.repo-list {
+  margin-bottom: 12px;
+}
+
+.github-auth-btn:disabled {
+  background-color: #1f6f3a;
+  border-color: #1f6f3a;
+  color: #8b949e;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.github-auth-btn:disabled:hover {
+  background-color: #1f6f3a;
+}

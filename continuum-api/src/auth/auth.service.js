@@ -84,7 +84,10 @@ export function createAuthService(db) {
       authProvider: "local", // 🔥 ADD
     });
 
-    return { token };
+    return {
+      token,
+      user
+    };
   }
 
   return {
