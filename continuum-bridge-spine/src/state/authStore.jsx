@@ -8,7 +8,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [status, setStatus] = useState("checking"); // checking | authenticated | unauthenticated
   const [user, setUser] = useState(null);
-  const [authProvider, setAuthProvider] = useState("local"); 
+  const [authProvider, setAuthProvider] = useState("local");
 
   useEffect(() => {
     const token = localStorage.getItem(TOKEN_KEY);
@@ -43,11 +43,13 @@ export function AuthProvider({ children }) {
       id: decoded.userId,
       email: decoded.email,
     });
-
+    setAuthProvider(decoded.authProvider || "local");
     setStatus("authenticated");
+    setAuthProvider(decoded.authProvider || "local");
   }
 
   function logout() {
+    console.log("LOGOUT USER", user);
     localStorage.removeItem(TOKEN_KEY);
     setUser(null);
     setAuthProvider("local");

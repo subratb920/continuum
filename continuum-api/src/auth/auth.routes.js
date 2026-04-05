@@ -78,49 +78,55 @@ router.get("/github/callback", async (req, res) => {
 
         const githubUser = await userRes.json();
 
-        console.log("GITHUB USER:", githubUser);
-
+        
         /**
          * 3️⃣ Fetch emails
-         */
-        const emailRes = await fetch(
-            "https://api.github.com/user/emails",
-            {
-                headers: {
-                    Authorization: `Bearer ${access_token}`,
-                    Accept: "application/json",
+        */
+       const emailRes = await fetch(
+           "https://api.github.com/user/emails",
+           {
+               headers: {
+                   Authorization: `Bearer ${access_token}`,
+                   Accept: "application/json",
                 },
             }
         );
-
+        
         const emails = await emailRes.json();
-
+        
         let primaryEmail;
-
+        
         if (Array.isArray(emails)) {
             primaryEmail =
-                emails.find((e) => e.primary)?.email ||
-                emails[0]?.email;
+            emails.find((e) => e.primary)?.email ||
+            emails[0]?.email;
         } else {
             console.error("EMAIL FETCH FAILED:", emails);
             primaryEmail = githubUser.email;
         }
-
+        
         /**
          * 4️⃣ Resolve or create user
-         */
-        let dbUser = await users.findOne({ githubId: githubUser.id });
-
-        const execution = db.collection("execution_state");
-
-        if (!dbUser) {
-            // 1️⃣ Create user
-            const result = await users.insertOne({
-                githubId: githubUser.id,
-                email: primaryEmail,
-                createdAt: new Date(),
-                updatedAt: new Date(),
+        */
+       let dbUser = await users.findOne({ githubId: githubUser.id });
+       
+       const execution = db.collection("execution_state");
+       
+       if (!dbUser) {
+           // 1️⃣ Create user
+           const result = await users.insertOne({
+               githubId: githubUser.id,
+               email: primaryEmail,
+               createdAt: new Date(),
+               updatedAt: new Date(),
             });
+            req.log.info(
+                {
+                    githubId: githubUser.id,
+                    dbUserId: dbUser._id,
+                },
+                "GitHub login resolved user"
+            );
 
             const userId = result.insertedId;
 

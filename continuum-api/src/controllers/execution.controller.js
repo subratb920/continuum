@@ -12,20 +12,22 @@ export async function getActiveProject(req, res) {
     "Fetching active project"
   );
 
-  const activeProjectId = await executionService.getActiveProject(req.user.id);
+  // const activeProjectId = await executionService.getActiveProject(req.user.id);
+  const activeProject = await executionService.getActiveProject(req.user.id);
 
   req.log.info(
     {
       userId: req.user.id,
-      activeProjectId,
+      activeProject,
     },
     "Active project retrieved"
   );
 
-  res
+
+res
   .set("Cache-Control", "no-store")
   .set("Pragma", "no-cache")
-  .json({ activeProjectId });
+  .json({ activeProject });
 }
 
 export async function activateProject(req, res) {

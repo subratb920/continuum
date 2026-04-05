@@ -122,7 +122,25 @@ export async function deleteProject(projectId) {
    ================================================== */
 
 export async function fetchActiveProject() {
-  const data = await request("GET", "/execution/active-project");
+  const res = await fetch(`${API_BASE}/execution/active-project`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("continuum_token")}`,
+    },
+  });
+
+  if (res.status === 304) {
+    return { activeProject: null };
+  }
+
+  if (res.status === 401) {
+    throw new Error("UNAUTHORIZED");
+  }
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch active project");
+  }
+
+  const data = await res.json();
 
   return {
     activeProject: data?.activeProject
