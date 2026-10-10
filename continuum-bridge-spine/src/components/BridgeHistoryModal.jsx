@@ -1,5 +1,5 @@
 import "./BridgeHistoryModal.css";
-import { formatDateTime } from "../utils/time";
+import { formatClock, formatDateTime, formatDuration } from "../utils/time";
 import { extractTicketKey } from "../utils/ticket";
 
 export default function BridgeHistoryModal({ bridge, onClose }) {
@@ -25,7 +25,7 @@ export default function BridgeHistoryModal({ bridge, onClose }) {
 
         <section className="modal-body">
           <p className="modal-meta">
-            {bridge.interval.mode} · {bridge.interval.duration} min
+            {bridge.interval.mode} · Planned {formatDuration(bridge.interval.duration)}
           </p>
 
           {bridge.ticketUrl && (
@@ -85,6 +85,18 @@ export default function BridgeHistoryModal({ bridge, onClose }) {
                 {formatDateTime(
                   bridge.interval?.endedAt || bridge.updatedAt
                 )}
+              </span>
+            </div>
+            {/* Actual time spent: start → recorded end (Stop or Save) */}
+            <div className="bridge-time-row">
+              <span className="bridge-time-label">Worked</span>
+              <span className="bridge-time-value">
+                {bridge.interval?.startedAt && bridge.interval?.endedAt
+                  ? formatClock(
+                      new Date(bridge.interval.endedAt) -
+                        new Date(bridge.interval.startedAt)
+                    )
+                  : "—"}
               </span>
             </div>
           </div>

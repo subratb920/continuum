@@ -4,16 +4,11 @@ import {
   showIntervalEndNotification,
 } from "../utils/intervalAlerts";
 
+import { formatClock } from "../utils/time";
+
 import "./BridgeDraftModal.css";
 
 const ENDED_TITLE = "⏰ Interval ended · Continuum";
-
-function formatClock(ms) {
-  const totalSeconds = Math.max(0, Math.round(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = String(totalSeconds % 60).padStart(2, "0");
-  return `${minutes}:${seconds}`;
-}
 
 /**
  * BridgeDraftModal
