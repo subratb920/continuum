@@ -20,19 +20,29 @@ export default function AuthGate() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/auth/${mode}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim(),
-          password,
-        }),
-      });
+      let res;
+      try {
+        res = await fetch(`${API_BASE}/auth/${mode}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: email.trim(),
+            password,
+          }),
+        });
+      } catch {
+        throw new Error("Can't reach the server. Check your connection.");
+      }
 
-      const data = await res.json();
+      let data = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
 
       if (!res.ok) {
-        throw new Error(data.message || "Authentication failed");
+        throw new Error(data?.error || "Something went wrong. Please try again.");
       }
 
       login(data.token);
