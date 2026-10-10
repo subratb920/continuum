@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { deleteProject, fetchBridges } from "../api";
 
 import "./ActivateProjectModal.css";
-import "./DeleteProjectModal.css";
+import "./ProjectFormModal.css";
 
 /**
  * DeleteProjectModal
@@ -76,7 +76,7 @@ export default function DeleteProjectModal({
 
   return createPortal(
     <div className="modal-backdrop">
-      <div className="modal-window activate-modal delete-modal">
+      <div className="modal-window activate-modal project-form-modal">
         {step === "select" ? (
           <>
             <h2>Delete Project</h2>

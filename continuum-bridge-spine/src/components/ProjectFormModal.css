@@ -1,21 +1,21 @@
 /* Scoped padding: another global .modal-window rule resets it to 0 */
-.modal-window.delete-modal {
+.modal-window.project-form-modal {
   padding: 24px;
 }
 
-.delete-modal h2 {
+.project-form-modal h2 {
   margin: 0 0 16px;
   font-size: 20px;
 }
 
-.delete-modal .modal-actions button {
+.project-form-modal .modal-actions button {
   padding: 8px 16px;
   border: none;
   border-radius: 6px;
   cursor: pointer;
 }
 
-.delete-modal .modal-actions button:disabled {
+.project-form-modal .modal-actions button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -41,5 +41,33 @@
 .delete-error {
   color: #d33;
   font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.project-name-input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 6px;
+  box-sizing: border-box;
+}
+
+.field-error {
+  color: #d33;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.field-hint {
+  color: #666;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.current-name {
+  background: #f4f4f5;
+  border: 1px solid #e4e4e7;
+  border-radius: 4px;
+  color: #444;
+  padding: 10px;
   margin-bottom: 12px;
 }

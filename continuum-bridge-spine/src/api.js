@@ -113,6 +113,12 @@ export async function fetchProjects() {
   return res.map(normalizeProject);
 }
 
+export async function renameProject(projectId, name) {
+  const res = await request("PATCH", `/projects/${projectId}`, { name });
+
+  return normalizeProject(res);
+}
+
 export async function deleteProject(projectId) {
   await request("DELETE", `/projects/${projectId}`);
 }

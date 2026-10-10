@@ -13,6 +13,7 @@ import CreateProject from "./screens/CreateProject";
 import BridgeDraftModal from "./components/BridgeDraftModal";
 import BridgeHistoryModal from "./components/BridgeHistoryModal";
 import ActivateProjectModal from "./components/ActivateProjectModal";
+import EditProjectModal from "./components/EditProjectModal";
 import DeleteProjectModal from "./components/DeleteProjectModal";
 import AuthCallback from "./pages/AuthCallback";
 import GithubImport from "./screens/GithubImport";
@@ -44,6 +45,7 @@ export default function App() {
 
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [showActivateProject, setShowActivateProject] = useState(false);
+  const [showEditProject, setShowEditProject] = useState(false);
   const [showDeleteProject, setShowDeleteProject] = useState(false);
 
   const [loading, setLoading] = useState(true);
@@ -119,11 +121,14 @@ export default function App() {
      ✅ INVARIANT: selectedProject mirrors activeProject
      ========================================================= */
 
+  // Keyed on the id so a rename of the active project doesn't
+  // move the user's current selection
   useEffect(() => {
     if (activeProject) {
       setSelectedProject(activeProject);
     }
-  }, [activeProject]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProject?._id]);
 
   /* =========================================================
      🔍 STATE CHANGE LOGGING
@@ -185,6 +190,16 @@ export default function App() {
     setSelectedProject(null);
   }
 
+  function handleProjectRenamed(updated) {
+    const rename = (p) =>
+      p?._id === updated._id ? { ...p, name: updated.name } : p;
+
+    setProjects(prev => prev.map(rename));
+    setActiveProject(prev => rename(prev));
+    setSelectedProject(prev => rename(prev));
+    setShowEditProject(false);
+  }
+
   function handleProjectDeleted(project) {
     setProjects(prev => prev.filter(p => p._id !== project._id));
 
@@ -230,6 +245,7 @@ export default function App() {
         onSelectBridge={setSelectedBridge}
         onCreateProject={() => setShowCreateProject(true)}
         onActivateProject={() => setShowActivateProject(true)}
+        onEditProject={() => setShowEditProject(true)}
         onDeleteProject={() => setShowDeleteProject(true)}
       >
         {isContextReady && hasActiveProject ? (
@@ -284,6 +300,17 @@ export default function App() {
             setShowActivateProject(false);
           }}
           onClose={() => setShowActivateProject(false)}
+        />
+      )}
+
+      {/* ============================
+          Edit Project Modal
+         ============================ */}
+      {showEditProject && (
+        <EditProjectModal
+          projects={projects}
+          onRenamed={handleProjectRenamed}
+          onClose={() => setShowEditProject(false)}
         />
       )}
 
