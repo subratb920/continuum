@@ -6,6 +6,12 @@ import { withSystemContext } from "../logging/childLogger.js";
 import { createProjectDoc } from "../models/project.model.js";
 import { AppError } from "../errors/AppError.js";
 
+const MAX_NAME_LENGTH = 100;
+
+// Names are compared trimmed and case-insensitively
+const sameName = (a, b) =>
+  a.trim().toLowerCase() === b.trim().toLowerCase();
+
 export async function createProjectService(db) {
   const log = withSystemContext("project");
 
@@ -97,6 +103,77 @@ export async function createProjectService(db) {
   }
 
   /**
+   * Rename a project (name is the only user-editable property)
+   * - a change in capitalization alone is not a different name
+   * - names are unique per user (case-insensitive); other users may share them
+   * - the name lives only in this document; everything else links by _id
+   */
+  async function renameProject(userId, projectId, name) {
+    if (!ObjectId.isValid(projectId)) {
+      throw new AppError("Invalid project id.", 400, "INVALID_ID");
+    }
+
+    if (typeof name !== "string" || !name.trim()) {
+      throw new AppError("Project name is required.", 400, "VALIDATION_ERROR");
+    }
+
+    const cleanName = name.trim();
+
+    if (cleanName.length > MAX_NAME_LENGTH) {
+      throw new AppError(
+        `Project name must be ${MAX_NAME_LENGTH} characters or fewer.`,
+        400,
+        "VALIDATION_ERROR"
+      );
+    }
+
+    const uid = toObjectId(userId);
+    const pid = toObjectId(projectId);
+
+    const project = await projectCol.findOne({ _id: pid, userId: uid });
+
+    if (!project) {
+      throw new AppError("Project not found.", 404, "PROJECT_NOT_FOUND");
+    }
+
+    if (sameName(project.name, cleanName)) {
+      throw new AppError(
+        "New name must be different from the current name.",
+        400,
+        "NAME_UNCHANGED"
+      );
+    }
+
+    // Case-insensitive match among this user's OTHER projects
+    const duplicate = await projectCol.findOne(
+      { userId: uid, name: cleanName, _id: { $ne: pid } },
+      { collation: { locale: "en", strength: 2 } }
+    );
+
+    if (duplicate) {
+      throw new AppError(
+        "Project with same name already exists",
+        409,
+        "PROJECT_NAME_EXISTS"
+      );
+    }
+
+    const updatedAt = new Date();
+
+    await projectCol.updateOne(
+      { _id: pid, userId: uid },
+      { $set: { name: cleanName, updatedAt } }
+    );
+
+    log.info(
+      { userId: uid, projectId: pid, from: project.name, to: cleanName },
+      "Project renamed"
+    );
+
+    return { ...project, name: cleanName, updatedAt };
+  }
+
+  /**
    * Delete project and the data that belongs to it
    * - ownership is checked BEFORE anything is deleted
    */
@@ -139,6 +216,7 @@ export async function createProjectService(db) {
     listProjects,
     createProject,
     createProjectFromGithub,
+    renameProject,
     deleteProject,
   };
 }

@@ -70,6 +70,42 @@ export async function createProject(req, res) {
   res.status(201).json({ projectId });
 }
 
+export async function renameProject(req, res) {
+  const db = getDB();
+  const projectService = await createProjectService(db);
+  const audit = createAuditService(db);
+
+  const projectId = req.params.id;
+  const name = req.body?.name; // name is the only editable property
+
+  req.log.info(
+    {
+      userId: req.user.id,
+      projectId,
+    },
+    "Renaming project"
+  );
+
+  const project = await projectService.renameProject(
+    req.user.id,
+    projectId,
+    name
+  );
+
+  // 🔒 IMMUTABLE AUDIT LOG
+  await audit.logEvent({
+    type: AUDIT_EVENTS.PROJECT_RENAMED,
+    userId: req.user.id,
+    projectId,
+    requestId: req.id,
+    ip: req.ip,
+    userAgent: req.headers["user-agent"],
+    metadata: { name: project.name },
+  });
+
+  res.json(project);
+}
+
 export async function deleteProject(req, res) {
   const db = getDB();
   const projectService = await createProjectService(db);
