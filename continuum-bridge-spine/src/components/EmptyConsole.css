@@ -1,0 +1,39 @@
+.empty-console {
+  color: #222;
+}
+
+.empty-console > p {
+  margin: 0;
+  font-size: 16px;
+}
+
+.empty-console h3 {
+  margin: 28px 0 8px;
+  font-size: 15px;
+}
+
+.empty-console ol {
+  margin: 0 0 16px;
+  padding-left: 20px;
+  color: #444;
+  font-size: 14px;
+}
+
+.empty-console li {
+  margin-bottom: 4px;
+}
+
+.empty-console .you-are-here {
+  color: #4f6ef7;
+  font-size: 13px;
+}
+
+.empty-console a {
+  font-size: 14px;
+  color: #0066cc;
+  text-decoration: none;
+}
+
+.empty-console a:hover {
+  text-decoration: underline;
+}

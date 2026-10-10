@@ -4,19 +4,27 @@ import { createProject } from "../api";
 /**
  * CreateProjectScreen
  * -------------------
- * Bootstrap screen shown only when no projects exist.
- * This is NOT a modal.
+ * Create-project form rendered inside the Create Project modal.
+ * (First-time users see screens/Welcome.jsx instead.)
  */
 export default function CreateProject({ onCreated, onClose }) {
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleCreate() {
     if (!name.trim() || creating) return;
 
+    setError("");
     setCreating(true);
-    const project = await createProject(name.trim());
-    onCreated(project);
+
+    try {
+      const project = await createProject(name.trim());
+      onCreated(project);
+    } catch (err) {
+      setError(err.message || "Could not create the project. Please try again.");
+      setCreating(false);
+    }
   }
 
   return (
@@ -51,6 +59,12 @@ export default function CreateProject({ onCreated, onClose }) {
           if (e.key === "Enter") handleCreate();
         }}
       />
+
+      {error && (
+        <p style={{ color: "#d33", fontSize: 13, marginTop: -8, marginBottom: 16 }}>
+          {error}
+        </p>
+      )}
 
       {/* 🔑 Action buttons */}
       <div

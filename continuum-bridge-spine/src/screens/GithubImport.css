@@ -1,12 +1,12 @@
+/* Fills the page area under the shared header (was fixed full-screen) */
 .github-import-root {
-  position: fixed;
-  inset: 0;
+  min-height: calc(100vh - 48px); /* 48px = shared header height */
+  box-sizing: border-box;
   background-color: #0d1117;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  z-index: 999;
 }
 
 .github-import-card {

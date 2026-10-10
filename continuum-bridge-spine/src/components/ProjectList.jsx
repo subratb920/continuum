@@ -39,6 +39,9 @@ export default function ProjectList({
       document.removeEventListener("mousedown", handleOutsideClick);
   }, [showMenu]);
 
+  // Edit / Delete / Activate need at least one project to pick from
+  const hasProjects = projects.length > 0;
+
   return (
     <div className="project-pane">
       {/* ----------------------------------
@@ -77,6 +80,7 @@ export default function ProjectList({
 
               <button
                 role="menuitem"
+                disabled={!hasProjects}
                 onClick={() => {
                   setShowMenu(false);
                   onEditProject();
@@ -87,6 +91,7 @@ export default function ProjectList({
 
               <button
                 role="menuitem"
+                disabled={!hasProjects}
                 onClick={() => {
                   setShowMenu(false);
                   onDeleteProject();
@@ -97,6 +102,7 @@ export default function ProjectList({
 
               <button
                 role="menuitem"
+                disabled={!hasProjects}
                 onClick={() => {
                   setShowMenu(false);
                   onActivateProject(selectedProject);
@@ -123,6 +129,10 @@ export default function ProjectList({
          Project List
       ---------------------------------- */}
       <div className="project-list">
+        {!hasProjects && (
+          <p className="project-list-empty">No projects yet.</p>
+        )}
+
         {projects.map((project) => {
           const isActive =
             activeProject?._id === project._id;

@@ -220,3 +220,10 @@
   color: #2f81f7;
 }
 
+
+.project-list-empty {
+  color: #888;
+  font-size: 13px;
+  padding: 8px 12px;
+  margin: 0;
+}

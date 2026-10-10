@@ -1,0 +1,170 @@
+.welcome {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+  color: #222;
+}
+
+.welcome h1 {
+  margin: 0 0 4px;
+  font-size: 30px;
+}
+
+.welcome h2 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+
+.welcome-intro {
+  margin-bottom: 24px;
+}
+
+.welcome-tagline {
+  font-size: 16px;
+  color: #4f6ef7;
+  margin: 0 0 12px;
+}
+
+.welcome-summary {
+  color: #444;
+  line-height: 1.55;
+  margin: 0 0 8px;
+}
+
+.welcome-help-link {
+  font-size: 14px;
+  color: #0066cc;
+  text-decoration: none;
+}
+
+.welcome-help-link:hover {
+  text-decoration: underline;
+}
+
+.welcome-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 700px) {
+  .welcome-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.welcome-card {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+
+.welcome-row .welcome-card {
+  margin-bottom: 0;
+}
+
+.welcome-muted {
+  font-size: 13px;
+  color: #777;
+  margin: 0 0 12px;
+}
+
+.welcome-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.welcome-error {
+  color: #d33;
+  font-size: 13px;
+  margin: -4px 0 10px;
+}
+
+.welcome-email {
+  font-weight: 600;
+  margin: 0 0 2px;
+  word-break: break-all;
+}
+
+.welcome-signout {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: #444;
+  cursor: pointer;
+}
+
+.welcome-signout:hover {
+  background: #f5f5f5;
+}
+
+.welcome-steps {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.welcome-steps li {
+  margin-bottom: 8px;
+}
+
+.welcome-steps li strong {
+  display: block;
+}
+
+.welcome-steps li span {
+  font-size: 14px;
+  color: #555;
+}
+
+.welcome-btn {
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 10px 18px;
+}
+
+.welcome-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.welcome-btn-secondary {
+  background: #fff;
+  border: 1px solid #4f6ef7;
+  color: #4f6ef7;
+}
+
+.welcome-continue {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.welcome-btn-primary {
+  background: #4f6ef7;
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 14px 32px;
+  box-shadow: 0 6px 16px rgba(79, 110, 247, 0.3);
+  margin-bottom: 8px;
+}
+
+.welcome-btn-primary:hover:not(:disabled) {
+  background: #3d5be0;
+}
+
+.welcome-stat {
+  font-size: 13px;
+  color: #444;
+  line-height: 1.6;
+  margin: 0 0 12px;
+}

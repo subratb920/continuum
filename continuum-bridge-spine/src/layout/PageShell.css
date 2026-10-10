@@ -1,0 +1,25 @@
+/* Shared page frame: header on top, page fills the rest of the window */
+.page-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.page-shell > .shell-header {
+  flex-shrink: 0;
+}
+
+/* Console: three-panel grid fills the space under the header */
+.page-shell > .app {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
+/* Welcome / Help / GitHub import: scroll inside, header stays visible */
+.page-shell-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: #fafafa;
+}

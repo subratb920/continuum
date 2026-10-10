@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../state/authStore";
 import "./ShellHeader.css";
 
@@ -27,7 +28,9 @@ export default function ShellHeader({ onManualCreate }) {
 
   return (
     <header className="shell-header">
-      <div className="shell-title">Continuum Console</div>
+      <Link to="/" className="shell-title">
+        Continuum Console
+      </Link>
 
       <div className="shell-user">
         {/* 🔥 NEW MENU */}
@@ -52,6 +55,10 @@ export default function ShellHeader({ onManualCreate }) {
             </div>
           )}
         </div>
+
+        <Link to="/help" className="shell-help">
+          Help
+        </Link>
 
         <span className="shell-email">{user?.email}</span>
 

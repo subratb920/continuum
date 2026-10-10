@@ -1,14 +1,18 @@
 import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { assertProject } from "./utils/assertions";
 
 import { useAuth } from "./state/authStore";
 import AuthGate from "./auth/AuthGate";
 
 import ThreePanelLayout from "./layout/ThreePanelLayout";
-import ShellHeader from "./layout/ShellHeader";
+import PageShell from "./layout/PageShell";
 
 import ReEntry from "./screens/ReEntry";
 import CreateProject from "./screens/CreateProject";
+import Welcome from "./screens/Welcome";
+import HelpPage from "./pages/HelpPage";
+import EmptyConsole from "./components/EmptyConsole";
 
 import BridgeDraftModal from "./components/BridgeDraftModal";
 import BridgeHistoryModal from "./components/BridgeHistoryModal";
@@ -33,6 +37,8 @@ export default function App() {
      ========================================================= */
 
   const { status, logout, authProvider } = useAuth();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
 
   const [projects, setProjects] = useState([]);
   const [activeProject, setActiveProject] = useState(null);
@@ -151,10 +157,23 @@ export default function App() {
      ========================================================= */
 
   if (status === "checking") return null;
-  if (window.location.pathname === "/auth/callback") {
+  if (pathname === "/auth/callback") {
     return <AuthCallback />;
   }
   if (status === "unauthenticated") return <AuthGate />;
+
+  /* =========================================================
+     📖 HELP PAGE (/help) — every signed-in user
+     ========================================================= */
+
+  if (pathname === "/help") {
+    return (
+      <PageShell scroll>
+        <HelpPage />
+      </PageShell>
+    );
+  }
+
   if (loading) return null;
 
   /* =========================================================
@@ -162,18 +181,33 @@ export default function App() {
      ========================================================= */
 
   if (authProvider === "github") {
-    return <GithubImport />;
+    return (
+      <PageShell scroll>
+        <GithubImport />
+      </PageShell>
+    );
   }
 
-  if (projects.length === 0) {
+  /* =========================================================
+     🏠 HOME (/) — welcome page, always shown after sign-in.
+     The console lives at /console.
+     ========================================================= */
+
+  if (pathname !== "/console") {
     return (
-      <CreateProject
-        onCreated={(project) => {
-          logger.ui("onCreated received project", project);
-          setProjects([project]);
-          setSelectedProject(project);
-        }}
-      />
+      <PageShell scroll>
+        <Welcome
+          projectCount={projects.length}
+          activeProject={activeProject}
+          onCreated={(project) => {
+            logger.ui("onCreated received project", project);
+            setProjects(prev => [...prev, project]);
+            setSelectedProject(project);
+            navigate("/console");
+          }}
+          onContinue={() => navigate("/console")}
+        />
+      </PageShell>
     );
   }
 
@@ -232,9 +266,7 @@ export default function App() {
      ========================================================= */
 
   return (
-    <div className="shell">
-      <ShellHeader />
-
+    <PageShell>
       <ThreePanelLayout
         projects={projects}
         activeProject={activeProject}
@@ -248,7 +280,9 @@ export default function App() {
         onEditProject={() => setShowEditProject(true)}
         onDeleteProject={() => setShowDeleteProject(true)}
       >
-        {isContextReady && hasActiveProject ? (
+        {projects.length === 0 ? (
+          <EmptyConsole onCreateProject={() => setShowCreateProject(true)} />
+        ) : isContextReady && hasActiveProject ? (
           <ReEntry
             key={activeBridge ? activeBridge._id : "idle"}
             activeProject={activeProject}
@@ -352,6 +386,6 @@ export default function App() {
           onClose={() => setSelectedBridge(null)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
