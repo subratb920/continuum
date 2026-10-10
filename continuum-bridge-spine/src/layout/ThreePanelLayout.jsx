@@ -11,6 +11,7 @@ export default function ThreePanelLayout({
   onSelectBridge,
   onCreateProject,
   onActivateProject,
+  onDeleteProject,
   children,
 }) {
   return (
@@ -23,6 +24,7 @@ export default function ThreePanelLayout({
           onSelectProject={onSelectProject}
           onCreateProject={onCreateProject}
           onActivateProject={onActivateProject}
+          onDeleteProject={onDeleteProject}
         />
       </aside>
 

@@ -20,7 +20,10 @@ export default function BridgeSpine({
      - Prevent malformed legacy data from entering UI
      ========================================================= */
   useEffect(() => {
-  if (!selectedProject) return;
+  if (!selectedProject) {
+    setBridges([]); // e.g. the selected project was deleted
+    return;
+  }
 
   let currentRequest = true;
 

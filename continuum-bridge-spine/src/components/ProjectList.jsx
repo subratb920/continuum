@@ -17,6 +17,7 @@ export default function ProjectList({
   onSelectProject,
   onCreateProject,
   onActivateProject,
+  onDeleteProject,
 }) {
   const [showMenu, setShowMenu] = useState(false);
 
@@ -77,7 +78,13 @@ export default function ProjectList({
                 Edit Project
               </button>
 
-              <button disabled role="menuitem">
+              <button
+                role="menuitem"
+                onClick={() => {
+                  setShowMenu(false);
+                  onDeleteProject();
+                }}
+              >
                 Delete Project
               </button>
 

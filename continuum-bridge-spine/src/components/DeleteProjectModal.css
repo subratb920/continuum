@@ -1,0 +1,45 @@
+/* Scoped padding: another global .modal-window rule resets it to 0 */
+.modal-window.delete-modal {
+  padding: 24px;
+}
+
+.delete-modal h2 {
+  margin: 0 0 16px;
+  font-size: 20px;
+}
+
+.delete-modal .modal-actions button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.delete-modal .modal-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.delete-warning {
+  background: #fdecec;
+  border: 1px solid #f3b4b4;
+  border-radius: 6px;
+  color: #8a1f1f;
+  font-size: 14px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.delete-warning p {
+  margin: 0 0 6px;
+}
+
+.delete-warning p:last-child {
+  margin-bottom: 0;
+}
+
+.delete-error {
+  color: #d33;
+  font-size: 13px;
+  margin-bottom: 12px;
+}

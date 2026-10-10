@@ -13,6 +13,7 @@ import CreateProject from "./screens/CreateProject";
 import BridgeDraftModal from "./components/BridgeDraftModal";
 import BridgeHistoryModal from "./components/BridgeHistoryModal";
 import ActivateProjectModal from "./components/ActivateProjectModal";
+import DeleteProjectModal from "./components/DeleteProjectModal";
 import AuthCallback from "./pages/AuthCallback";
 import GithubImport from "./screens/GithubImport";
 
@@ -43,6 +44,7 @@ export default function App() {
 
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [showActivateProject, setShowActivateProject] = useState(false);
+  const [showDeleteProject, setShowDeleteProject] = useState(false);
 
   const [loading, setLoading] = useState(true);
 
@@ -183,6 +185,23 @@ export default function App() {
     setSelectedProject(null);
   }
 
+  function handleProjectDeleted(project) {
+    setProjects(prev => prev.filter(p => p._id !== project._id));
+
+    if (selectedProject?._id === project._id) {
+      setSelectedProject(null);
+      setSelectedBridge(null);
+    }
+
+    // Backend also clears the active-project pointer
+    if (activeProject?._id === project._id) {
+      setActiveProject(null);
+      setActiveBridge(null);
+    }
+
+    setShowDeleteProject(false);
+  }
+
   function handleUpdateActiveBridge(updatedBridge) {
     setActiveBridge(updatedBridge);
     patchBridge(updatedBridge._id, {
@@ -211,6 +230,7 @@ export default function App() {
         onSelectBridge={setSelectedBridge}
         onCreateProject={() => setShowCreateProject(true)}
         onActivateProject={() => setShowActivateProject(true)}
+        onDeleteProject={() => setShowDeleteProject(true)}
       >
         {isContextReady && hasActiveProject ? (
           <ReEntry
@@ -264,6 +284,18 @@ export default function App() {
             setShowActivateProject(false);
           }}
           onClose={() => setShowActivateProject(false)}
+        />
+      )}
+
+      {/* ============================
+          Delete Project Modal
+         ============================ */}
+      {showDeleteProject && (
+        <DeleteProjectModal
+          projects={projects}
+          activeProject={activeProject}
+          onDeleted={handleProjectDeleted}
+          onClose={() => setShowDeleteProject(false)}
         />
       )}
 
