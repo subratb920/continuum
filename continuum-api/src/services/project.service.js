@@ -1,14 +1,17 @@
 import { ObjectId } from "mongodb";
 import { PROJECT_COLLECTION } from "../models/project.model.js";
 import { BRIDGE_COLLECTION } from "../models/bridge.model.js";
+import { EXECUTION_COLLECTION } from "../models/execution.model.js";
 import { withSystemContext } from "../logging/childLogger.js";
 import { createProjectDoc } from "../models/project.model.js";
+import { AppError } from "../errors/AppError.js";
 
 export async function createProjectService(db) {
   const log = withSystemContext("project");
 
   const projectCol = db.collection(PROJECT_COLLECTION);
   const bridgeCol = db.collection(BRIDGE_COLLECTION);
+  const executionCol = db.collection(EXECUTION_COLLECTION);
 
   const toObjectId = (id) =>
     typeof id === "string" ? new ObjectId(id) : id;
@@ -94,24 +97,42 @@ export async function createProjectService(db) {
   }
 
   /**
-   * Delete project
+   * Delete project and the data that belongs to it
+   * - ownership is checked BEFORE anything is deleted
    */
   async function deleteProject(userId, projectId) {
+    if (!ObjectId.isValid(projectId)) {
+      throw new AppError("Invalid project id.", 400, "INVALID_ID");
+    }
+
     const uid = toObjectId(userId);
     const pid = toObjectId(projectId);
 
-    await bridgeCol.deleteMany({
-      projectId: pid,
-    });
-
+    // Scoped to the owner, so another user's project id can't delete anything
     const result = await projectCol.deleteOne({
       _id: pid,
       userId: uid,
     });
 
     if (result.deletedCount === 0) {
-      throw new Error("Project not found or not owned by user");
+      throw new AppError("Project not found.", 404, "PROJECT_NOT_FOUND");
     }
+
+    const { deletedCount: bridgesDeleted } = await bridgeCol.deleteMany({
+      projectId: pid,
+    });
+
+    await db.collection("bridge_counters").deleteOne({ projectId: pid });
+
+    // Clear the active-project pointer if it referenced this project
+    await executionCol.updateOne(
+      { userId: uid, activeProjectId: pid },
+      { $set: { activeProjectId: null, updatedAt: new Date() } }
+    );
+
+    log.info({ userId: uid, projectId: pid, bridgesDeleted }, "Project deleted");
+
+    return { bridgesDeleted };
   }
 
   return {
