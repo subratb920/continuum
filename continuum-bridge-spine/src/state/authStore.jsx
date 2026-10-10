@@ -35,6 +35,19 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // Keep tabs in sync: if another tab signs in, signs out or switches
+  // account, reload so this tab never acts for a stale session
+  useEffect(() => {
+    function handleStorage(e) {
+      if (e.key === TOKEN_KEY || e.key === null) {
+        window.location.reload();
+      }
+    }
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
   function login(token) {
     localStorage.setItem(TOKEN_KEY, token);
 
