@@ -1,5 +1,11 @@
 import { hashPassword, verifyPassword } from "../utils/hash.js";
 import { signToken } from "../utils/jwt.js";
+import { AppError } from "../errors/AppError.js";
+
+// Same message for unknown email, wrong password and GitHub-only accounts,
+// so the login form can't be used to discover which emails are registered.
+const invalidCredentials = () =>
+  new AppError("Invalid email or password.", 401, "INVALID_CREDENTIALS");
 
 /**
  * Auth Service
@@ -18,7 +24,7 @@ export function createAuthService(db) {
   async function signup(email, password) {
     const existing = await users.findOne({ email });
     if (existing) {
-      throw new Error("Email already registered");
+      throw new AppError("Email already registered.", 409, "EMAIL_EXISTS");
     }
 
     const passwordHash = await hashPassword(password);
@@ -69,13 +75,15 @@ export function createAuthService(db) {
    */
   async function login(email, password) {
     const user = await users.findOne({ email });
-    if (!user) {
-      throw new Error("Invalid credentials");
+
+    // GitHub-only accounts have no passwordHash
+    if (!user || !user.passwordHash) {
+      throw invalidCredentials();
     }
 
     const ok = await verifyPassword(password, user.passwordHash);
     if (!ok) {
-      throw new Error("Invalid credentials");
+      throw invalidCredentials();
     }
 
     const token = signToken({
