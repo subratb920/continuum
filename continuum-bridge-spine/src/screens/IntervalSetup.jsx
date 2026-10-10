@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { startInterval } from "../api";
 import { prepareIntervalAlerts } from "../utils/intervalAlerts";
+import DurationPicker from "../components/DurationPicker";
 import "./IntervalSetup.css";
 
 export default function IntervalSetup({
@@ -165,17 +166,15 @@ export default function IntervalSetup({
         {/* Interval Length */}
         <section className="interval-section">
           <h3>Interval Length</h3>
-          {[30, 45].map((d) => (
-            <label key={d} className="radio">
-              <input
-                type="radio"
-                name="duration"
-                checked={duration === d}
-                onChange={() => setDuration(d)}
-              />
-              {d} min
-            </label>
-          ))}
+          <DurationPicker
+            value={duration}
+            onChange={setDuration}
+            min={5}
+            max={240}
+            step={5}
+            defaultValue={30}
+            disabled={!isExecutable}
+          />
         </section>
       </fieldset>
 

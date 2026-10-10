@@ -1,0 +1,117 @@
+/* DurationPicker — hours : minutes, one value per box */
+
+.duration-picker {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.duration-picker-boxes {
+  display: flex;
+  align-items: flex-end;
+}
+
+.duration-picker-unit-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.duration-picker-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.duration-picker-label {
+  font-size: 11px;
+  color: #777;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+/* Editable box (text input styled as a single-value tile) */
+.duration-picker-box {
+  width: 64px;
+  box-sizing: border-box;
+  padding: 8px 0;
+  text-align: center;
+  font-family: inherit;
+  font-size: 26px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #222;
+  background: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+  cursor: text;
+}
+
+.duration-picker-box:focus {
+  background: #fff;
+  border-color: #b5b5b5;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
+}
+
+.duration-picker-box:disabled {
+  cursor: not-allowed;
+}
+
+.duration-picker-sep {
+  font-size: 24px;
+  font-weight: 600;
+  color: #999;
+  margin: 0 10px;
+  /* line up with the boxes, not the arrows */
+  padding-top: 14px;
+}
+
+.duration-picker-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: #555;
+  cursor: pointer;
+}
+
+.duration-picker-arrow:hover:not(:disabled) {
+  background: #f0f0f0;
+  color: #222;
+}
+
+.duration-picker-arrow:disabled {
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+.duration-picker-reset {
+  font-size: 12px;
+  padding: 5px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  color: #555;
+  cursor: pointer;
+}
+
+.duration-picker-reset:hover:not(:disabled) {
+  background: #f0f0f0;
+  color: #222;
+}
+
+.duration-picker-reset:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.duration-picker.is-disabled .duration-picker-box {
+  color: #aaa;
+}
