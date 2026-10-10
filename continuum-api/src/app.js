@@ -15,12 +15,12 @@ const app = express();
 
 app.use(corsMiddleware());
 app.use(express.json());
-app.use("/auth", authRoutes);
 
 // 👇 must come AFTER body parsing, BEFORE routes
 app.use(requestLogger);
 
 // Routes
+app.use("/auth", authRoutes);
 app.use("/github", requireAuth, githubRoutes);
 app.use("/projects", requireAuth, projectRoutes);
 app.use("/execution", requireAuth, executionRoutes);
