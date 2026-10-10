@@ -13,8 +13,10 @@ if (!API_BASE) {
  * Core request helper (SINGLE SOURCE OF TRUTH)
  * --------------------------------------------------
  */
-async function request(method, path, body) {
-  const token = localStorage.getItem(TOKEN_KEY);
+async function request(method, path, body, tokenOverride) {
+  // tokenOverride: used by bridge autosave so a save goes out with the
+  // login it was made under, even if another tab signed out meanwhile
+  const token = tokenOverride ?? localStorage.getItem(TOKEN_KEY);
 
   const headers = {
     "Content-Type": "application/json",
@@ -90,8 +92,31 @@ export async function fetchBridges(projectId) {
   return request("GET", `/projects/${projectId}/bridges`);
 }
 
-export async function patchBridge(id, data) {
-  await request("PATCH", `/bridges/${id}`, data);
+export async function patchBridge(id, data, token) {
+  await request("PATCH", `/bridges/${id}`, data, token);
+}
+
+/**
+ * Fire-and-forget PATCH that survives the page closing (keepalive).
+ * Used by bridge autosave on page hide. Skipped without a token.
+ */
+export function patchBridgeKeepalive(id, data, tokenOverride) {
+  const token = tokenOverride ?? localStorage.getItem(TOKEN_KEY);
+  if (!token) return;
+
+  try {
+    fetch(`${API_BASE}/bridges/${id}`, {
+      method: "PATCH",
+      keepalive: true,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: JSON.stringify(data),
+    });
+  } catch {
+    // best effort only
+  }
 }
 
 /* ==================================================

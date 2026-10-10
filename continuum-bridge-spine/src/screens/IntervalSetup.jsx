@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { startInterval } from "../api";
+import { prepareIntervalAlerts } from "../utils/intervalAlerts";
 import "./IntervalSetup.css";
 
 export default function IntervalSetup({
@@ -48,6 +49,10 @@ export default function IntervalSetup({
   -------------------------------------------------- */
   async function handleStartInterval() {
     if (!isExecutable || goals.length === 0) return;
+
+    // Must run during the click: browsers only allow the notification
+    // prompt and audio after a user action
+    prepareIntervalAlerts();
 
     const bridge = await startInterval({
       projectId: activeProject._id,

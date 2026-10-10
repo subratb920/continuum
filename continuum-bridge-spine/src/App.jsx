@@ -24,12 +24,16 @@ import GithubImport from "./screens/GithubImport";
 
 import {
   fetchActiveProject,
+  fetchBridges,
   fetchProjects,
-  finalizeBridge,
-  patchBridge,
 } from "./api";
 
 import { logger } from "./utils/logger";
+import { normalizeBridge } from "./utils/normalizeBridge";
+import {
+  queueBridgeSave,
+  getUnsavedBridgeChanges,
+} from "./utils/bridgeAutosave";
 
 export default function App() {
   /* =========================================================
@@ -87,6 +91,15 @@ export default function App() {
      🔁 INITIAL DATA LOAD (AUTHENTICATED CONTEXT)
      ========================================================= */
 
+  // Signed out: drop any open interval window so it can never show
+  // for a different account (unsaved data stays in localStorage)
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      setActiveBridge(null);
+      setSelectedBridge(null);
+    }
+  }, [status]);
+
   useEffect(() => {
     if (status !== "authenticated") return;
 
@@ -109,6 +122,57 @@ export default function App() {
 
         setActiveProject(activeProject);
         setSelectedProject(activeProject);
+
+        // 4️⃣ Resume an open interval (draft bridge) after a reload.
+        //    Kept separate so a failure here never breaks the load.
+        if (activeProject) {
+          try {
+            const bridges = await fetchBridges(activeProject._id);
+            const draft = bridges
+              .filter(b => b.status === "draft")
+              .sort((a, b) => (b.index ?? 0) - (a.index ?? 0))[0];
+
+            if (draft) {
+              const resumed = normalizeBridge(draft);
+              const unsaved = getUnsavedBridgeChanges(resumed._id);
+
+              if (Array.isArray(unsaved?.sessionGoals)) {
+                resumed.sessionGoals = unsaved.sessionGoals;
+              }
+
+              if (unsaved?.status === "finalized") {
+                // The user already clicked Save/End but it never reached
+                // the server (e.g. session ended): finish it now
+                const result = await queueBridgeSave(resumed._id, {
+                  status: "finalized",
+                  ended: true,
+                  sessionGoals: resumed.sessionGoals,
+                });
+
+                if (result.ok) {
+                  logger.ui("Completed pending bridge save", resumed);
+                  setBridgeRevision(r => r + 1);
+                } else {
+                  setActiveBridge(resumed);
+                }
+              } else {
+                // Re-send changes the server never confirmed
+                // (goal statuses, and a Stop that didn't reach the server)
+                if (unsaved) {
+                  if (unsaved.ended && !resumed.interval.endedAt) {
+                    resumed.interval.endedAt = new Date().toISOString();
+                  }
+                  queueBridgeSave(resumed._id, unsaved);
+                }
+
+                logger.ui("Resumed open interval", resumed);
+                setActiveBridge(resumed);
+              }
+            }
+          } catch (resumeErr) {
+            console.error("Could not resume open interval", resumeErr);
+          }
+        }
       } catch (err) {
         if (err.message === "UNAUTHORIZED") {
           logout();
@@ -153,6 +217,49 @@ export default function App() {
   }, [selectedProject]);
 
   /* =========================================================
+     ⏱ RUNNING INTERVAL — draft bridge window, shown on every
+     signed-in page so it stays open for the whole interval
+     ========================================================= */
+
+  const draftModal = activeBridge && (
+    <BridgeDraftModal
+      bridge={activeBridge}
+      onUpdate={handleUpdateActiveBridge}
+      onSignIn={logout}
+      onStop={(bridge) => {
+        // Stop the timer: records interval.endedAt; stays a draft
+        setActiveBridge(bridge);
+        queueBridgeSave(bridge._id, {
+          ended: true,
+          sessionGoals: bridge.sessionGoals,
+        });
+      }}
+      onEnd={async (bridge) => {
+        // Goes through the autosave queue, so it is sent after any
+        // pending goal saves (latest change wins). If it fails, the
+        // data stays in localStorage and is completed on next load.
+        // A stopped interval keeps its stop time as the end time.
+        const result = await queueBridgeSave(bridge._id, {
+          status: "finalized",
+          // Omitted (not false) when stopped, so a Stop that hasn't
+          // reached the server yet is still sent with this save
+          ...(bridge.interval?.endedAt ? {} : { ended: true }),
+          sessionGoals: bridge.sessionGoals,
+        });
+
+        if (!result.ok) {
+          const err = new Error("Bridge could not be saved");
+          err.code = result.unauthorized ? "UNAUTHORIZED" : "SAVE_FAILED";
+          throw err;
+        }
+
+        setActiveBridge(null);
+        setBridgeRevision(r => r + 1);
+      }}
+    />
+  );
+
+  /* =========================================================
      🔒 AUTH GATES
      ========================================================= */
 
@@ -170,6 +277,7 @@ export default function App() {
     return (
       <PageShell scroll>
         <HelpPage />
+        {draftModal}
       </PageShell>
     );
   }
@@ -184,6 +292,7 @@ export default function App() {
     return (
       <PageShell scroll>
         <GithubImport />
+        {draftModal}
       </PageShell>
     );
   }
@@ -207,6 +316,7 @@ export default function App() {
           }}
           onContinue={() => navigate("/console")}
         />
+        {draftModal}
       </PageShell>
     );
   }
@@ -253,7 +363,7 @@ export default function App() {
 
   function handleUpdateActiveBridge(updatedBridge) {
     setActiveBridge(updatedBridge);
-    patchBridge(updatedBridge._id, {
+    queueBridgeSave(updatedBridge._id, {
       sessionGoals: updatedBridge.sessionGoals,
     });
   }
@@ -364,21 +474,7 @@ export default function App() {
       {/* ============================
           Bridge Modals
          ============================ */}
-      {activeBridge && (
-        <BridgeDraftModal
-          bridge={activeBridge}
-          onUpdate={handleUpdateActiveBridge}
-          onClose={async () => {
-            await finalizeBridge(
-              activeBridge._id,
-              activeBridge.sessionGoals
-            );
-
-            setActiveBridge(null);
-            setBridgeRevision(r => r + 1);
-          }}
-        />
-      )}
+      {draftModal}
 
       {selectedBridge && (
         <BridgeHistoryModal
