@@ -96,6 +96,7 @@ export default function ProjectList({
               </button>
 
               <button
+                role="menuitem"
                 onClick={() => {
                   setShowMenu(false);
                   onActivateProject(selectedProject);

@@ -291,6 +291,7 @@ export default function App() {
         <ActivateProjectModal
           projects={projects}
           activeProject={activeProject}
+          initialProject={selectedProject}
           onActivated={(project) => {
             handleActivate(project);
             setShowActivateProject(false);

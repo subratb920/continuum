@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import {
   activateProject,
@@ -6,51 +6,74 @@ import {
 } from "../api";
 
 import "./ActivateProjectModal.css";
+import "./ProjectFormModal.css";
 
+/**
+ * ActivateProjectModal
+ * --------------------
+ * Only one project can be active at a time.
+ * - Activate is the main action; it replaces the current active project.
+ * - Deactivate is a separate secondary action, shown only when a
+ *   project is active.
+ * - The dropdown starts on the project selected in the list.
+ */
 export default function ActivateProjectModal({
   projects,
   activeProject,
+  initialProject,
   onActivated,
   onDeactivated,
   onClose,
 }) {
-  const [selectedId, setSelectedId] = useState(
-    activeProject?._id || ""
-  );
-  const [loading, setLoading] = useState(false);
-  const isActive = selectedId === activeProject?._id;
+  const [selectedId, setSelectedId] = useState(initialProject?._id || "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
-  async function handleAction() {
-    setLoading(true);
+  const isAlreadyActive = !!selectedId && selectedId === activeProject?._id;
+  const willReplace = !!activeProject && !!selectedId && !isAlreadyActive;
+
+  async function handleActivate() {
+    setError("");
+    setBusy(true);
+
     try {
-      if (isActive) {
-        await deactivateProject();
-        onDeactivated();
-      } else {
-        await activateProject(selectedId);
-        const project = projects.find(p => p._id === selectedId);
-        onActivated(project);
-      }
-      onClose();
+      await activateProject(selectedId);
+      onActivated(projects.find(p => p._id === selectedId));
     } catch (err) {
-      console.error("Execution update failed", err);
-    } finally {
-      setLoading(false);
+      setError(err.message);
+      setBusy(false);
+    }
+  }
+
+  async function handleDeactivate() {
+    setError("");
+    setBusy(true);
+
+    try {
+      await deactivateProject();
+      onDeactivated();
+    } catch (err) {
+      setError(err.message);
+      setBusy(false);
     }
   }
 
   return createPortal(
     <div className="modal-backdrop">
-      <div className="modal-window activate-modal">
-        <h2>Execution Context</h2>
+      <div className="modal-window activate-modal project-form-modal">
+        <h2>Activate Project</h2>
 
-        <label className="field-label">
-          Project
+        <label className="field-label" htmlFor="activate-project-select">
+          Select project to activate
         </label>
 
         <select
+          id="activate-project-select"
           value={selectedId}
-          onChange={(e) => setSelectedId(e.target.value)}
+          onChange={(e) => {
+            setSelectedId(e.target.value);
+            setError("");
+          }}
           className="project-select"
         >
           <option value="" disabled>
@@ -59,34 +82,51 @@ export default function ActivateProjectModal({
           {projects.map(p => (
             <option key={p._id} value={p._id}>
               {p.name}
+              {p._id === activeProject?._id ? " (active)" : ""}
             </option>
           ))}
         </select>
 
-        {activeProject && (
-          <div className="active-indicator">
-            Active: <strong>{activeProject.name}</strong>
+        {willReplace && (
+          <div className="field-hint">
+            This will replace “{activeProject.name}” as your active project.
           </div>
         )}
 
+        {isAlreadyActive && (
+          <div className="field-hint">This project is already active.</div>
+        )}
+
+        {activeProject && (
+          <div className="activate-current">
+            <span>
+              Currently active: <strong>{activeProject.name}</strong>
+            </span>
+
+            <button
+              type="button"
+              onClick={handleDeactivate}
+              disabled={busy}
+              className="activate-deactivate-btn"
+            >
+              Deactivate
+            </button>
+          </div>
+        )}
+
+        {error && <div className="field-error">{error}</div>}
+
         <div className="modal-actions">
-          <button
-            onClick={onClose}
-            className="btn-secondary"
-          >
+          <button onClick={onClose} disabled={busy} className="btn-secondary">
             Cancel
           </button>
 
           <button
-            onClick={handleAction}
-            disabled={!selectedId || loading}
-            className={isActive ? "btn-danger" : "btn-primary"}
+            onClick={handleActivate}
+            disabled={!selectedId || isAlreadyActive || busy}
+            className="btn-primary"
           >
-            {loading
-              ? "Please wait…"
-              : isActive
-              ? "Deactivate"
-              : "Activate"}
+            {busy ? "Please wait…" : "Activate"}
           </button>
         </div>
       </div>
