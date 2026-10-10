@@ -34,9 +34,11 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
+/* Bridge name centred (draft and history windows) */
 .modal-header h2 {
   margin: 0;
   font-size: 18px;
+  text-align: center;
 }
 
 .modal-body {
