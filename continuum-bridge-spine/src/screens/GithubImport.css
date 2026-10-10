@@ -216,3 +216,25 @@
 .github-auth-btn:disabled:hover {
   background-color: #1f6f3a;
 }
+/* Slim, subtle scrollbar for the repository list (height unchanged) */
+.repo-list {
+  scrollbar-width: thin;
+  scrollbar-color: #30363d transparent;
+}
+
+.repo-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.repo-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.repo-list::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 999px;
+}
+
+.repo-list::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}

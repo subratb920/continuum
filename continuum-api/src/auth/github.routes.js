@@ -7,6 +7,9 @@ import { createProjectService } from "../services/project.service.js";
 
 const router = Router();
 
+// Safety cap: 10 pages × 100 = up to 1000 repositories
+const MAX_REPO_PAGES = 10;
+
 router.get("/repos", async (req, res) => {
     try {
         const db = getDB();
@@ -20,17 +23,37 @@ router.get("/repos", async (req, res) => {
             return res.status(400).json({ message: "GitHub not connected" });
         }
 
-        const githubRes = await fetch(
-            "https://api.github.com/user/repos",
-            {
+        // All repos the user can access (public + private, owned,
+        // collaborator and organisation), newest activity first.
+        // GitHub returns at most 100 per page, so follow the pages.
+        const repos = [];
+
+        for (let page = 1; page <= MAX_REPO_PAGES; page++) {
+            const url =
+                "https://api.github.com/user/repos" +
+                `?per_page=100&page=${page}&sort=updated` +
+                "&affiliation=owner,collaborator,organization_member";
+
+            const githubRes = await fetch(url, {
                 headers: {
                     Authorization: `Bearer ${user.githubAccessToken}`,
                     Accept: "application/json",
                 },
-            }
-        );
+            });
 
-        const repos = await githubRes.json();
+            if (!githubRes.ok) {
+                const body = await githubRes.json().catch(() => ({}));
+                console.error("GITHUB REPOS ERROR:", githubRes.status, body);
+                return res.status(400).json({
+                    message: "Couldn't load your GitHub repositories. Sign in with GitHub again.",
+                });
+            }
+
+            const batch = await githubRes.json();
+            repos.push(...batch);
+
+            if (batch.length < 100) break;
+        }
 
         res.json(repos);
     } catch (err) {

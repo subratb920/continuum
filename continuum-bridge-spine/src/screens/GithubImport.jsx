@@ -4,7 +4,8 @@ import { useAuth } from "../state/authStore";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
-export default function GithubImport() {
+// onImported(): refreshes the project list in the app (no page reload)
+export default function GithubImport({ onImported }) {
     const { overrideAuthProvider } = useAuth();
     const [loading, setLoading] = useState(false);
     const [repos, setRepos] = useState([]);
@@ -29,20 +30,28 @@ export default function GithubImport() {
             });
 
             const data = await res.json();
-            console.log(data);
-            setRepos(data);
+
+            // Only accept a list; an error response is an object
+            if (res.ok && Array.isArray(data)) {
+                setRepos(data);
+            } else {
+                console.error("Failed to fetch repos", data);
+            }
         } catch (err) {
             console.error("Failed to fetch repos", err);
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleImport = async () => {
         try {
+            // Selection holds repo ids (see toggleRepo / Select All)
             const selectedRepos = repos.filter((r) =>
-                selected.includes(r.name)
+                selected.includes(r.id)
             );
 
-            await fetch(`${API_BASE}/github/import`, {
+            const res = await fetch(`${API_BASE}/github/import`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -50,6 +59,14 @@ export default function GithubImport() {
                 },
                 body: JSON.stringify({ repos: selectedRepos }),
             });
+
+            if (!res.ok) {
+                console.error("Import failed", await res.json().catch(() => ({})));
+                return;
+            }
+
+            // Show the imported projects without reloading the page
+            await onImported?.();
 
             overrideAuthProvider("local");
 

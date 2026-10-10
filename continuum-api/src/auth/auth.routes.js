@@ -18,7 +18,10 @@ router.post("/login", login);
 router.get("/github", (req, res) => {
     const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 
-    const redirect = `https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&scope=user:email`;
+    // "repo" is needed to list private repositories (OAuth Apps have no
+    // read-only private scope); Continuum only reads the repo list.
+    const scope = encodeURIComponent("user:email repo");
+    const redirect = `https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&scope=${scope}`;
 
     res.redirect(redirect);
 });

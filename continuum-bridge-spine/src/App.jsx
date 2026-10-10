@@ -291,7 +291,13 @@ export default function App() {
   if (authProvider === "github") {
     return (
       <PageShell scroll>
-        <GithubImport />
+        <GithubImport
+          onImported={async () => {
+            // Refresh the project list so imported repos appear at once
+            const list = await fetchProjects();
+            setProjects(list);
+          }}
+        />
         {draftModal}
       </PageShell>
     );
