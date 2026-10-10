@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../state/authStore";
 import { FaGithub, FaGoogle } from "react-icons/fa";
 import "./AuthGate.css";
@@ -7,6 +8,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 export default function AuthGate() {
   const { login } = useAuth();
+  const navigate = useNavigate();
 
   const [mode, setMode] = useState("login"); // login | signup
   const [email, setEmail] = useState("");
@@ -46,6 +48,7 @@ export default function AuthGate() {
       }
 
       login(data.token);
+      navigate("/", { replace: true }); // always land on the home page after sign-in
     } catch (err) {
       setError(err.message);
     } finally {
