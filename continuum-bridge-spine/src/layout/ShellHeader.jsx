@@ -1,7 +1,21 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/authStore";
 import "./ShellHeader.css";
+
+// Deploy menu placeholders (greyed out until deployment is defined)
+const DEPLOY_TARGETS = [
+  "AWS",
+  "Google Cloud (GCP)",
+  "Microsoft Azure",
+  "Vercel",
+  "Netlify",
+  "Cloudflare",
+  "DigitalOcean",
+  "Heroku",
+  "Render",
+  "Oracle Cloud",
+];
 
 /**
  * Two letters for the avatar, from the email's local part:
@@ -33,15 +47,14 @@ export default function ShellHeader({ onManualCreate }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  const [openMenu, setOpenMenu] = useState(null); // null | "create" | "profile"
-  const actionsRef = useRef(null);
+  const [openMenu, setOpenMenu] = useState(null); // null | "create" | "deploy" | "profile"
 
-  // Close on outside click or Escape
+  // Close on outside click (outside any header menu) or Escape
   useEffect(() => {
     if (!openMenu) return;
 
     function handleClick(e) {
-      if (actionsRef.current && !actionsRef.current.contains(e.target)) {
+      if (!e.target.closest?.(".shell-menu")) {
         setOpenMenu(null);
       }
     }
@@ -83,59 +96,87 @@ export default function ShellHeader({ onManualCreate }) {
         Continuum Console
       </Link>
 
-      {/* Middle column lines up with the console's Interval Setup pane */}
+      {/* Middle column: spans the Interval Setup box — Interval Setup on
+          its left edge, + Create and Deploy on its right edge */}
       <nav className="shell-nav">
-        <button
-          type="button"
-          className="shell-nav-btn"
-          aria-current={pathname === "/console" ? "page" : undefined}
-          onClick={() => {
-            setOpenMenu(null);
-            navigate("/console");
-          }}
-        >
-          Interval Setup
-        </button>
-      </nav>
-
-      <div className="shell-actions" ref={actionsRef}>
-        {/* + Create */}
-        <div className="shell-menu">
+        <div className="shell-nav-inner">
           <button
             type="button"
             className="shell-nav-btn"
-            onClick={() => toggle("create")}
-            aria-haspopup="menu"
-            aria-expanded={openMenu === "create"}
+            aria-current={pathname === "/console" ? "page" : undefined}
+            onClick={() => {
+              setOpenMenu(null);
+              navigate("/console");
+            }}
           >
-            + Create ▾
+            Interval Setup
           </button>
 
-          {openMenu === "create" && (
-            <div className="menu-dropdown" role="menu">
-              <button role="menuitem" onClick={handleExternalCreate}>
-                🚀 Create via Backstage
-              </button>
-
-              <button role="menuitem" onClick={handleManual}>
-                📝 Create Manually
-              </button>
-
-              {/* GitHub sign-ins only; greyed out for email sign-ins */}
+          <div className="shell-nav-group">
+            {/* + Create */}
+            <div className="shell-menu">
               <button
-                role="menuitem"
-                disabled={authProvider !== "github"}
-                onClick={() => {
-                  setOpenMenu(null);
-                  navigate("/import", { state: { from: pathname } });
-                }}
+                type="button"
+                className="shell-nav-btn"
+                onClick={() => toggle("create")}
+                aria-haspopup="menu"
+                aria-expanded={openMenu === "create"}
               >
-                📦 Import Repo (Github)
+                + Create ▾
               </button>
-            </div>
-          )}
-        </div>
 
+              {openMenu === "create" && (
+                <div className="menu-dropdown" role="menu">
+                  <button role="menuitem" onClick={handleExternalCreate}>
+                    🚀 Create via Backstage
+                  </button>
+
+                  <button role="menuitem" onClick={handleManual}>
+                    📝 Create Manually
+                  </button>
+
+                  {/* GitHub sign-ins only; greyed out for email sign-ins */}
+                  <button
+                    role="menuitem"
+                    disabled={authProvider !== "github"}
+                    onClick={() => {
+                      setOpenMenu(null);
+                      navigate("/import", { state: { from: pathname } });
+                    }}
+                  >
+                    📦 Import Repo (Github)
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Deploy — placeholders until deployment is defined */}
+            <div className="shell-menu">
+              <button
+                type="button"
+                className="shell-nav-btn"
+                onClick={() => toggle("deploy")}
+                aria-haspopup="menu"
+                aria-expanded={openMenu === "deploy"}
+              >
+                Deploy ▾
+              </button>
+
+              {openMenu === "deploy" && (
+                <div className="menu-dropdown" role="menu">
+                  {DEPLOY_TARGETS.map((target) => (
+                    <button key={target} role="menuitem" disabled>
+                      ☁️ Deploy on {target}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div className="shell-actions">
         {/* Help — same control style as + Create */}
         <button
           type="button"

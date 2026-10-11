@@ -20,7 +20,26 @@
 
 /* 40px = .center padding in index.css */
 .shell-nav {
-  padding-left: 40px;
+  padding: 0 40px;
+  min-width: 0;
+}
+
+/* Same width as the Interval Setup box (.interval-setup max-width 720px):
+   Interval Setup on its left edge, + Create / Deploy on its right edge */
+.shell-nav-inner {
+  /* The box is a <fieldset> with the browser's default 2px side margin */
+  max-width: 716px;
+  margin: 0 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.shell-nav-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .shell-actions {
@@ -35,7 +54,7 @@
   position: relative;
 }
 
-/* One style for header controls (+ Create, Help) */
+/* One style for header controls (Interval Setup, + Create, Deploy, Help) */
 .shell-nav-btn {
   font-size: 12px;
   padding: 5px 12px;
