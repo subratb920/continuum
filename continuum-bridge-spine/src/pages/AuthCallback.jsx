@@ -1,37 +1,36 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useAuth } from "../state/authStore";
 
 export default function AuthCallback() {
   const { login } = useAuth();
+  // Run once: login() re-renders with a new function, which would run this
+  // again on an address that no longer has the token (and send you home)
+  const handled = useRef(false);
 
   useEffect(() => {
-    try {
-      // ✅ Parse token from URL (no React Router needed)
-      const params = new URLSearchParams(window.location.search);
-      const token = params.get("token");
+    if (handled.current) return;
+    handled.current = true;
 
-      console.log("AuthCallback → token:", token);
+    try {
+      // ✅ Parse token from URL (no React Router needed); never logged
+      const token = new URLSearchParams(window.location.search).get("token");
 
       if (!token) {
         console.error("AuthCallback: No token found in URL");
-        window.location.href = "/";
+        window.location.replace("/");
         return;
       }
 
       // ✅ Store token + update auth state
       login(token);
 
-      // ✅ Clean URL (remove token from address bar)
-      window.history.replaceState({}, document.title, "/import");
-
       // ✅ This callback is only used by GitHub sign-in: show the
-      // Import from GitHub page once, right after signing in
-      setTimeout(() => {
-        window.location.href = "/import";
-      }, 100);
+      // Import from GitHub page once, right after signing in.
+      // replace() also drops the address with the token from history.
+      window.location.replace("/import");
     } catch (err) {
       console.error("AuthCallback error:", err);
-      window.location.href = "/";
+      window.location.replace("/");
     }
   }, [login]);
 
