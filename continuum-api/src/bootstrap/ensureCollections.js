@@ -14,6 +14,9 @@ export async function ensureCollections(db) {
     "projects",
     "bridges",
     "execution_state",
+    // SSO for continuum-deploy (codes and refresh tokens, hashes only)
+    "oauth_codes",
+    "oauth_refresh_tokens",
   ];
 
   let created = 0;

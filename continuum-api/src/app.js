@@ -9,6 +9,7 @@ import bridgeRoutes from "./routes/bridge.routes.js";
 import { requireAuth } from "./middleware/requireAuth.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import githubRoutes from "./auth/github.routes.js";
+import oauthRoutes from "./oauth/oauth.routes.js";
 
 
 const app = express();
@@ -21,6 +22,7 @@ app.use(requestLogger);
 
 // Routes
 app.use("/auth", authRoutes);
+app.use("/oauth", oauthRoutes); // SSO for continuum-deploy
 app.use("/github", requireAuth, githubRoutes);
 app.use("/projects", requireAuth, projectRoutes);
 app.use("/execution", requireAuth, executionRoutes);

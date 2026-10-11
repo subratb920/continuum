@@ -1,7 +1,7 @@
 // src/server.js
 
-// 1️⃣ Load environment variables ONCE (must be first)
-import "dotenv/config";
+// 1️⃣ Load environment variables ONCE (must be first): .env.local, then .env
+import "./config/loadEnv.js";
 
 import app from "./app.js";
 import { ENV } from "./config/env.js";

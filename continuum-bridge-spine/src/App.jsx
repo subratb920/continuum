@@ -4,6 +4,7 @@ import { assertProject } from "./utils/assertions";
 
 import { useAuth } from "./state/authStore";
 import AuthGate from "./auth/AuthGate";
+import SsoAuthorize from "./pages/SsoAuthorize";
 
 import ThreePanelLayout from "./layout/ThreePanelLayout";
 import PageShell from "./layout/PageShell";
@@ -327,6 +328,9 @@ export default function App() {
     return <AuthCallback />;
   }
   if (status === "unauthenticated") return <AuthGate />;
+
+  // Sign-in to Continuum Deploy (shown after Continuum's own sign-in if needed)
+  if (pathname === "/sso/authorize") return <SsoAuthorize />;
 
   /* =========================================================
      📖 HELP PAGE (/help) — every signed-in user

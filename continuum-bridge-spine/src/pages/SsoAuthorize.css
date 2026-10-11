@@ -1,0 +1,35 @@
+.sso-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fafafa;
+}
+
+.sso-card {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 28px 32px;
+  max-width: 440px;
+  text-align: center;
+}
+
+.sso-card h1 {
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+
+.sso-card p {
+  margin: 0 0 12px;
+  color: #555;
+  font-size: 14px;
+}
+
+.sso-error {
+  background: #fdecec;
+  border: 1px solid #f3b4b4;
+  border-radius: 6px;
+  color: #8a1f1f;
+  padding: 10px 12px;
+}

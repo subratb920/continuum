@@ -28,6 +28,28 @@ export async function ensureIndexes(db) {
     log.debug("🧾 Index exists: execution_state.userId");
   }
 
+  // SSO for continuum-deploy: expired codes and refresh tokens are removed automatically
+  for (const [name, extra] of [
+    ["oauth_codes", []],
+    ["oauth_refresh_tokens", [{ familyId: 1 }, { userId: 1 }]],
+  ]) {
+    const col = db.collection(name);
+    const existing = await col.indexes();
+    if (!existing.find((i) => i.name === "expires_ttl")) {
+      await col.createIndex({ expiresAt: 1 }, { name: "expires_ttl", expireAfterSeconds: 0 });
+      log.info(`🧱 Created index: ${name}.expiresAt (TTL)`);
+      created++;
+    }
+    for (const keys of extra) {
+      const field = Object.keys(keys)[0];
+      if (!existing.find((i) => i.key[field] && Object.keys(i.key).length === 1)) {
+        await col.createIndex(keys);
+        log.info(`🧱 Created index: ${name}.${field}`);
+        created++;
+      }
+    }
+  }
+
   if (created === 0) {
     log.info("✅ All indexes already exist");
   }

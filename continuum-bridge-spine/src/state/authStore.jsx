@@ -63,6 +63,15 @@ export function AuthProvider({ children }) {
 
   function logout() {
     console.log("LOGOUT USER", user);
+    // Also end this user's Continuum Deploy sessions (spec 6.5); best effort
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (token) {
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/oauth/revoke-all`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        keepalive: true,
+      }).catch(() => {});
+    }
     localStorage.removeItem(TOKEN_KEY);
     setUser(null);
     setAuthProvider("local");

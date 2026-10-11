@@ -3,7 +3,11 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/authStore";
 import "./ShellHeader.css";
 
-// Deploy menu placeholders (greyed out until deployment is defined)
+// Continuum Deploy sign-in: opening this signs the user in via Continuum (SSO)
+const DEPLOY_LOGIN_URL =
+  import.meta.env.VITE_DEPLOY_LOGIN_URL || "http://localhost:45180/auth/login?from=continuum";
+
+// Deploy menu: AWS is live; the others stay greyed out until supported
 const DEPLOY_TARGETS = [
   "AWS",
   "Google Cloud (GCP)",
@@ -150,7 +154,7 @@ export default function ShellHeader({ onManualCreate }) {
               )}
             </div>
 
-            {/* Deploy — placeholders until deployment is defined */}
+            {/* Deploy — AWS opens Continuum Deploy; others are placeholders */}
             <div className="shell-menu">
               <button
                 type="button"
@@ -165,7 +169,16 @@ export default function ShellHeader({ onManualCreate }) {
               {openMenu === "deploy" && (
                 <div className="menu-dropdown" role="menu">
                   {DEPLOY_TARGETS.map((target) => (
-                    <button key={target} role="menuitem" disabled>
+                    <button
+                      key={target}
+                      role="menuitem"
+                      disabled={target !== "AWS"}
+                      onClick={() => {
+                        setOpenMenu(null);
+                        // New tab, so a running interval here is never interrupted
+                        window.open(DEPLOY_LOGIN_URL, "_blank", "noopener");
+                      }}
+                    >
                       ☁️ Deploy on {target}
                     </button>
                   ))}
