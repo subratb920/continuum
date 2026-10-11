@@ -15,7 +15,20 @@ services:
       MONGO_INITDB_ROOT_USERNAME: continuum_admin
       MONGO_INITDB_ROOT_PASSWORD: continuum_dev_pw
 
-    command: ["mongod", "--bind_ip_all", "--port", "45171"]
+    # Single-node replica set (rs0) so continuum-deploy can use transactions.
+    # A replica set with sign-in needs a key file; MongoDB requires it to be owned
+    # by the mongodb user and readable only by it, so it is copied in with those
+    # permissions before the server starts. The key file itself is created by the
+    # owner at docker/mongo/mongo-keyfile (gitignored) and never committed.
+    secrets:
+      - mongo_keyfile
+    command:
+      - bash
+      - -c
+      - >-
+        install -m 400 -o 999 -g 999 /run/secrets/mongo_keyfile /tmp/mongo-keyfile &&
+        exec docker-entrypoint.sh mongod --bind_ip_all --port 45171
+        --replSet rs0 --keyFile /tmp/mongo-keyfile
 
     healthcheck:
       test:
@@ -78,3 +91,7 @@ services:
 
 volumes:
   mongo_data:
+
+secrets:
+  mongo_keyfile:
+    file: ./mongo/mongo-keyfile

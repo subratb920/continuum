@@ -23,3 +23,6 @@ continuum-dbvolume
 *.njsproj
 *.sln
 *.sw?
+
+# MongoDB replica-set key file (secret; created by the owner, never committed)
+docker/mongo/
