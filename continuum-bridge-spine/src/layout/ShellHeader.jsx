@@ -121,7 +121,15 @@ export default function ShellHeader({ onManualCreate }) {
                 📝 Create Manually
               </button>
 
-              <button role="menuitem" disabled>
+              {/* GitHub sign-ins only; greyed out for email sign-ins */}
+              <button
+                role="menuitem"
+                disabled={authProvider !== "github"}
+                onClick={() => {
+                  setOpenMenu(null);
+                  navigate("/import", { state: { from: pathname } });
+                }}
+              >
                 📦 Import Repo (Github)
               </button>
             </div>

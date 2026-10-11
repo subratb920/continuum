@@ -41,7 +41,7 @@ export default function App() {
      ========================================================= */
 
   const { status, logout } = useAuth();
-  const { pathname } = useLocation();
+  const { pathname, state: locationState } = useLocation();
   const navigate = useNavigate();
 
   const [projects, setProjects] = useState([]);
@@ -298,7 +298,13 @@ export default function App() {
             const list = await fetchProjects();
             setProjects(list);
           }}
-          onDone={() => navigate("/", { replace: true })}
+          onDone={() => {
+            // Opened from the header menu → back to that page;
+            // after a GitHub sign-in (no "from") → home
+            const from = locationState?.from;
+            const returnTo = from && from !== "/import" ? from : "/";
+            navigate(returnTo, { replace: true });
+          }}
         />
         {draftModal}
       </PageShell>
