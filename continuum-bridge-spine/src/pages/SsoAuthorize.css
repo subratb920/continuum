@@ -33,3 +33,37 @@
   color: #8a1f1f;
   padding: 10px 12px;
 }
+
+/* Fills over the visible period before continuing to Continuum Deploy */
+.sso-progress {
+  height: 4px;
+  background: #eef0f6;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.sso-progress-bar {
+  height: 100%;
+  width: 100%;
+  background: #4f6ef7;
+  transform-origin: left;
+  animation-name: sso-fill;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes sso-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sso-progress-bar {
+    animation: none;
+  }
+}
