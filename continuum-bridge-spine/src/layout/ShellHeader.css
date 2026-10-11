@@ -18,18 +18,19 @@
   text-decoration: none;
 }
 
-/* 40px = .center padding in index.css */
+/* Middle column (above the Interval Setup pane).
+   Left 40px = .center padding in index.css; right 16px gap before the
+   Bridge Spine pane, where the middle column ends */
 .shell-nav {
-  padding: 0 40px;
+  padding: 0 16px 0 40px;
   min-width: 0;
 }
 
-/* Same width as the Interval Setup box (.interval-setup max-width 720px):
-   Interval Setup on its left edge, + Create / Deploy on its right edge */
+/* Interval Setup on the box's left border (the box is a <fieldset> with
+   the browser's default 2px side margin); + Create / Deploy at the right
+   end of the middle column */
 .shell-nav-inner {
-  /* The box is a <fieldset> with the browser's default 2px side margin */
-  max-width: 716px;
-  margin: 0 2px;
+  margin-left: 2px;
   display: flex;
   align-items: center;
   justify-content: space-between;
