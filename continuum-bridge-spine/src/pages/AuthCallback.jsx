@@ -22,11 +22,12 @@ export default function AuthCallback() {
       login(token);
 
       // ✅ Clean URL (remove token from address bar)
-      window.history.replaceState({}, document.title, "/");
+      window.history.replaceState({}, document.title, "/import");
 
-      // ✅ Redirect to app root
+      // ✅ This callback is only used by GitHub sign-in: show the
+      // Import from GitHub page once, right after signing in
       setTimeout(() => {
-        window.location.href = "/";
+        window.location.href = "/import";
       }, 100);
     } catch (err) {
       console.error("AuthCallback error:", err);

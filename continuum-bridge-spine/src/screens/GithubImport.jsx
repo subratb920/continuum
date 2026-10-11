@@ -1,12 +1,11 @@
 import React, { useState } from "react";
 import "./GithubImport.css";
-import { useAuth } from "../state/authStore";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 // onImported(): refreshes the project list in the app (no page reload)
-export default function GithubImport({ onImported }) {
-    const { overrideAuthProvider } = useAuth();
+// onDone():     leaves the import page (Skip, or after a successful Import)
+export default function GithubImport({ onImported, onDone }) {
     const [loading, setLoading] = useState(false);
     const [repos, setRepos] = useState([]);
     const [selected, setSelected] = useState([]);
@@ -17,7 +16,7 @@ export default function GithubImport({ onImported }) {
     );
 
     const handleSkip = () => {
-        overrideAuthProvider("local");
+        onDone?.();
     };
 
     const handleFetchRepos = async () => {
@@ -68,7 +67,7 @@ export default function GithubImport({ onImported }) {
             // Show the imported projects without reloading the page
             await onImported?.();
 
-            overrideAuthProvider("local");
+            onDone?.();
 
         } catch (err) {
             console.error("Import failed", err);

@@ -40,7 +40,7 @@ export default function App() {
      🔒 AUTH + CORE STATE
      ========================================================= */
 
-  const { status, logout, authProvider } = useAuth();
+  const { status, logout } = useAuth();
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
@@ -285,10 +285,11 @@ export default function App() {
   if (loading) return null;
 
   /* =========================================================
-     📭 EMPTY STATE — NO PROJECTS
+     📦 IMPORT FROM GITHUB (/import) — shown after a GitHub
+     sign-in (AuthCallback sends GitHub sign-ins here)
      ========================================================= */
 
-  if (authProvider === "github") {
+  if (pathname === "/import") {
     return (
       <PageShell scroll>
         <GithubImport
@@ -297,6 +298,7 @@ export default function App() {
             const list = await fetchProjects();
             setProjects(list);
           }}
+          onDone={() => navigate("/", { replace: true })}
         />
         {draftModal}
       </PageShell>
