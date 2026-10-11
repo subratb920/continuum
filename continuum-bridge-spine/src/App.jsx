@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { assertProject } from "./utils/assertions";
 
@@ -34,6 +34,34 @@ import {
   queueBridgeSave,
   getUnsavedBridgeChanges,
 } from "./utils/bridgeAutosave";
+
+// Last page on reopen (see App): only these pages are remembered
+const LAST_PATH_KEY = "continuum_last_path";
+const RESTORABLE_PATHS = ["/", "/console", "/help"];
+
+function readLastPath() {
+  try {
+    return localStorage.getItem(LAST_PATH_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function rememberLastPath(path) {
+  try {
+    localStorage.setItem(LAST_PATH_KEY, path);
+  } catch {
+    // storage unavailable — reopen simply shows the home page
+  }
+}
+
+function forgetLastPath() {
+  try {
+    localStorage.removeItem(LAST_PATH_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 export default function App() {
   /* =========================================================
@@ -97,8 +125,39 @@ export default function App() {
     if (status === "unauthenticated") {
       setActiveBridge(null);
       setSelectedBridge(null);
+      forgetLastPath(); // next account on this browser starts fresh
     }
   }, [status]);
+
+  /* =========================================================
+     ↩ LAST PAGE ON REOPEN — when the browser is reopened (or the
+     page reloaded) while still signed in, the base address shows
+     the last page the user was on. A new sign-in never restores.
+     ========================================================= */
+
+  // Read before anything below can overwrite it
+  const savedLastPath = useRef(readLastPath());
+  const previousStatus = useRef(status);
+
+  useEffect(() => {
+    const was = previousStatus.current;
+    previousStatus.current = status;
+
+    // checking → authenticated = token already present (reopen/reload)
+    if (was === "checking" && status === "authenticated" && pathname === "/") {
+      const target = savedLastPath.current;
+      if (target && target !== "/" && RESTORABLE_PATHS.includes(target)) {
+        navigate(target, { replace: true });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+
+  useEffect(() => {
+    if (status === "authenticated" && RESTORABLE_PATHS.includes(pathname)) {
+      rememberLastPath(pathname);
+    }
+  }, [pathname, status]);
 
   useEffect(() => {
     if (status !== "authenticated") return;
