@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/authStore";
 import "./ShellHeader.css";
@@ -7,18 +7,26 @@ import "./ShellHeader.css";
 const DEPLOY_LOGIN_URL =
   import.meta.env.VITE_DEPLOY_LOGIN_URL || "http://localhost:45180/auth/login?from=continuum";
 
-// Deploy menu: AWS is live; the others stay greyed out until supported
+/** Continuum Deploy, signed in, on its Connections page: all clouds, or only one. */
+function deployUrl(cloud) {
+  const url = new URL(DEPLOY_LOGIN_URL);
+  url.searchParams.set("returnTo", cloud ? `/connections?cloud=${cloud}` : "/connections?cloud=all");
+  return url.toString();
+}
+
+// Deploy menu: AWS and Railway are live; the others stay greyed out until supported
 const DEPLOY_TARGETS = [
-  "AWS",
-  "Google Cloud (GCP)",
-  "Microsoft Azure",
-  "Vercel",
-  "Netlify",
-  "Cloudflare",
-  "DigitalOcean",
-  "Heroku",
-  "Render",
-  "Oracle Cloud",
+  { label: "AWS", cloud: "aws" },
+  { label: "Railway", cloud: "railway" },
+  { label: "Google Cloud (GCP)" },
+  { label: "Microsoft Azure" },
+  { label: "Vercel" },
+  { label: "Netlify" },
+  { label: "Cloudflare" },
+  { label: "DigitalOcean" },
+  { label: "Heroku" },
+  { label: "Render" },
+  { label: "Oracle Cloud" },
 ];
 
 /**
@@ -77,6 +85,24 @@ export default function ShellHeader({ onManualCreate }) {
 
   function toggle(menu) {
     setOpenMenu((current) => (current === menu ? null : menu));
+  }
+
+  // Deploy opens on hover or keyboard focus; a short delay lets the pointer cross to the list
+  const deployCloseTimer = useRef(null);
+  function openDeploy() {
+    clearTimeout(deployCloseTimer.current);
+    setOpenMenu("deploy");
+  }
+  function closeDeploySoon() {
+    clearTimeout(deployCloseTimer.current);
+    deployCloseTimer.current = setTimeout(() => setOpenMenu((m) => (m === "deploy" ? null : m)), 200);
+  }
+  useEffect(() => () => clearTimeout(deployCloseTimer.current), []);
+
+  function openDeployApp(cloud) {
+    setOpenMenu(null);
+    // New tab, so a running interval here is never interrupted
+    window.open(deployUrl(cloud), "_blank", "noopener");
   }
 
   function handleExternalCreate() {
@@ -154,14 +180,21 @@ export default function ShellHeader({ onManualCreate }) {
               )}
             </div>
 
-            {/* Deploy — AWS opens Continuum Deploy; others are placeholders */}
-            <div className="shell-menu">
+            {/* Deploy — click opens Continuum Deploy with all clouds; hover lists the clouds */}
+            <div
+              className="shell-menu"
+              onMouseEnter={openDeploy}
+              onMouseLeave={closeDeploySoon}
+              onFocus={openDeploy}
+              onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && closeDeploySoon()}
+            >
               <button
                 type="button"
                 className="shell-nav-btn"
-                onClick={() => toggle("deploy")}
+                onClick={() => openDeployApp(null)}
                 aria-haspopup="menu"
                 aria-expanded={openMenu === "deploy"}
+                title="Open Continuum Deploy (all clouds)"
               >
                 Deploy ▾
               </button>
@@ -170,16 +203,12 @@ export default function ShellHeader({ onManualCreate }) {
                 <div className="menu-dropdown" role="menu">
                   {DEPLOY_TARGETS.map((target) => (
                     <button
-                      key={target}
+                      key={target.label}
                       role="menuitem"
-                      disabled={target !== "AWS"}
-                      onClick={() => {
-                        setOpenMenu(null);
-                        // New tab, so a running interval here is never interrupted
-                        window.open(DEPLOY_LOGIN_URL, "_blank", "noopener");
-                      }}
+                      disabled={!target.cloud}
+                      onClick={() => openDeployApp(target.cloud)}
                     >
-                      ☁️ Deploy on {target}
+                      ☁️ Deploy on {target.label}
                     </button>
                   ))}
                 </div>
