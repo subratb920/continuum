@@ -15,7 +15,10 @@ export function deployConnectionsUrl(cloud) {
   return withReturn(`/connections?cloud=${cloud || "all"}`);
 }
 
-/** New deployment with this Continuum project already chosen. */
-export function deployProjectUrl(projectId) {
-  return withReturn(`/deployments/new?project=${encodeURIComponent(projectId)}&cloud=all`);
+/**
+ * Deploy this Continuum project on a cloud: Continuum Deploy opens with the
+ * project chosen (its app's page if it has one, otherwise a new app for its repo).
+ */
+export function deployProjectUrl(projectId, cloud) {
+  return withReturn(`/deployments/new?project=${encodeURIComponent(projectId)}&cloud=${cloud || "all"}`);
 }

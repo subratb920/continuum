@@ -453,7 +453,7 @@ export default function App() {
      ========================================================= */
 
   return (
-    <PageShell>
+    <PageShell selectedProject={selectedProject}>
       <ThreePanelLayout
         projects={projects}
         activeProject={activeProject}

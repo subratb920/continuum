@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/authStore";
 import "./ShellHeader.css";
-import { deployConnectionsUrl } from "../deployLinks";
+import { deployConnectionsUrl, deployProjectUrl } from "../deployLinks";
 
-// Deploy menu: AWS and Railway are live; the others stay greyed out until supported
+// Deploy menu: AWS and Railway are live; the others stay greyed out until supported.
+// deploysProject: deploying a selected project works there (Railway; AWS opens its connections).
 const DEPLOY_TARGETS = [
   { label: "AWS", cloud: "aws" },
-  { label: "Railway", cloud: "railway" },
+  { label: "Railway", cloud: "railway", deploysProject: true },
   { label: "Google Cloud (GCP)" },
   { label: "Microsoft Azure" },
   { label: "Vercel" },
@@ -43,8 +44,10 @@ function getInitials(email) {
  * Shared header on every signed-in page (see PageShell).
  * Actions: + Create menu, Help, and a profile avatar whose menu holds
  * the email and Sign out. Only one menu is open at a time.
+ * selectedProject (console only): Deploy on Railway deploys that project's
+ * GitHub repository; without one it opens that cloud's connections.
  */
-export default function ShellHeader({ onManualCreate }) {
+export default function ShellHeader({ onManualCreate, selectedProject = null }) {
   const { user, authProvider, logout } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -89,10 +92,14 @@ export default function ShellHeader({ onManualCreate }) {
   }
   useEffect(() => () => clearTimeout(deployCloseTimer.current), []);
 
-  function openDeployApp(cloud) {
+  // Only a project imported from GitHub has a repository to deploy
+  const deployable = selectedProject?.source === "github" ? selectedProject : null;
+
+  function openDeployApp(target) {
     setOpenMenu(null);
+    const url = target?.deploysProject && deployable ? deployProjectUrl(deployable._id, target.cloud) : deployConnectionsUrl(target?.cloud);
     // New tab, so a running interval here is never interrupted
-    window.open(deployConnectionsUrl(cloud), "_blank", "noopener");
+    window.open(url, "_blank", "noopener");
   }
 
   function handleExternalCreate() {
@@ -191,12 +198,24 @@ export default function ShellHeader({ onManualCreate }) {
 
               {openMenu === "deploy" && (
                 <div className="menu-dropdown" role="menu">
+                  {selectedProject && (
+                    <div className="menu-dropdown-note">
+                      {deployable ? (
+                        <>
+                          Selected project: <strong>{deployable.name}</strong>
+                        </>
+                      ) : (
+                        <>{selectedProject.name} has no GitHub repository to deploy</>
+                      )}
+                    </div>
+                  )}
                   {DEPLOY_TARGETS.map((target) => (
                     <button
                       key={target.label}
                       role="menuitem"
                       disabled={!target.cloud}
-                      onClick={() => openDeployApp(target.cloud)}
+                      onClick={() => openDeployApp(target)}
+                      title={target.deploysProject && deployable ? `Deploy ${deployable.name} on ${target.label}` : undefined}
                     >
                       ☁️ Deploy on {target.label}
                     </button>
