@@ -67,3 +67,28 @@ test("only Ed25519 keys are accepted for signing", () => {
   const pem = privateKey.export({ format: "pem", type: "pkcs8" });
   assert.throws(() => loadSigningKey(Buffer.from(pem).toString("base64")), /Ed25519/);
 });
+
+// verifyJwt: what /deploy/* accepts (only continuum-deploy's own access tokens)
+import { verifyJwt } from "../src/oauth/oauth.crypto.js";
+
+const deployKey = generateKeyPairSync("ed25519").privateKey;
+const opts = { issuer: "continuum-api", audience: "continuum-deploy" };
+const nowS = Math.floor(Date.now() / 1000);
+const claims = { iss: "continuum-api", aud: "continuum-deploy", sub: "69d163aad7da5c2d67a8dc3b", exp: nowS + 600 };
+
+test("verifyJwt accepts a token this server signed for continuum-deploy", () => {
+  assert.equal(verifyJwt(signJwt(claims, deployKey, "k1"), deployKey, opts)?.sub, claims.sub);
+});
+
+test("verifyJwt refuses another key, another audience or issuer, expiry, tampering and junk", () => {
+  const otherKey = generateKeyPairSync("ed25519").privateKey;
+  assert.equal(verifyJwt(signJwt(claims, otherKey, "k1"), deployKey, opts), null);
+  assert.equal(verifyJwt(signJwt({ ...claims, aud: "someone-else" }, deployKey, "k1"), deployKey, opts), null);
+  assert.equal(verifyJwt(signJwt({ ...claims, iss: "evil" }, deployKey, "k1"), deployKey, opts), null);
+  assert.equal(verifyJwt(signJwt({ ...claims, exp: nowS - 1 }, deployKey, "k1"), deployKey, opts), null);
+  const [h, , s] = signJwt(claims, deployKey, "k1").split(".");
+  const forged = Buffer.from(JSON.stringify({ ...claims, sub: "someone-else" })).toString("base64url");
+  assert.equal(verifyJwt(`${h}.${forged}.${s}`, deployKey, opts), null);
+  assert.equal(verifyJwt("not.a.jwt", deployKey, opts), null);
+  assert.equal(verifyJwt(undefined, deployKey, opts), null);
+});

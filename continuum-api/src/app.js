@@ -10,6 +10,7 @@ import { requireAuth } from "./middleware/requireAuth.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import githubRoutes from "./auth/github.routes.js";
 import oauthRoutes from "./oauth/oauth.routes.js";
+import deployRoutes from "./oauth/deploy.routes.js";
 
 
 const app = express();
@@ -23,6 +24,7 @@ app.use(requestLogger);
 // Routes
 app.use("/auth", authRoutes);
 app.use("/oauth", oauthRoutes); // SSO for continuum-deploy
+app.use("/deploy", deployRoutes); // read-only data for continuum-deploy (its access token only)
 app.use("/github", requireAuth, githubRoutes);
 app.use("/projects", requireAuth, projectRoutes);
 app.use("/execution", requireAuth, executionRoutes);

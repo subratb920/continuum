@@ -2,17 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/authStore";
 import "./ShellHeader.css";
-
-// Continuum Deploy sign-in: opening this signs the user in via Continuum (SSO)
-const DEPLOY_LOGIN_URL =
-  import.meta.env.VITE_DEPLOY_LOGIN_URL || "http://localhost:45180/auth/login?from=continuum";
-
-/** Continuum Deploy, signed in, on its Connections page: all clouds, or only one. */
-function deployUrl(cloud) {
-  const url = new URL(DEPLOY_LOGIN_URL);
-  url.searchParams.set("returnTo", cloud ? `/connections?cloud=${cloud}` : "/connections?cloud=all");
-  return url.toString();
-}
+import { deployConnectionsUrl } from "../deployLinks";
 
 // Deploy menu: AWS and Railway are live; the others stay greyed out until supported
 const DEPLOY_TARGETS = [
@@ -102,7 +92,7 @@ export default function ShellHeader({ onManualCreate }) {
   function openDeployApp(cloud) {
     setOpenMenu(null);
     // New tab, so a running interval here is never interrupted
-    window.open(deployUrl(cloud), "_blank", "noopener");
+    window.open(deployConnectionsUrl(cloud), "_blank", "noopener");
   }
 
   function handleExternalCreate() {

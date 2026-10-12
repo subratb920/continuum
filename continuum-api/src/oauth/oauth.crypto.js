@@ -10,6 +10,7 @@ import {
   randomBytes,
   sign,
   timingSafeEqual,
+  verify,
 } from "crypto";
 
 export function base64url(input) {
@@ -69,4 +70,27 @@ export function signJwt(payload, privateKey, kid) {
   const input = `${base64url(JSON.stringify(header))}.${base64url(JSON.stringify(payload))}`;
   const signature = sign(null, Buffer.from(input), privateKey).toString("base64url");
   return `${input}.${signature}`;
+}
+
+/**
+ * Checks a JWT this server signed: EdDSA signature with our key, issuer,
+ * audience and expiry. Returns the claims, or null if anything is wrong.
+ */
+export function verifyJwt(token, privateKey, { issuer, audience }, nowSeconds = Math.floor(Date.now() / 1000)) {
+  if (typeof token !== "string") return null;
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const header = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf8"));
+    if (header.alg !== "EdDSA") return null;
+    const ok = verify(null, Buffer.from(`${parts[0]}.${parts[1]}`), createPublicKey(privateKey), Buffer.from(parts[2], "base64url"));
+    if (!ok) return null;
+    const claims = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+    if (claims.iss !== issuer || claims.aud !== audience) return null;
+    if (typeof claims.exp !== "number" || claims.exp <= nowSeconds) return null;
+    if (typeof claims.sub !== "string" || !claims.sub) return null;
+    return claims;
+  } catch {
+    return null;
+  }
 }

@@ -1,0 +1,21 @@
+// Links into Continuum Deploy. Opening one signs the user in via Continuum (SSO)
+// and lands on the page given by returnTo.
+
+const DEPLOY_LOGIN_URL =
+  import.meta.env.VITE_DEPLOY_LOGIN_URL || "http://localhost:45180/auth/login?from=continuum";
+
+function withReturn(path) {
+  const url = new URL(DEPLOY_LOGIN_URL);
+  url.searchParams.set("returnTo", path);
+  return url.toString();
+}
+
+/** Connections page: all clouds (cloud null), or only one ("aws", "railway"). */
+export function deployConnectionsUrl(cloud) {
+  return withReturn(`/connections?cloud=${cloud || "all"}`);
+}
+
+/** New deployment with this Continuum project already chosen. */
+export function deployProjectUrl(projectId) {
+  return withReturn(`/deployments/new?project=${encodeURIComponent(projectId)}&cloud=all`);
+}

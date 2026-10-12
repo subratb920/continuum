@@ -220,6 +220,22 @@
   color: #2f81f7;
 }
 
+/* Deploy (opens Continuum Deploy with this project chosen), before the ↗ GitHub link */
+.project-deploy {
+  font-size: 11px;
+  padding: 1px 7px;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+}
+
+.project-deploy:hover {
+  border-color: #2f81f7;
+}
+
+.project-deploy + .project-link {
+  margin-left: 8px;
+}
+
 
 .project-list-empty {
   color: #888;

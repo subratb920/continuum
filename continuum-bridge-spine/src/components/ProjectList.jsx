@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { deployProjectUrl } from "../deployLinks";
 import "./ProjectList.css";
 import { getProjectMeta } from "../models/project";
 
@@ -177,6 +178,18 @@ export default function ProjectList({
                   {getProjectMeta(project).label}
                 </span>
               </div>
+              {project.source === "github" && (
+                <a
+                  href={deployProjectUrl(project._id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="project-link project-deploy"
+                  title="Deploy this project with Continuum Deploy"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Deploy
+                </a>
+              )}
               {project.githubRepoUrl && (
                 <a
                   href={project.githubRepoUrl}
