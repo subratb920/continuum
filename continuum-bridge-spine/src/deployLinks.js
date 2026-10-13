@@ -1,8 +1,12 @@
 // Links into Continuum Deploy. Opening one signs the user in via Continuum (SSO)
 // and lands on the page given by returnTo.
 
-const DEPLOY_LOGIN_URL =
-  import.meta.env.VITE_DEPLOY_LOGIN_URL || "http://localhost:45180/auth/login?from=continuum";
+// Continuum Deploy's sign-in address (VITE_DEPLOY_LOGIN_URL), e.g.
+// http://localhost:45180/auth/login?from=continuum. Unset: no Deploy menu.
+const DEPLOY_LOGIN_URL = import.meta.env.VITE_DEPLOY_LOGIN_URL || "";
+
+/** Whether this setup links to a Continuum Deploy. */
+export const DEPLOY_AVAILABLE = Boolean(DEPLOY_LOGIN_URL);
 
 function withReturn(path) {
   const url = new URL(DEPLOY_LOGIN_URL);

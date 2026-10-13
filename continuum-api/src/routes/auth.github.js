@@ -1,5 +1,6 @@
 import fetch from "node-fetch";
 import jwt from "jsonwebtoken";
+import { clientAuthCallbackUrl, githubAuthorizeUrl, githubCallbackUrl } from "../config/urls.js";
 
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
@@ -8,9 +9,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 export function registerGithubAuth(app, db) {
   // STEP 1 → Redirect user to GitHub
   app.get("/auth/github", (req, res) => {
-    const redirect = `https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&scope=user:email`;
-
-    res.redirect(redirect);
+    res.redirect(githubAuthorizeUrl("user:email"));
   });
 
   // STEP 2 → GitHub callback
@@ -30,6 +29,7 @@ export function registerGithubAuth(app, db) {
             client_id: CLIENT_ID,
             client_secret: CLIENT_SECRET,
             code,
+            ...(githubCallbackUrl() ? { redirect_uri: githubCallbackUrl() } : {}),
           }),
         }
       );
@@ -85,9 +85,7 @@ export function registerGithubAuth(app, db) {
       );
 
       // Redirect back to frontend
-      res.redirect(
-        `http://localhost:45173/auth/callback?token=${token}`
-      );
+      res.redirect(clientAuthCallbackUrl(token));
     } catch (err) {
       console.error(err);
       res.status(500).send("GitHub auth failed");

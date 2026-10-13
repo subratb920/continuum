@@ -9,6 +9,8 @@
 const DEP_FILES = new Set(["package.json", "requirements.txt", "pyproject.toml", "go.mod", "pom.xml", "build.gradle", "Gemfile", "composer.json", "schema.prisma"]);
 const COMPOSE = /^(docker-)?compose(\.[\w-]+)?\.ya?ml$/;
 const ENV_EXAMPLE = /^\.env\.(example|sample|template)$/;
+/** The settings an app runs with in the cloud (committed; secrets by name only). */
+const ENV_PRODUCTION = ".env.production";
 
 /** Words in dependency files → engine. */
 const PACKAGES = {
@@ -27,6 +29,7 @@ export function detectDatabases(files) {
   const found = { mongodb: { evidence: new Set(), envName: null }, postgres: { evidence: new Set(), envName: null }, mysql: { evidence: new Set(), envName: null } };
   for (const f of files) {
     const name = f.path.split("/").pop();
+    if (name === "Dockerfile" || name === ENV_PRODUCTION) continue; // read for its port / settings only
     if (ENV_EXAMPLE.test(name)) {
       // Names only: "NAME=" at the start of a line; the value after = is ignored
       for (const line of f.text.split("\n")) {
@@ -65,6 +68,25 @@ export function detectDatabases(files) {
     .sort((a, b) => b.evidence.length - a.evidence.length);
 }
 
+/**
+ * A .env file's settings: NAME=value lines (quotes removed, "export " and
+ * comments ignored). Values are kept as written; an empty one is a secret
+ * whose value is entered elsewhere.
+ */
+export function parseEnvFile(text) {
+  const out = {};
+  for (const raw of text.split("\n")) {
+    const m = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/.exec(raw);
+    if (!m) continue;
+    let v = m[2];
+    if (/^"(.*)"$/.test(v)) v = v.slice(1, -1).replace(/\\n/g, "\n");
+    else if (/^'(.*)'$/.test(v)) v = v.slice(1, -1);
+    else v = v.replace(/\s+#.*$/, "");
+    out[m[1]] = v;
+  }
+  return out;
+}
+
 /** The setting names an app's .env.example files list (names only: values are never read). */
 export function settingNamesOf(files) {
   const names = new Set();
@@ -96,7 +118,18 @@ export function byFolder(files, appFolders) {
     if (!groups.has(o)) groups.set(o, []);
     groups.get(o).push(f);
   }
-  return Object.fromEntries([...groups.entries()].map(([folder, group]) => [folder, { databases: detectDatabases(group), settingNames: settingNamesOf(group) }]));
+  return Object.fromEntries(
+    [...groups.entries()].map(([folder, group]) => {
+      // The port its Dockerfile says it uses (EXPOSE), if any: a hint, not a setting
+      const docker = group.find((f) => f.path.split("/").pop() === "Dockerfile" && f.path.split("/").slice(0, -1).join("/") === folder);
+      const exposed = docker ? Number(/^\s*EXPOSE\s+(\d{2,5})/im.exec(docker.text)?.[1] ?? 0) || null : null;
+      // Its own .env.production (directly in the folder): the settings Continuum Deploy uses in the cloud
+      const prod = group.find((f) => f.path.split("/").pop() === ENV_PRODUCTION && f.path.split("/").slice(0, -1).join("/") === folder);
+      const envProduction = prod ? parseEnvFile(prod.text) : null;
+      const names = [...new Set([...settingNamesOf(group), ...Object.keys(envProduction ?? {})])];
+      return [folder, { databases: detectDatabases(group), settingNames: names, ...(exposed ? { exposedPort: exposed } : {}), ...(envProduction ? { envProduction } : {}) }];
+    }),
+  );
 }
 
 /** Which files of a repository tree to read for detection (at most 30, small ones). */
@@ -106,7 +139,7 @@ export function filesToRead(tree, skipDirs) {
     .filter((i) => !i.path.split("/").some((p) => skipDirs.has(p)) && i.path.split("/").length <= 3)
     .filter((i) => {
       const name = i.path.split("/").pop();
-      return DEP_FILES.has(name) || COMPOSE.test(name) || ENV_EXAMPLE.test(name);
+      return DEP_FILES.has(name) || COMPOSE.test(name) || ENV_EXAMPLE.test(name) || name === "Dockerfile" || name === ENV_PRODUCTION;
     })
     .slice(0, 30)
     .map((i) => i.path);

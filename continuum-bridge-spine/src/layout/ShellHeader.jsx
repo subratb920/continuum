@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/authStore";
 import "./ShellHeader.css";
-import { deployCloudPageUrl, deployConnectionsUrl, deployHomeUrl, deployListUrl, deployProjectUrl } from "../deployLinks";
+import { DEPLOY_AVAILABLE, deployCloudPageUrl, deployConnectionsUrl, deployHomeUrl, deployListUrl, deployProjectUrl } from "../deployLinks";
+
+// continuum-create (Backstage), if this setup has one: VITE_CREATE_URL. Unset: its menu item is hidden.
+const CREATE_URL = import.meta.env.VITE_CREATE_URL || "";
 
 // Deploy menu: AWS, Railway and GCP are live. deploysProject: deploying a selected
 // project works there (Railway and GCP; AWS opens its connections). soon: not supported
@@ -117,7 +120,7 @@ export default function ShellHeader({ onManualCreate, selectedProject = null }) 
   }
 
   function handleExternalCreate() {
-    window.open("http://localhost:3000/create", "_blank");
+    if (CREATE_URL) window.open(CREATE_URL, "_blank", "noopener");
     setOpenMenu(null);
   }
 
@@ -168,9 +171,11 @@ export default function ShellHeader({ onManualCreate, selectedProject = null }) 
 
               {openMenu === "create" && (
                 <div className="menu-dropdown" role="menu">
-                  <button role="menuitem" onClick={handleExternalCreate}>
-                    🚀 Create via Backstage
-                  </button>
+                  {CREATE_URL && (
+                    <button role="menuitem" onClick={handleExternalCreate}>
+                      🚀 Create via Backstage
+                    </button>
+                  )}
 
                   <button role="menuitem" onClick={handleManual}>
                     📝 Create Manually
@@ -191,8 +196,9 @@ export default function ShellHeader({ onManualCreate, selectedProject = null }) 
               )}
             </div>
 
-            {/* Deploy — click opens Continuum Deploy with all clouds; hover lists the clouds */}
-            <div
+            {/* Deploy — click opens Continuum Deploy with all clouds; hover lists the clouds (only when this setup has one) */}
+            {DEPLOY_AVAILABLE && (
+<div
               className="shell-menu"
               onMouseEnter={openDeploy}
               onMouseLeave={closeDeploySoon}
@@ -237,6 +243,7 @@ export default function ShellHeader({ onManualCreate, selectedProject = null }) 
                 </div>
               )}
             </div>
+            )}
           </div>
         </div>
       </nav>

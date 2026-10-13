@@ -52,3 +52,19 @@ test("per app folder: each app's own database and setting names (names only); a 
   assert.deepEqual(r.web, { databases: [], settingNames: ["VITE_API_URL"] });
   assert.ok(!JSON.stringify(r).includes("secret@"), "values are never returned");
 });
+
+test("a folder's Dockerfile EXPOSE is reported as a port hint; Dockerfiles never count as database evidence", async () => {
+  const { byFolder } = await import("../src/oauth/detect-databases.js");
+  const r = byFolder([{ path: "web/Dockerfile", text: "FROM node:20\nRUN npm i pg-promise-cli\nEXPOSE 5173\n" }, { path: "web/package.json", text: "{}" }], ["web"]);
+  assert.equal(r.web.exposedPort, 5173);
+  assert.deepEqual(r.web.databases, []);
+});
+
+test("an app folder's .env.production is read (values as written, empty = a secret); plain .env never is", async () => {
+  const { byFolder, filesToRead, parseEnvFile } = await import("../src/oauth/detect-databases.js");
+  assert.deepEqual(parseEnvFile('# c\nexport A=1\nB="two words"\nC=\nD=x # note\nE=\'q\'\n'), { A: "1", B: "two words", C: "", D: "x", E: "q" });
+  const r = byFolder([{ path: "api/.env.production", text: "NODE_ENV=production\nJWT_SECRET=\n" }, { path: "api/package.json", text: "{}" }], ["api"]);
+  assert.deepEqual(r.api.envProduction, { NODE_ENV: "production", JWT_SECRET: "" });
+  const tree = ["api/.env", "api/.env.production", "api/.env.development"].map((path) => ({ type: "blob", path, size: 10 }));
+  assert.deepEqual(filesToRead(tree, new Set()), ["api/.env.production"]);
+});
