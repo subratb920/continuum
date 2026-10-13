@@ -2,22 +2,23 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/authStore";
 import "./ShellHeader.css";
-import { deployConnectionsUrl, deployProjectUrl } from "../deployLinks";
+import { deployCloudPageUrl, deployConnectionsUrl, deployHomeUrl, deployListUrl, deployProjectUrl } from "../deployLinks";
 
-// Deploy menu: AWS and Railway are live; the others stay greyed out until supported.
-// deploysProject: deploying a selected project works there (Railway; AWS opens its connections).
+// Deploy menu: AWS, Railway and GCP are live. deploysProject: deploying a selected
+// project works there (Railway and GCP; AWS opens its connections). soon: not supported
+// yet; opens that cloud's own page in Continuum Deploy, which says so.
 const DEPLOY_TARGETS = [
   { label: "AWS", cloud: "aws" },
   { label: "Railway", cloud: "railway", deploysProject: true },
-  { label: "Google Cloud (GCP)" },
-  { label: "Microsoft Azure" },
-  { label: "Vercel" },
-  { label: "Netlify" },
-  { label: "Cloudflare" },
-  { label: "DigitalOcean" },
-  { label: "Heroku" },
-  { label: "Render" },
-  { label: "Oracle Cloud" },
+  { label: "GCP", cloud: "gcp", deploysProject: true },
+  { label: "Microsoft Azure", cloud: "azure", soon: true },
+  { label: "Vercel", cloud: "vercel", soon: true },
+  { label: "Netlify", cloud: "netlify", soon: true },
+  { label: "Cloudflare", cloud: "cloudflare", soon: true },
+  { label: "DigitalOcean", cloud: "digitalocean", soon: true },
+  { label: "Heroku", cloud: "heroku", soon: true },
+  { label: "Render", cloud: "render", soon: true },
+  { label: "Oracle Cloud", cloud: "oracle", soon: true },
 ];
 
 /**
@@ -44,8 +45,8 @@ function getInitials(email) {
  * Shared header on every signed-in page (see PageShell).
  * Actions: + Create menu, Help, and a profile avatar whose menu holds
  * the email and Sign out. Only one menu is open at a time.
- * selectedProject (console only): Deploy on Railway deploys that project's
- * GitHub repository; without one it opens that cloud's connections.
+ * selectedProject (console only): Deploy on Railway or GCP deploys that project's
+ * GitHub repository; without one it opens that cloud's deployments list.
  */
 export default function ShellHeader({ onManualCreate, selectedProject = null }) {
   const { user, authProvider, logout } = useAuth();
@@ -97,7 +98,20 @@ export default function ShellHeader({ onManualCreate, selectedProject = null }) 
 
   function openDeployApp(target) {
     setOpenMenu(null);
-    const url = target?.deploysProject && deployable ? deployProjectUrl(deployable._id, target.cloud) : deployConnectionsUrl(target?.cloud);
+    // Deploy itself opens the start screen. A cloud that deploys: the selected project's deploy page,
+    // or (none selected) that cloud's deployments. Clouds that don't deploy yet open their connections.
+    // GCP without a project: its own step-by-step page (account, infrastructure, projects)
+    const url = !target
+      ? deployHomeUrl()
+      : target.soon
+        ? deployCloudPageUrl(target.cloud)
+        : !target.deploysProject
+          ? deployConnectionsUrl(target.cloud)
+          : deployable
+            ? deployProjectUrl(deployable._id, target.cloud)
+            : target.cloud === "gcp"
+              ? deployCloudPageUrl("gcp")
+              : deployListUrl(target.cloud);
     // New tab, so a running interval here is never interrupted
     window.open(url, "_blank", "noopener");
   }
@@ -215,7 +229,7 @@ export default function ShellHeader({ onManualCreate, selectedProject = null }) 
                       role="menuitem"
                       disabled={!target.cloud}
                       onClick={() => openDeployApp(target)}
-                      title={target.deploysProject && deployable ? `Deploy ${deployable.name} on ${target.label}` : undefined}
+                      title={target.soon ? `${target.label}: coming soon` : target.deploysProject && deployable ? `Deploy ${deployable.name} on ${target.label}` : undefined}
                     >
                       ☁️ Deploy on {target.label}
                     </button>

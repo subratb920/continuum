@@ -10,9 +10,24 @@ function withReturn(path) {
   return url.toString();
 }
 
+/** The start screen: what Continuum Deploy does, and a card for every cloud. */
+export function deployHomeUrl() {
+  return withReturn("/");
+}
+
+/** A cloud Continuum Deploy doesn't support yet: its own page there, which says so ("azure", "vercel" …). */
+export function deployCloudPageUrl(cloud) {
+  return withReturn(`/clouds/${encodeURIComponent(cloud)}`);
+}
+
 /** Connections page: all clouds (cloud null), or only one ("aws", "railway"). */
 export function deployConnectionsUrl(cloud) {
   return withReturn(`/connections?cloud=${cloud || "all"}`);
+}
+
+/** Deployments list, for one cloud ("railway") or all. */
+export function deployListUrl(cloud) {
+  return withReturn(`/deployments?cloud=${cloud || "all"}`);
 }
 
 /**

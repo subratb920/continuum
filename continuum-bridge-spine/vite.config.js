@@ -7,5 +7,9 @@ export default defineConfig({
   server: {
     port: 45173,
     strictPort: true
+  },
+  // Serving the built app (SERVE=built in the cloud): answer on its public address, whatever its name
+  preview: {
+    allowedHosts: true
   }
 })
