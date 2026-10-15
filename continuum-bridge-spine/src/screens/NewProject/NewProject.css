@@ -518,7 +518,22 @@
   .np-step.is-current .np-step-label {
     display: inline;
   }
-  .np-grid,
+  /* Kind and type cards: two columns (dependencies keep one per row) */
+  .np-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .np-card {
+    padding: 12px;
+    gap: 4px;
+  }
+  .np-card-name {
+    font-size: 14px;
+  }
+  .np-card-text {
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
   .np-dep-list {
     grid-template-columns: 1fr;
   }
@@ -564,4 +579,97 @@
 .np-repo-input input {
   flex: 1;
   min-width: 0;
+}
+
+/* Loading: placeholder blocks in the wizard's own layout (no jump when it fills in) */
+/* The height most real cards have (152px; 134px on phones), padding included */
+.np-skeleton-card {
+  box-sizing: border-box;
+  cursor: default;
+  min-height: 152px;
+}
+
+.np-skeleton-card:hover {
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+.np-skel {
+  display: block;
+  border-radius: 4px;
+  /* The theme's colour for empty bars, with a lighter sheen passing over it */
+  background: linear-gradient(90deg, var(--control) 0%, var(--hover) 40%, var(--control) 80%);
+  background-size: 300% 100%;
+  animation: np-skel-sheen 1.4s ease-in-out infinite;
+}
+
+.np-skel-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+}
+
+.np-skel-title {
+  width: 55%;
+  height: 15px;
+  margin-top: 2px;
+}
+
+.np-skel-line {
+  width: 90%;
+  height: 11px;
+}
+
+.np-skel-short {
+  width: 65%;
+}
+
+.np-skel-meta {
+  width: 30%;
+  height: 10px;
+  margin-top: auto;
+}
+
+.np-files-skeleton li {
+  align-items: center;
+  padding: 5px 0;
+}
+
+.np-files-skeleton .np-skel {
+  height: 10px;
+}
+
+.np-files-skeleton .np-skel-size {
+  width: 40px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .np-skeleton-card {
+    min-height: 134px;
+  }
+}
+
+@keyframes np-skel-sheen {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .np-skel {
+    animation: none;
+  }
+}
+
+.np-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }

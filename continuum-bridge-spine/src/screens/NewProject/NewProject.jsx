@@ -223,13 +223,7 @@ export default function NewProject({ onCreated, onEmptyProject, onCancel }) {
       </div>
     );
   }
-  if (!catalog || !state) {
-    return (
-      <div className="np-page">
-        <p className="np-muted">Loading…</p>
-      </div>
-    );
-  }
+  if (!catalog || !state) return <WizardSkeleton onCancel={onCancel} />;
 
   const { kind, variant, options, details, dependencies, step } = state;
   const deps = dependencyStates(kind, variant, options, dependencies);
@@ -319,10 +313,7 @@ export default function NewProject({ onCreated, onEmptyProject, onCancel }) {
 
   return (
     <div className="np-page">
-      <header className="np-head">
-        <h1>New project</h1>
-        <p className="np-muted">Choose what to build; Continuum creates the starter project in a folder on this device.</p>
-      </header>
+      <WizardHead />
 
       <ol className="np-steps" aria-label="Steps">
         {STEPS.map((label, i) => (
@@ -597,7 +588,7 @@ export default function NewProject({ onCreated, onEmptyProject, onCancel }) {
               </dd>
             </dl>
             <h3 className="np-files-title">Files{preview ? ` (${preview.files.length})` : ""}</h3>
-            {!preview ? <p className="np-muted">Preparing the file list…</p> : <FileList files={preview.files} />}
+            {!preview ? <FilesSkeleton /> : <FileList files={preview.files} />}
           </>
         )}
       </section>
@@ -625,6 +616,79 @@ export default function NewProject({ onCreated, onEmptyProject, onCancel }) {
         )}
       </footer>
     </div>
+  );
+}
+
+function WizardHead() {
+  return (
+    <header className="np-head">
+      <h1>New project</h1>
+      <p className="np-muted">Choose what to build; Continuum creates the starter project in a folder on this device.</p>
+    </header>
+  );
+}
+
+/**
+ * While the catalogue loads: the wizard's own layout with placeholder blocks
+ * (the step bar, a card per kind, the footer), so the real screen fills the
+ * same places instead of jumping in.
+ */
+function WizardSkeleton({ onCancel }) {
+  return (
+    <div className="np-page" aria-busy="true">
+      <WizardHead />
+      <ol className="np-steps" aria-label="Steps">
+        {STEPS.map((label, i) => (
+          <li key={label}>
+            {/* As on the first step: the later steps aren't reachable yet */}
+            <button type="button" className={`np-step${i === 0 ? " is-current" : ""}`} disabled={i > 0} aria-current={i === 0 ? "step" : undefined}>
+              <span className="np-step-num">{i + 1}</span>
+              <span className="np-step-label">{label}</span>
+            </button>
+          </li>
+        ))}
+      </ol>
+      <section className="np-body">
+        <h2>What kind of project?</h2>
+        <p className="np-sr-only" role="status">
+          Loading the kinds of project…
+        </p>
+        <div className="np-grid" aria-hidden="true">
+          {Array.from({ length: 12 }, (_, i) => (
+            <div key={i} className="np-card np-skeleton-card">
+              <span className="np-skel np-skel-logo" />
+              <span className="np-skel np-skel-title" />
+              <span className="np-skel np-skel-line" />
+              <span className="np-skel np-skel-line np-skel-short" />
+              <span className="np-skel np-skel-meta" />
+            </div>
+          ))}
+        </div>
+      </section>
+      <footer className="np-foot">
+        <button type="button" className="np-btn" onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="button" className="np-btn np-btn-primary" disabled>
+          Next
+        </button>
+      </footer>
+    </div>
+  );
+}
+
+/** Review, while the file list is prepared: rows shaped like the tree */
+function FilesSkeleton() {
+  const widths = [38, 52, 30, 64, 44, 58, 36, 48];
+  return (
+    <ul className="np-files np-files-skeleton" aria-busy="true" aria-label="Preparing the file list">
+      {widths.map((w, i) => (
+        <li key={i} style={{ paddingLeft: (i % 3) * 16 }}>
+          <span className="np-skel" style={{ width: `${w}%` }} />
+          <span className="np-skel np-skel-size" />
+        </li>
+      ))}
+    </ul>
   );
 }
 
