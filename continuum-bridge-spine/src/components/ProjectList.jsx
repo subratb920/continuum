@@ -7,6 +7,7 @@ import { importFromDevice } from "../utils/importFromDevice";
 import { usePreferences } from "../utils/preferences";
 import ProjectContents from "./ProjectContents";
 import Tip from "./Tip";
+import { onPhone } from "../utils/device";
 import { LuMonitor, LuSquarePen } from "react-icons/lu";
 
 /** github.com/owner/repo → github.dev/owner/repo (GitHub's editor in the browser); null otherwise */
@@ -44,6 +45,8 @@ export default function ProjectList({
   const [contentsToggled, setContentsToggled] = useState({});
   const { authProvider } = useAuth();
   const navigate = useNavigate();
+  // On a phone projects are made on Continuum's server and kept in GitHub, never on the device
+  const [phone] = useState(onPhone);
   const { pathname } = useLocation();
 
   /* ---------------------------------------------------------
@@ -119,11 +122,14 @@ export default function ProjectList({
           {showMenu && (
             <div className="project-action-menu" role="menu">
               <button role="menuitem" onClick={() => run(onCreateProject)}>
-                Create project
+                {phone ? "Create on GitHub" : "Create project"}
               </button>
-              <button role="menuitem" onClick={() => run(() => importFromDevice())}>
-                Import from device
-              </button>
+              {/* A phone can't hold a project: nothing is imported from it */}
+              {!phone && (
+                <button role="menuitem" onClick={() => run(() => importFromDevice())}>
+                  Import from device
+                </button>
+              )}
               <button role="menuitem" disabled={!canImportGithub} title={canImportGithub ? undefined : "Sign in with GitHub to import a repository"} onClick={() => run(importGithub)}>
                 Import from GitHub
               </button>
@@ -161,9 +167,15 @@ export default function ProjectList({
       {!hasProjects ? (
         <div className="project-list-empty">
           <p>No projects yet.</p>
-          <button type="button" className="project-empty-btn primary-action" onClick={() => importFromDevice()}>
-            Import from device
-          </button>
+          {phone ? (
+            <button type="button" className="project-empty-btn primary-action" onClick={onCreateProject}>
+              Create on GitHub
+            </button>
+          ) : (
+            <button type="button" className="project-empty-btn primary-action" onClick={() => importFromDevice()}>
+              Import from device
+            </button>
+          )}
           <button type="button" className="project-empty-btn" disabled={!canImportGithub} onClick={importGithub}>
             Import from GitHub
           </button>

@@ -4,11 +4,25 @@
  * where it goes and allows saving there; Continuum then makes <name>/ inside,
  * empty, or filled with a GitHub repository's files.
  *
- * Safari, Firefox and phones can't do this: canCreateFolders() is false there.
+ * Safari, Firefox and phones never do this: canCreateFolders() is false there
+ * (Chrome on Android can pick folders, but a phone isn't where projects live:
+ * Continuum creates them on its server and keeps them in GitHub).
  */
 
+/**
+ * A phone or tablet: Android, iPhone, iPad (iPadOS says "Macintosh" but has a
+ * touch screen) or any browser that calls itself mobile. nav: for tests.
+ */
+export function isMobileDevice(nav = typeof navigator !== "undefined" ? navigator : null) {
+  if (!nav) return false;
+  if (nav.userAgentData?.mobile === true) return true;
+  const ua = String(nav.userAgent ?? "");
+  if (/Android|iPhone|iPad|iPod|Mobile|Silk|Kindle/i.test(ua)) return true;
+  return /Macintosh/.test(ua) && Number(nav.maxTouchPoints) > 1;
+}
+
 export function canCreateFolders() {
-  return typeof window !== "undefined" && window.isSecureContext && typeof window.showDirectoryPicker === "function";
+  return typeof window !== "undefined" && window.isSecureContext && typeof window.showDirectoryPicker === "function" && !isMobileDevice();
 }
 
 export const NO_FOLDERS_NOTE = "Your browser can't create folders — use Chrome or Edge on a computer.";

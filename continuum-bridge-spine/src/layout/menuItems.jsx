@@ -1,6 +1,7 @@
 import { LuFolderOpen, LuLayoutGrid, LuSparkles } from "react-icons/lu";
 import { SiBackstage, SiGithub, SiGooglecloud, SiRailway } from "react-icons/si";
 import { CREATE_URL, DEPLOY_TARGETS } from "./shellActions";
+import { onPhone } from "../utils/device";
 import "./menuItems.css";
 
 /**
@@ -15,23 +16,32 @@ const CLOUD_ICONS = {
   gcp: <SiGooglecloud className="menu-logo menu-logo-gcloud" />,
 };
 
-/** Create using Continuum → Import from device → Import from GitHub → Create via Backstage */
+/**
+ * Create using Continuum → Import from device → Import from GitHub → Create via Backstage.
+ * On a phone nothing is made on the device: Create on GitHub (Continuum's server) and Import from GitHub.
+ */
 export function createItems(actions, authProvider) {
+  const phone = onPhone();
   return [
     {
       key: "continuum",
       icon: <LuSparkles className="menu-logo menu-logo-brand" />,
-      title: "Create using Continuum",
-      hint: "A starter project: React, Node, Spring, Python and more.",
+      title: phone ? "Create on GitHub" : "Create using Continuum",
+      hint: phone ? "Made on Continuum's server, kept in your GitHub." : "A starter project: React, Node, Spring, Python and more.",
       onClick: actions.newProject,
     },
-    {
-      key: "device",
-      icon: <LuFolderOpen className="menu-logo" />,
-      title: "Import from device",
-      hint: "A project folder on this device.",
-      onClick: actions.importFromDevice,
-    },
+    // A phone can't hold a project: nothing is imported from it
+    ...(phone
+      ? []
+      : [
+          {
+            key: "device",
+            icon: <LuFolderOpen className="menu-logo" />,
+            title: "Import from device",
+            hint: "A project folder on this device.",
+            onClick: actions.importFromDevice,
+          },
+        ]),
     {
       key: "github",
       icon: <SiGithub className="menu-logo" />,

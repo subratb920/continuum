@@ -53,3 +53,17 @@ test("put on GitHub: the browser's .tar.gz (long paths, binary, unicode) is read
     assert.deepEqual(new Uint8Array(got.data), new Uint8Array(await f.file.arrayBuffer()), f.path);
   }
 });
+
+test("phones are phones, whatever their browser can do (Chrome on Android picks folders too)", async () => {
+  const { isMobileDevice } = await import("../../continuum-bridge-spine/src/utils/deviceFolder.js");
+  const android = "Mozilla/5.0 (Linux; Android 13; LXX504) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36";
+  const iphone = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
+  const ipad = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15";
+  const mac = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+  assert.equal(isMobileDevice({ userAgent: android }), true);
+  assert.equal(isMobileDevice({ userAgent: iphone }), true);
+  assert.equal(isMobileDevice({ userAgent: ipad, maxTouchPoints: 5 }), true, "iPadOS says Macintosh");
+  assert.equal(isMobileDevice({ userAgent: mac, maxTouchPoints: 0 }), false);
+  assert.equal(isMobileDevice({ userAgent: mac, userAgentData: { mobile: true } }), true);
+  assert.equal(isMobileDevice({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", userAgentData: { mobile: false } }), false);
+});

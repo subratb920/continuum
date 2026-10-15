@@ -1,13 +1,8 @@
 import { useState } from "react";
-import { canCreateFolders } from "../utils/deviceFolder";
+import { onPhone } from "../utils/device";
 import "./PhoneCard.css";
 
 const DISMISSED_KEY = "continuum.phoneCard.dismissed";
-
-/** A phone or tablet: a touch screen and no way to write project folders to the device. */
-function onPhone() {
-  return !canCreateFolders() && typeof window !== "undefined" && Boolean(window.matchMedia?.("(pointer: coarse)").matches);
-}
 
 function wasDismissed() {
   try {
@@ -42,10 +37,10 @@ export default function PhoneCard({ onCreate, onWorkspaces }) {
       </span>
       <div className="phone-card-text">
         <strong>You're on your phone</strong>
-        <p>Continuum can create projects on its own server and keep the code in your GitHub, and open a workspace (VS Code in the browser) to work on them from here.</p>
+        <p>Projects aren&apos;t made on this phone: Continuum creates them on its own server and keeps the code in your GitHub. Work on them in a workspace (VS Code in the browser).</p>
         <div className="phone-card-actions">
           <button type="button" className="phone-card-primary" onClick={onCreate}>
-            Create a project
+            Create on GitHub
           </button>
           <button type="button" className="phone-card-later" onClick={onWorkspaces}>
             Open a workspace

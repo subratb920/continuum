@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { checkGithubRepoName, createProject, fetchCreateCatalog, fetchGithubCreateStatus, generateNewProject, previewNewProject } from "../../api";
 import { canCreateFolders, createProjectFolder, filesOfTarball, pickParentFolder, removeProjectFolder, writeFiles } from "../../utils/deviceFolder";
 import { normalizeProject } from "../../models/project";
+import { onPhone } from "../../utils/device";
 import { formatBytes, MAX_ENTRIES } from "../../utils/importFromDevice";
 import { getPreferences } from "../../utils/preferences";
 import BrandIcon from "./BrandIcon";
@@ -241,6 +242,7 @@ export default function NewProject({ onCreated, onEmptyProject, onCancel }) {
   // No folders on this device (phones, Safari, Firefox): Continuum creates the project on its
   // server and it lives in a new GitHub repository, so the GitHub answer has to be Yes
   const onServer = !canCreateFolders();
+  const phone = onPhone();
   const githubAnswered =
     (github.answer === "no" && !onServer) || (github.answer === "yes" && repoNameValid && repoCheck?.name === repoName && repoCheck.available === true);
   const stepValid = [Boolean(kind), Boolean(variant), true, Object.values(detailErrors).every((e) => !e), githubAnswered, Boolean(preview)];
@@ -383,13 +385,16 @@ export default function NewProject({ onCreated, onEmptyProject, onCancel }) {
                   </span>
                 </button>
               ))}
-              <button type="button" className="np-card np-card-empty" style={{ "--i": catalog.kinds.length }} onClick={onEmptyProject}>
-                <span className="np-logo-fallback" style={{ width: 32, height: 32, fontSize: 20 }} aria-hidden="true">
-                  +
-                </span>
-                <span className="np-card-name">Empty project</span>
-                <span className="np-card-text">Just a name (and, if you like, an empty folder).</span>
-              </button>
+              {/* A name-only project lives nowhere but Continuum: not offered on a phone (everything goes to GitHub there) */}
+              {!phone && (
+                <button type="button" className="np-card np-card-empty" style={{ "--i": catalog.kinds.length }} onClick={onEmptyProject}>
+                  <span className="np-logo-fallback" style={{ width: 32, height: 32, fontSize: 20 }} aria-hidden="true">
+                    +
+                  </span>
+                  <span className="np-card-name">Empty project</span>
+                  <span className="np-card-text">Just a name (and, if you like, an empty folder).</span>
+                </button>
+              )}
             </div>
           </>
         )}
@@ -668,7 +673,11 @@ function WizardHead() {
   return (
     <header className="np-head">
       <h1>New project</h1>
-      <p className="np-muted">Choose what to build; Continuum creates the starter project in a folder on this device.</p>
+      <p className="np-muted">
+        {canCreateFolders()
+          ? "Choose what to build; Continuum creates the starter project in a folder on this device."
+          : "Choose what to build; Continuum creates the starter project on its own server and keeps it in a new repository on your GitHub."}
+      </p>
     </header>
   );
 }
@@ -699,7 +708,8 @@ function WizardSkeleton({ onCancel }) {
           Loading the kinds of project…
         </p>
         <div className="np-grid" aria-hidden="true">
-          {Array.from({ length: 12 }, (_, i) => (
+          {/* The kinds, plus "Empty project" (not on a phone) */}
+          {Array.from({ length: onPhone() ? 11 : 12 }, (_, i) => (
             <div key={i} className="np-card np-skeleton-card">
               <span className="np-skel np-skel-logo" />
               <span className="np-skel np-skel-title" />
