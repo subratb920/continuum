@@ -66,7 +66,7 @@ export async function createRepo(token, { name, description = "", isPrivate = tr
     method: "POST",
     body: { name, description: description.slice(0, 350), private: isPrivate, auto_init: false },
   });
-  if (status === 201) return { htmlUrl: data.html_url, cloneUrl: data.clone_url, fullName: data.full_name };
+  if (status === 201) return { id: data.id, name: data.name, htmlUrl: data.html_url, cloneUrl: data.clone_url, fullName: data.full_name, isPrivate: data.private === true };
   if (status === 422) throw Object.assign(new AppError(`A repository called “${name}” already exists on your GitHub.`, 409, "REPO_EXISTS"), { field: "git.github.name" });
   if (status === 401 || status === 403) throw new AppError("GitHub didn't allow creating the repository; sign in with GitHub again.", 403, "GITHUB_FORBIDDEN");
   throw new AppError(`GitHub couldn't create the repository (${status}).`, 502, "UPSTREAM_UNAVAILABLE");

@@ -1,0 +1,71 @@
+/* Phones: what Continuum can do without a folder on the device */
+.phone-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--info-border);
+  border-radius: 12px;
+  background: var(--info-soft);
+  color: var(--text);
+}
+
+.phone-card-icon {
+  font-size: 22px;
+  line-height: 1;
+  padding-top: 2px;
+}
+
+.phone-card-text {
+  min-width: 0;
+}
+
+.phone-card-text strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--info-text);
+}
+
+.phone-card-text p {
+  margin: 4px 0 10px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+
+.phone-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.phone-card-primary,
+.phone-card-later {
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.phone-card-primary {
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 500;
+}
+
+.phone-card-later {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-2);
+}
+
+.phone-card-primary:focus-visible,
+.phone-card-later:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}

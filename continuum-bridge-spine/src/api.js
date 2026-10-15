@@ -213,6 +213,51 @@ export async function requestCallback(details) {
 }
 
 /* ==================================================
+   Continuum Workspaces (a development server per project)
+   ================================================== */
+
+/** { items: [{ id, projectId, projectName, repo, size, state, lastOpenedAt }], limits, sizes } */
+export async function fetchWorkspaces() {
+  return request("GET", "/workspaces");
+}
+
+export async function createWorkspace(projectId, size) {
+  return request("POST", "/workspaces", { projectId, size });
+}
+
+/** Starts it when stopped; { url } opens the editor (it carries a one-time access token) */
+export async function openWorkspace(id, size) {
+  return request("POST", `/workspaces/${id}/open`, size ? { size } : {});
+}
+
+export async function stopWorkspace(id) {
+  return request("POST", `/workspaces/${id}/stop`);
+}
+
+export async function deleteWorkspace(id) {
+  return request("DELETE", `/workspaces/${id}`);
+}
+
+/**
+ * "Put on GitHub": a new repository on the user's GitHub for a project that
+ * has none, with the folder's files (a .tar.gz Blob) as the first commit, or
+ * a README when there are none. → { project } with its GitHub link.
+ */
+export async function putProjectOnGithub(projectId, { name, isPrivate }, archive) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const q = new URLSearchParams({ name, private: isPrivate ? "1" : "0" });
+  const res = await fetch(`${API_BASE}/projects/${projectId}/github?${q}`, {
+    method: "POST",
+    headers: { ...(archive ? { "Content-Type": "application/gzip" } : {}), ...(token && { Authorization: `Bearer ${token}` }) },
+    body: archive ?? undefined,
+  });
+  if (res.status === 401) throw new Error("UNAUTHORIZED");
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw Object.assign(new Error(data?.error || "The project couldn't be put on GitHub."), { field: data?.field ?? null });
+  return data;
+}
+
+/* ==================================================
    New Project wizard
    ================================================== */
 

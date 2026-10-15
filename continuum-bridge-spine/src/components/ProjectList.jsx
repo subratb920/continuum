@@ -6,6 +6,13 @@ import { useAuth } from "../state/authStore";
 import { importFromDevice } from "../utils/importFromDevice";
 import { usePreferences } from "../utils/preferences";
 import ProjectContents from "./ProjectContents";
+import { LuMonitor, LuSquarePen } from "react-icons/lu";
+
+/** github.com/owner/repo → github.dev/owner/repo (GitHub's editor in the browser); null otherwise */
+function githubDevUrl(url) {
+  const m = /^https:\/\/github\.com\/([^/]+\/[^/]+?)(?:\.git)?\/?$/.exec(url ?? "");
+  return m ? `https://github.dev/${m[1]}` : null;
+}
 
 /** Above this many projects the pane shows a search box. */
 const SEARCH_FROM = 8;
@@ -211,6 +218,29 @@ export default function ProjectList({
                       >
                         <span aria-hidden="true">{contentsOpen ? "▾" : "▸"}</span>
                       </button>
+                    )}
+                    {/* A workspace (VS Code with a terminal): any project (one without GitHub is put on GitHub first) */}
+                    <button
+                      type="button"
+                      className="project-icon-btn project-link"
+                      title="Open a workspace"
+                      aria-label={`Open a workspace for ${project.name}`}
+                      onClick={() => navigate("/workspaces", { state: { projectId: project._id } })}
+                    >
+                      <LuMonitor aria-hidden="true" />
+                    </button>
+                    {/* Edit the repository in the browser (github.dev), from any device */}
+                    {githubDevUrl(project.githubRepoUrl) && (
+                      <a
+                        href={githubDevUrl(project.githubRepoUrl)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="project-icon-btn project-link"
+                        title="Edit in browser (github.dev)"
+                        aria-label={`Edit ${project.name} in the browser`}
+                      >
+                        <LuSquarePen aria-hidden="true" />
+                      </a>
                     )}
                     {project.githubRepoUrl ? (
                       <a

@@ -16,6 +16,7 @@ import { IMPORT_EVENT } from "./utils/importFromDevice";
 import Welcome from "./screens/Welcome";
 import HelpPage from "./pages/HelpPage";
 import EmptyConsole from "./components/EmptyConsole";
+import PhoneCard from "./components/PhoneCard";
 
 import BridgeDraftModal from "./components/BridgeDraftModal";
 import BridgeHistoryModal from "./components/BridgeHistoryModal";
@@ -26,6 +27,7 @@ import AuthCallback from "./pages/AuthCallback";
 import GithubImport from "./screens/GithubImport";
 // The wizard (and its technology logos) loads only when /new is opened
 const NewProject = lazy(() => import("./screens/NewProject/NewProject"));
+const Workspaces = lazy(() => import("./screens/Workspaces"));
 
 import {
   fetchAccountPreferences,
@@ -415,6 +417,22 @@ export default function App() {
      details, git, then the project is written to a device folder
      ========================================================= */
 
+  /* =========================================================
+     💻 WORKSPACES (/workspaces) — a development server per
+     project with a GitHub repository (continuum-workspaces)
+     ========================================================= */
+
+  if (pathname === "/workspaces") {
+    return (
+      <PageShell scroll>
+        <Suspense fallback={null}>
+          <Workspaces projects={projects} initialProjectId={locationState?.projectId ?? null} onProjectChanged={(p) => setProjects((prev) => prev.map((x) => (x._id === p._id ? { ...x, ...p } : x)))} />
+        </Suspense>
+        {draftModal}
+      </PageShell>
+    );
+  }
+
   if (pathname === "/new") {
     return (
       <PageShell scroll>
@@ -528,6 +546,8 @@ export default function App() {
         onDeleteProject={() => setShowDeleteProject(true)}
         leftPane={pathname === "/dashboard" ? <DashboardNav onIntervalSetup={() => navigate("/console")} /> : null}
       >
+        {/* Phones: Continuum creates on its server, the code lives in GitHub */}
+        {pathname !== "/dashboard" && <PhoneCard onCreate={() => navigate("/new")} onWorkspaces={() => navigate("/workspaces")} />}
         {pathname === "/dashboard" ? (
           // Dashboard (profile menu): the overview, in the console's middle pane
           <Dashboard

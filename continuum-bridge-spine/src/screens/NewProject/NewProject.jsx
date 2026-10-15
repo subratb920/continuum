@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { checkGithubRepoName, createProject, fetchCreateCatalog, fetchGithubCreateStatus, generateNewProject, previewNewProject } from "../../api";
-import { canCreateFolders, createProjectFolder, filesOfTarball, NO_FOLDERS_NOTE, pickParentFolder, removeProjectFolder, writeFiles } from "../../utils/deviceFolder";
+import { canCreateFolders, createProjectFolder, filesOfTarball, pickParentFolder, removeProjectFolder, writeFiles } from "../../utils/deviceFolder";
+import { normalizeProject } from "../../models/project";
 import { formatBytes, MAX_ENTRIES } from "../../utils/importFromDevice";
 import { getPreferences } from "../../utils/preferences";
 import BrandIcon from "./BrandIcon";
@@ -17,6 +18,8 @@ import "./NewProject.css";
  */
 
 const STEPS = ["Kind", "Type", "Dependencies", "Details", "Git", "Review"];
+// The loading placeholders show at least this long, so the cards don't flash in
+const MIN_LOADING_MS = 2000;
 
 /** Paths that are never listed as a project's contents (same as Import from device) */
 const NOT_LISTED = /(^|\/)(node_modules|\.git|dist|build|\.next|coverage|__pycache__|\.venv)(\/|$)|(^|\/)\.env(\.[^/]*)?$/;
@@ -142,14 +145,20 @@ export default function NewProject({ onCreated, onEmptyProject, onCancel }) {
   const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState(null);
+  // The kinds fade in once, when they first replace the loading placeholders
+  const [reveal, setReveal] = useState(true);
 
   useEffect(() => {
     let live = true;
-    fetchCreateCatalog()
-      .then((c) => {
+    // The placeholders stay at least 2 s, then the cards come in (an error shows at once)
+    Promise.all([fetchCreateCatalog(), new Promise((ok) => setTimeout(ok, MIN_LOADING_MS))])
+      .then(([c]) => {
         if (!live) return;
+        const restored = fromParams(params, c);
         setCatalog(c);
-        setState(fromParams(params, c));
+        setState(restored);
+        // Opened on a later step (a shared link): nothing to fade in later
+        setReveal(restored.step === 0);
       })
       .catch((e) => live && setLoadError(e.message || "The catalogue couldn't be loaded."));
     return () => {
@@ -229,12 +238,16 @@ export default function NewProject({ onCreated, onEmptyProject, onCancel }) {
   const deps = dependencyStates(kind, variant, options, dependencies);
   const detailErrors = Object.fromEntries((variant?.details ?? []).map((f) => [f.id, detailError(f, details[f.id], catalog.rules)]));
   const repoNameValid = /^(?!\.\.?$)[A-Za-z0-9._-]{1,100}$/.test(repoName) && !repoName.endsWith(".git");
+  // No folders on this device (phones, Safari, Firefox): Continuum creates the project on its
+  // server and it lives in a new GitHub repository, so the GitHub answer has to be Yes
+  const onServer = !canCreateFolders();
   const githubAnswered =
-    github.answer === "no" || (github.answer === "yes" && repoNameValid && repoCheck?.name === repoName && repoCheck.available === true);
+    (github.answer === "no" && !onServer) || (github.answer === "yes" && repoNameValid && repoCheck?.name === repoName && repoCheck.available === true);
   const stepValid = [Boolean(kind), Boolean(variant), true, Object.values(detailErrors).every((e) => !e), githubAnswered, Boolean(preview)];
   const reachable = (i) => stepValid.slice(0, i).every(Boolean);
   const update = (patch) => {
     setError(null);
+    if (patch.step !== undefined && patch.step !== 0) setReveal(false);
     setState((s) => ({ ...s, ...patch }));
   };
   const go = (i) => reachable(i) && update({ step: i });
@@ -265,9 +278,26 @@ export default function NewProject({ onCreated, onEmptyProject, onCancel }) {
     }
   }
 
+  /** On a phone: built on Continuum's server, pushed to the new repository; nothing comes back or stays there */
+  async function createOnGithub() {
+    setError(null);
+    try {
+      setBusy("Creating the project and pushing it to GitHub…");
+      const res = await generateNewProject({ ...choices, target: "github" });
+      const { project } = await res.json();
+      onCreated(normalizeProject(project));
+    } catch (e) {
+      setBusy("");
+      const field = e.field ?? null;
+      setError({ message: e.message || "The project couldn't be created.", field });
+      const at = field?.startsWith("details.") ? 3 : field?.startsWith("git.") ? 4 : field === "dependencies" ? 2 : field?.startsWith("options.") || field === "variant" ? 1 : field === "kind" ? 0 : null;
+      if (at != null) update({ step: at });
+    }
+  }
+
   async function create() {
     setError(null);
-    if (!canCreateFolders()) return;
+    if (onServer) return createOnGithub();
     // The folder first: browsers only open the picker straight after a click
     let parent;
     try {
@@ -309,7 +339,6 @@ export default function NewProject({ onCreated, onEmptyProject, onCancel }) {
   const filtered = query.trim()
     ? deps.filter((d) => `${d.name} ${d.description}`.toLowerCase().includes(query.trim().toLowerCase()))
     : deps;
-  const canCreate = canCreateFolders();
 
   return (
     <div className="np-page">
@@ -336,9 +365,16 @@ export default function NewProject({ onCreated, onEmptyProject, onCancel }) {
         {step === 0 && (
           <>
             <h2>What kind of project?</h2>
-            <div className="np-grid">
-              {catalog.kinds.map((k) => (
-                <button key={k.id} type="button" className={`np-card${kind?.id === k.id ? " is-selected" : ""}`} onClick={() => chooseKind(k)} aria-pressed={kind?.id === k.id}>
+            <div className={`np-grid${reveal ? " np-reveal" : ""}`}>
+              {catalog.kinds.map((k, i) => (
+                <button
+                  key={k.id}
+                  type="button"
+                  className={`np-card${kind?.id === k.id ? " is-selected" : ""}`}
+                  style={{ "--i": i }}
+                  onClick={() => chooseKind(k)}
+                  aria-pressed={kind?.id === k.id}
+                >
                   <BrandIcon name={k.icon} label={k.name} size={32} />
                   <span className="np-card-name">{k.name}</span>
                   <span className="np-card-text">{k.description}</span>
@@ -347,7 +383,7 @@ export default function NewProject({ onCreated, onEmptyProject, onCancel }) {
                   </span>
                 </button>
               ))}
-              <button type="button" className="np-card np-card-empty" onClick={onEmptyProject}>
+              <button type="button" className="np-card np-card-empty" style={{ "--i": catalog.kinds.length }} onClick={onEmptyProject}>
                 <span className="np-logo-fallback" style={{ width: 32, height: 32, fontSize: 20 }} aria-hidden="true">
                   +
                 </span>
@@ -477,6 +513,12 @@ export default function NewProject({ onCreated, onEmptyProject, onCancel }) {
         {step === 4 && (
           <>
             <h2>Git</h2>
+            {onServer && (
+              <p className="np-note np-info">
+                This device can't hold the project's folder, so Continuum creates it on its server and keeps it in a new GitHub repository. Nothing stays on
+                Continuum's server; you work on it in the browser or a workspace.
+              </p>
+            )}
             <label className="np-toggle">
               <input type="checkbox" checked={git} disabled={github.answer === "yes"} title={github.answer === "yes" ? "A GitHub repository needs it" : undefined} onChange={(e) => setGit(e.target.checked)} />
               <BrandIcon name="SiGit" label="Git" size={22} />
@@ -510,6 +552,9 @@ export default function NewProject({ onCreated, onEmptyProject, onCancel }) {
                 </label>
               </div>
               {github.answer === null && <p className="np-muted np-github-hint">Choose Yes or No to continue.</p>}
+              {onServer && github.answer === "no" && (
+                <p className="np-field-error np-github-hint">Without a GitHub repository there's nowhere to keep the project from this device. Choose Yes, or create it on a computer.</p>
+              )}
               {githubStatus && !githubStatus.connected && <p className="np-muted np-github-hint">{githubStatus.reason}</p>}
 
               {github.answer === "yes" && (
@@ -598,7 +643,7 @@ export default function NewProject({ onCreated, onEmptyProject, onCancel }) {
           {error.message}
         </p>
       )}
-      {step === 5 && !canCreate && <p className="np-note">{NO_FOLDERS_NOTE} Creating a project needs Chrome or Edge on a computer.</p>}
+      {step === 5 && onServer && <p className="np-note np-info">Created on Continuum's server and pushed to your new GitHub repository; nothing is kept on the server.</p>}
 
       <footer className="np-foot">
         <button type="button" className="np-btn" onClick={step === 0 ? onCancel : () => go(step - 1)} disabled={Boolean(busy)}>
@@ -610,8 +655,8 @@ export default function NewProject({ onCreated, onEmptyProject, onCancel }) {
             Next
           </button>
         ) : (
-          <button type="button" className="np-btn np-btn-primary" onClick={create} disabled={!preview || Boolean(busy) || !canCreate} title={canCreate ? "Choose where the project folder goes" : NO_FOLDERS_NOTE}>
-            Create project
+          <button type="button" className="np-btn np-btn-primary" onClick={create} disabled={!preview || Boolean(busy)} title={onServer ? "Create it on Continuum's server and push it to GitHub" : "Choose where the project folder goes"}>
+            {onServer ? "Create on GitHub" : "Create project"}
           </button>
         )}
       </footer>

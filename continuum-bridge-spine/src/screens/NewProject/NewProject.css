@@ -458,6 +458,14 @@
   font-size: 13px;
 }
 
+/* Information, not a warning (e.g. phones: created on the server, kept on GitHub) */
+.np-note.np-info {
+  margin: 12px 0;
+  border-color: var(--info-border);
+  background: var(--info-soft);
+  color: var(--info-text);
+}
+
 .np-foot {
   display: flex;
   align-items: center;
@@ -650,6 +658,23 @@
   }
 }
 
+/* The real cards replacing the placeholders: each fades and rises in, one after another */
+.np-reveal > .np-card {
+  animation: np-card-in 360ms ease-out both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+@keyframes np-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @keyframes np-skel-sheen {
   from {
     background-position: 100% 0;
@@ -662,6 +687,16 @@
 @media (prefers-reduced-motion: reduce) {
   .np-skel {
     animation: none;
+  }
+  .np-reveal > .np-card {
+    animation: np-card-fade 200ms ease-out both;
+    animation-delay: 0ms;
+  }
+}
+
+@keyframes np-card-fade {
+  from {
+    opacity: 0;
   }
 }
 

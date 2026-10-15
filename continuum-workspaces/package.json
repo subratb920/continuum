@@ -1,0 +1,15 @@
+{
+  "name": "continuum-workspaces",
+  "version": "1.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "description": "Continuum Workspaces: development servers (OpenVSCode Server) per project, started and stopped for Continuum",
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

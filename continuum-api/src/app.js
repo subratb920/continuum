@@ -13,7 +13,9 @@ import oauthRoutes from "./oauth/oauth.routes.js";
 import deployRoutes from "./oauth/deploy.routes.js";
 import supportRoutes from "./routes/support.routes.js";
 import createRoutes from "./create/routes.js";
+import publishRoutes from "./create/publish.js";
 import meRoutes from "./routes/me.routes.js";
+import { createWorkspacesRouter } from "./workspaces/routes.js";
 
 
 const app = express();
@@ -30,12 +32,14 @@ app.use("/auth", authRoutes);
 app.use("/oauth", oauthRoutes); // SSO for continuum-deploy
 app.use("/deploy", deployRoutes); // read-only data for continuum-deploy (its access token only)
 app.use("/github", requireAuth, githubRoutes);
+app.use("/projects", requireAuth, publishRoutes); // "Put on GitHub" (before the JSON-only project routes)
 app.use("/projects", requireAuth, projectRoutes);
 app.use("/execution", requireAuth, executionRoutes);
 app.use("/bridges", requireAuth, bridgeRoutes);
 app.use("/support", requireAuth, supportRoutes); // Contact us: callback requests
 app.use("/create", requireAuth, createRoutes); // New Project wizard: catalogue and generated projects
 app.use("/me", requireAuth, meRoutes); // the user's own preferences (theme), shared with Continuum Deploy
+app.use("/workspaces", requireAuth, createWorkspacesRouter()); // development servers per project (continuum-workspaces)
 
 // ❗ MUST BE LAST
 app.use(errorMiddleware);

@@ -5,7 +5,11 @@
 //   POST /create/preview   the files a set of choices would produce
 //   POST /create/generate  the project as .tar.gz (with .git when asked, and
 //                          pushed to a new GitHub repository when asked);
-//                          the browser writes it into the chosen folder
+//                          the browser writes it into the chosen folder.
+//                          With target "github" (phones: no folders there) it
+//                          only goes to the new repository, nothing is sent
+//                          back or kept here, and the project is added to the
+//                          user's projects as a GitHub project
 //   GET  /create/github    whether a GitHub repository can be created (and as whom)
 //   GET  /create/github/available?name=  is that repository name free?
 
@@ -18,8 +22,25 @@ import { generateProject } from "./generate.js";
 import { withGitRepository } from "./git.js";
 import { tarGz } from "./tar.js";
 import { checkRepoName, createRepo, githubAccount, githubTokenOf, repoAvailable } from "./github.js";
+import { createProjectService } from "../services/project.service.js";
 
 const router = express.Router();
+
+/**
+ * Where a generated project goes: "archive" (default; the browser writes it
+ * into a folder) or "github" (only to a new repository, which must be asked for).
+ */
+export function targetOf(body) {
+  const target = body?.target ?? "archive";
+  if (target !== "archive" && target !== "github") throw Object.assign(new AppError("target must be archive or github.", 400, "VALIDATION_ERROR"), { field: "target" });
+  if (target === "github" && body?.git?.github?.create !== true) {
+    throw Object.assign(new AppError("Without a folder on this device, the project goes to a new GitHub repository: choose its name.", 400, "VALIDATION_ERROR"), { field: "git.github.create" });
+  }
+  if (target === "github" && body?.git?.init === false) {
+    throw Object.assign(new AppError("A GitHub repository needs a git repository; tick “Initialise a git repository”.", 400, "VALIDATION_ERROR"), { field: "git.init" });
+  }
+  return target;
+}
 
 export const CREATIONS_COLLECTION = "project_creations";
 /** At most this many projects created per person per hour. */
@@ -73,6 +94,7 @@ router.post("/generate", async (req, res) => {
 
   const git = req.body?.git ?? {};
   const wantsGithub = git.github?.create === true;
+  const target = targetOf(req.body);
   if (wantsGithub && git.init === false) {
     throw Object.assign(new AppError("A GitHub repository needs a git repository; tick “Initialise a git repository”.", 400, "VALIDATION_ERROR"), { field: "git.init" });
   }
@@ -112,8 +134,8 @@ router.post("/generate", async (req, res) => {
     }
   }
 
-  const archive = tarGz(files, project.name.replace(/^@[^/]+\//, ""));
-  if (archive.length > MAX_BYTES) throw new AppError("The generated project is unexpectedly large.", 500, "TEMPLATE_ERROR");
+  const archive = target === "archive" ? tarGz(files, project.name.replace(/^@[^/]+\//, "")) : null;
+  if (archive && archive.length > MAX_BYTES) throw new AppError("The generated project is unexpectedly large.", 500, "TEMPLATE_ERROR");
 
   await db.collection(CREATIONS_COLLECTION).insertOne({
     userId,
@@ -124,7 +146,15 @@ router.post("/generate", async (req, res) => {
     github: repo ? { repo: repo.fullName, private: github.isPrivate } : null,
     createdAt: new Date(),
   });
-  req.log.info({ userId, kind: project.kind, variant: project.variant, files: files.length, git: Boolean(sha), github: repo?.fullName ?? null }, "Project generated");
+  req.log.info({ userId, kind: project.kind, variant: project.variant, files: files.length, git: Boolean(sha), github: repo?.fullName ?? null, target }, "Project generated");
+
+  if (target === "github") {
+    // The repository is the project's home: added like an import from GitHub
+    const projects = await createProjectService(db);
+    const id = await projects.createProjectFromGithub(req.user.id, { id: repo.id, name: repo.name, html_url: repo.htmlUrl, private: repo.isPrivate, full_name: repo.fullName });
+    res.status(201).json({ project: { _id: String(id), name: repo.name, source: "github", githubRepoId: repo.id, githubRepoUrl: repo.htmlUrl, visibility: repo.isPrivate ? "private" : "public", fullName: repo.fullName }, commit: sha });
+    return;
+  }
 
   res.set({
     "Content-Type": "application/gzip",

@@ -63,6 +63,9 @@ services:
       JWT_SECRET: dev-secret
       CLIENT_ORIGIN: http://localhost:45173
       MONGO_URI: mongodb://continuum_admin:continuum_dev_pw@continuum-mongo:45171/continuum?authSource=admin
+      # Continuum Workspaces: the service's internal API, and where browsers open the editors
+      WORKSPACES_URL: http://continuum-workspaces:45177
+      WORKSPACES_PUBLIC_URL: http://localhost:45176
 
     depends_on:
       mongo:
@@ -87,6 +90,31 @@ services:
       - continuum-api
 
     command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+
+  # Development servers per project (OpenVSCode Server in a container each).
+  # Local development only: it drives Docker through Docker's socket, which
+  # gives it full control of Docker on this machine. The cloud uses Kubernetes.
+  # Workspace image first: docker build -t continuum-workspace:dev ../continuum-workspaces/image
+  continuum-workspaces:
+    build:
+      context: ../continuum-workspaces
+    container_name: continuum-workspaces
+    restart: unless-stopped
+    # Root only to use Docker's socket (local development)
+    user: "0"
+    ports:
+      # The editors (/w/<id>/…); the internal API (45177) stays on the Docker network
+      - "45176:45176"
+    environment:
+      PUBLIC_PORT: 45176
+      INTERNAL_PORT: 45177
+      DRIVER: docker
+      WORKSPACE_IMAGE: continuum-workspace:dev
+      WORKSPACE_NETWORK: docker_default
+      IDLE_MINUTES: 30
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
 
 volumes:

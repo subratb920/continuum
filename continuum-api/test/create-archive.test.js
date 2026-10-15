@@ -33,3 +33,23 @@ test("git: one commit on main; origin without credentials", async () => {
   assert.ok(files.some(([p]) => p.startsWith(".git/objects/")));
   assert.equal(FIRST_COMMIT_MESSAGE, "Initial commit from Continuum");
 });
+
+test("put on GitHub: the browser's .tar.gz (long paths, binary, unicode) is read back byte for byte", async () => {
+  const { tarGzOf } = await import("../../continuum-bridge-spine/src/utils/tarWriter.js");
+  const { readTarGz } = await import("../src/create/tar.js");
+  const long = "src/" + "very-long-folder-name/".repeat(6) + "deep-file.js";
+  const bin = new Uint8Array(3000).map((_, i) => i % 256);
+  const files = [
+    { path: "package.json", file: new Blob(['{"name":"demo"}']) },
+    { path: long, file: new Blob(["export const x = 1;\n"]) },
+    { path: "assets/logo.png", file: new Blob([bin]) },
+    { path: "README.md", file: new Blob(["# Demo — ünïcode ✓\n"]) },
+  ];
+  const back = readTarGz(Buffer.from(await (await tarGzOf(files)).arrayBuffer()), 10 * 1024 * 1024);
+  assert.equal(back.length, files.length);
+  for (const f of files) {
+    const got = back.find((b) => b.path === f.path);
+    assert.ok(got, f.path);
+    assert.deepEqual(new Uint8Array(got.data), new Uint8Array(await f.file.arrayBuffer()), f.path);
+  }
+});

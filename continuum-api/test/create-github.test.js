@@ -47,3 +47,27 @@ test("github: expired sign-in, name taken and outages give clear errors", async 
   const down = fakeGithub({ "GET /repos/o/n": [500, {}] });
   await assert.rejects(repoAvailable("t", "o", "n", { fetchImpl: down.fetchImpl }), /couldn't be reached/);
 });
+
+test("github target: only with a new repository (and git); unknown targets refused", async () => {
+  const { targetOf } = await import("../src/create/routes.js");
+  const field = (body) => {
+    try {
+      targetOf(body);
+    } catch (e) {
+      return e.field;
+    }
+    return null;
+  };
+  assert.equal(targetOf({}), "archive");
+  assert.equal(targetOf({ target: "github", git: { github: { create: true } } }), "github");
+  assert.equal(field({ target: "github" }), "git.github.create");
+  assert.equal(field({ target: "github", git: { github: { create: false } } }), "git.github.create");
+  assert.equal(field({ target: "github", git: { init: false, github: { create: true } } }), "git.init");
+  assert.equal(field({ target: "zip" }), "target");
+});
+
+test("github: a created repository reports its id, name and visibility (to add it as a project)", async () => {
+  const gh = fakeGithub({ "POST /user/repos": [201, { id: 7, name: "app", private: false, html_url: "https://github.com/o/app", clone_url: "https://github.com/o/app.git", full_name: "o/app" }] });
+  const repo = await createRepo("tok", { name: "app", isPrivate: false }, { fetchImpl: gh.fetchImpl });
+  assert.deepEqual(repo, { id: 7, name: "app", htmlUrl: "https://github.com/o/app", cloneUrl: "https://github.com/o/app.git", fullName: "o/app", isPrivate: false });
+});

@@ -67,8 +67,9 @@ export function tarGz(files, top = "project") {
  * A .tar.gz read back: [{ path, data, executable }], the top folder removed
  * (e.g. Spring Initializr's starter.tgz). Paths with ".." are dropped.
  */
-export function readTarGz(gz) {
-  const bytes = gunzipSync(gz);
+export function readTarGz(gz, maxBytes) {
+  // maxBytes: refuse archives that unpack to more (a small upload can't become gigabytes here)
+  const bytes = maxBytes ? gunzipSync(gz, { maxOutputLength: maxBytes }) : gunzipSync(gz);
   const text = (b) => b.toString("utf8").replace(/\0.*$/s, "");
   const out = [];
   let off = 0;

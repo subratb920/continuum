@@ -1,0 +1,366 @@
+/* Continuum Workspaces: new workspace, then one card per workspace */
+.ws-page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  color: var(--text);
+}
+
+.ws-head h1 {
+  margin: 0 0 6px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.ws-muted {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ws-head .ws-muted {
+  margin: 0 0 20px;
+}
+
+.ws-error {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--danger-border);
+  border-radius: 8px;
+  background: var(--danger-soft);
+  color: var(--danger-text);
+  font-size: 14px;
+}
+
+.ws-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 16px;
+}
+
+.ws-new {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.ws-new h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.ws-new .ws-muted {
+  margin: 0;
+}
+
+.ws-field {
+  display: grid;
+  gap: 4px;
+}
+
+.ws-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ws-field select,
+.ws-size-select {
+  min-height: 38px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.ws-sizes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ws-sizes legend {
+  margin-bottom: 4px;
+}
+
+.ws-size {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface-subtle);
+  cursor: pointer;
+}
+
+.ws-size input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ws-size.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-ring);
+  background: var(--surface);
+}
+
+.ws-size:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.ws-size-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.ws-size-spec {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.ws-size-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.ws-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.ws-item {
+  display: grid;
+  gap: 4px;
+}
+
+.ws-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ws-item-name {
+  font-weight: 600;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.ws-item-repo,
+.ws-item-meta {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.ws-state {
+  flex: none;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--hover);
+  color: var(--text-3);
+}
+
+.ws-state.is-running {
+  border-color: var(--success-border);
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+
+.ws-state.is-starting {
+  border-color: var(--info-border);
+  background: var(--info-soft);
+  color: var(--info-text);
+}
+
+.ws-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ws-btn {
+  min-height: 38px;
+  padding: 7px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ws-btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.ws-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.ws-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ws-btn-primary {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 500;
+}
+
+.ws-btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.ws-new .ws-btn-primary {
+  justify-self: start;
+}
+
+.ws-btn-quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-3);
+  margin-left: auto;
+}
+
+.ws-btn-danger {
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.ws-confirm {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--danger-border);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.ws-empty,
+.ws-limits {
+  margin: 12px 0 0;
+}
+
+@media (max-width: 600px) {
+  .ws-page {
+    padding-top: 16px;
+  }
+  .ws-sizes {
+    grid-template-columns: 1fr;
+  }
+  .ws-btn-quiet {
+    margin-left: 0;
+  }
+}
+
+/* Put on GitHub (a project without a repository) */
+.ws-github {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface-subtle);
+}
+
+.ws-github .ws-muted {
+  margin: 0;
+}
+
+.ws-question {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ws-question legend {
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+.ws-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ws-choice.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-ring);
+}
+
+.ws-choice.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ws-repo {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ws-repo input {
+  flex: 1;
+  min-width: 0;
+  min-height: 38px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.ws-field-error {
+  color: var(--danger-text);
+  font-size: 13px;
+}
+
+.ws-folder {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+
+.ws-github .ws-btn-primary {
+  justify-self: start;
+}

@@ -98,13 +98,16 @@ export default function ShellHeader({ selectedProject = null }) {
     ["setup", "Interval Setup", "⏱"],
     ["projects", "Projects", "📂"],
     ["bridges", "Bridges", "🌉"],
+    ["workspaces", "Workspaces", "💻"],
     ["create", "Create", "＋"],
     ...(DEPLOY_AVAILABLE ? [["deploy", "Deploy", "🚀"]] : []),
   ];
   const onConsole = panels.enabled && pathname === "/console";
-  const currentView = onConsole ? (panels.panel ?? "setup") : null;
+  const currentView = pathname === "/workspaces" ? "workspaces" : onConsole ? (panels.panel ?? "setup") : null;
   function showView(view) {
     setOpenMenu(null);
+    // Workspaces is a page of its own (not a console pane)
+    if (view === "workspaces") return navigate("/workspaces");
     if (onConsole) panels.open(view === "setup" ? null : view);
     else navigate("/console", { state: { view: view === "setup" ? null : view } });
   }
@@ -198,6 +201,18 @@ export default function ShellHeader({ selectedProject = null }) {
           </button>
 
           <div className="shell-nav-group">
+            <button
+              type="button"
+              className="shell-nav-btn"
+              aria-current={pathname === "/workspaces" ? "page" : undefined}
+              onClick={() => {
+                setOpenMenu(null);
+                navigate("/workspaces");
+              }}
+            >
+              Workspaces
+            </button>
+
             {/* + Create */}
             <div className="shell-menu">
               <button
