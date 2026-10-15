@@ -11,7 +11,7 @@ import { createProjectFolder, pickParentFolder, removeProjectFolder } from "../u
  * Create-project form rendered inside the Create Project modal.
  * (First-time users see screens/Welcome.jsx instead.)
  */
-export default function CreateProject({ onCreated, onClose, initialName = "", importedFrom = null, contents = null }) {
+export default function CreateProject({ onCreated, onClose, initialName = "", importedFrom = null, contents = null, githubRepoUrl = null }) {
   const [name, setName] = useState(initialName);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
@@ -42,7 +42,7 @@ export default function CreateProject({ onCreated, onClose, initialName = "", im
     setCreating(true);
     try {
       if (parent) folder = await createProjectFolder(parent, name.trim());
-      const extra = contents ? { source: "device", contents } : folder ? { source: "device", contents: { folder: folder.name, entries: [] } } : {};
+      const extra = contents ? { source: "device", contents, ...(githubRepoUrl && { githubRepoUrl }) } : folder ? { source: "device", contents: { folder: folder.name, entries: [] } } : {};
       const project = await createProject(name.trim(), extra);
       onCreated(project);
     } catch (err) {

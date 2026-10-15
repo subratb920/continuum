@@ -41,8 +41,8 @@ export default function AuthCallback() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#0f1115",
-        color: "#e6e6e6",
+        background: "var(--auth-bg)",
+        color: "var(--auth-text)",
         fontFamily: "system-ui",
       }}
     >

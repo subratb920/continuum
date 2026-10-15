@@ -34,7 +34,7 @@ export async function createProject(req, res) {
   const projectService = await createProjectService(db);
   const audit = createAuditService(db);
 
-  const { name, source, contents } = req.body;
+  const { name, source, contents, githubRepoUrl } = req.body;
 
   req.log.info(
     {
@@ -47,7 +47,7 @@ export async function createProject(req, res) {
   const projectId = await projectService.createProject(
     req.user.id,
     name,
-    { source, contents }
+    { source, contents, githubRepoUrl }
   );
 
   // 🔒 IMMUTABLE AUDIT LOG

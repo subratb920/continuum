@@ -20,10 +20,20 @@ export const DEFAULT_PREFERENCES = Object.freeze({
   // Developer
   debugLogs: false,
   // Appearance
-  theme: "light", // light | dark | system (follows the device)
+  theme: "light", // a THEMES id, or "system" (follows the device: light or dark)
   reduceMotion: false,
   compactLists: false,
 });
+
+/**
+ * The colour themes. Each id has a block of values in src/theme/tokens.css
+ * (:root[data-theme="<id>"]); adding a theme is that block plus a line here.
+ */
+export const THEMES = [
+  { id: "light", label: "Light" },
+  { id: "dark", label: "Dark" },
+  { id: "gray", label: "Gray" },
+];
 
 let cache = null;
 
@@ -86,17 +96,24 @@ export function usePreferences() {
 
 const darkQuery = typeof window !== "undefined" && window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
 
-/** The theme in use: dark, or light ("system" follows the device). */
+/** The theme in use: a THEMES id ("system" follows the device's light or dark). */
 export function resolvedTheme(prefs = getPreferences()) {
-  if (prefs.theme === "dark") return "dark";
   if (prefs.theme === "system") return darkQuery?.matches ? "dark" : "light";
-  return "light";
+  return THEMES.some((t) => t.id === prefs.theme) ? prefs.theme : "light";
 }
 
-/** Appearance settings on <html>: data-theme (theme-dark.css) and classes (appearance.css). */
+/** Appearance settings on <html>: data-theme (picks a block in theme/tokens.css) and classes (appearance.css). */
 export function applyAppearance(prefs = getPreferences()) {
   const root = document.documentElement;
   root.dataset.theme = resolvedTheme(prefs);
+  // Remembered for index.html, which paints this colour before the app loads (no flash, any theme)
+  const page = getComputedStyle(root).getPropertyValue("--page").trim();
+  root.style.backgroundColor = page; // the canvas around the app (overscroll) follows the theme too
+  try {
+    localStorage.setItem("continuum_theme_page", page);
+  } catch {
+    /* no early colour next time */
+  }
   root.classList.toggle("reduce-motion", Boolean(prefs.reduceMotion));
   root.classList.toggle("compact-lists", Boolean(prefs.compactLists));
 }

@@ -6,6 +6,7 @@ import { withSystemContext } from "../logging/childLogger.js";
 import { createProjectDoc } from "../models/project.model.js";
 import { AppError } from "../errors/AppError.js";
 import { normalizeContents } from "./projectContents.js";
+import { normalizeGithubRepoUrl } from "./githubRemote.js";
 
 const MAX_NAME_LENGTH = 100;
 
@@ -40,9 +41,10 @@ export async function createProjectService(db) {
 
   /**
    * Create a LOCAL project, or one imported from the user's device
-   * (source "device", with the file list taken when the folder was picked).
+   * (source "device", with the file list taken when the folder was picked,
+   * and its GitHub address when the folder's git remote is on GitHub).
    */
-  async function createProject(userId, name, { source = "local", contents = undefined } = {}) {
+  async function createProject(userId, name, { source = "local", contents = undefined, githubRepoUrl = undefined } = {}) {
     const uid = toObjectId(userId);
 
     if (!name || !name.trim()) {
@@ -52,6 +54,7 @@ export async function createProjectService(db) {
       throw new AppError("source must be local or device.", 400, "VALIDATION_ERROR");
     }
     const files = source === "device" ? normalizeContents(contents ?? { entries: [] }) : null;
+    const repoUrl = source === "device" ? normalizeGithubRepoUrl(githubRepoUrl) : null;
 
     const cleanName = name.trim();
 
@@ -63,7 +66,7 @@ export async function createProjectService(db) {
     });
 
     if (existing) {
-      if (files) await projectCol.updateOne({ _id: existing._id }, { $set: { contents: files, updatedAt: new Date() } });
+      if (files) await projectCol.updateOne({ _id: existing._id }, { $set: { contents: files, githubRepoUrl: repoUrl, updatedAt: new Date() } });
       return existing._id;
     }
 
@@ -73,6 +76,7 @@ export async function createProjectService(db) {
       name: cleanName,
       userId: uid,
       source,
+      githubRepoUrl: repoUrl,
     });
     if (files) doc.contents = files;
 

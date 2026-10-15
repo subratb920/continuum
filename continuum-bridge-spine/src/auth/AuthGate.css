@@ -3,8 +3,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0f1115;
-  color: #e6e6e6;
+  background: var(--auth-bg);
+  color: var(--auth-text);
   font-family: system-ui, sans-serif;
 }
 
@@ -12,8 +12,8 @@
   width: 360px;
   padding: 32px;
   border-radius: 10px;
-  background: #151821;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  background: var(--auth-card);
+  box-shadow: 0 20px 40px var(--auth-shadow);
 }
 
 .auth-title {
@@ -25,7 +25,7 @@
 .auth-subtitle {
   margin: 6px 0 24px;
   font-size: 13px;
-  color: #9aa0aa;
+  color: var(--auth-muted);
   text-align: center;
 }
 
@@ -33,25 +33,25 @@
   width: 100%;
   padding: 10px 12px;
   margin-bottom: 12px;
-  background: #0f1115;
-  border: 1px solid #2a2f3a;
+  background: var(--auth-bg);
+  border: 1px solid var(--auth-border);
   border-radius: 6px;
-  color: #e6e6e6;
+  color: var(--auth-text);
 }
 
 .auth-form input:focus {
   outline: none;
-  border-color: #4f6ef7;
+  border-color: var(--auth-brand);
 }
 
 .auth-form button[type="submit"] {
   width: 100%;
   padding: 10px;
   margin-top: 8px;
-  background: #4f6ef7;
+  background: var(--auth-brand);
   border: none;
   border-radius: 6px;
-  color: white;
+  color: var(--auth-on-brand);
   font-weight: 500;
   cursor: pointer;
 }
@@ -64,20 +64,20 @@
 .auth-error {
   margin-bottom: 10px;
   font-size: 13px;
-  color: #ff6b6b;
+  color: var(--auth-error);
 }
 
 .auth-switch {
   margin-top: 18px;
   font-size: 13px;
   text-align: center;
-  color: #9aa0aa;
+  color: var(--auth-muted);
 }
 
 .auth-switch button {
   background: none;
   border: none;
-  color: #4f6ef7;
+  color: var(--auth-brand);
   cursor: pointer;
   padding: 0;
 }
@@ -90,7 +90,7 @@
   align-items: center;
   margin: 18px 0;
   font-size: 12px;
-  color: #666;
+  color: var(--auth-subtle);
 }
 
 .auth-divider::before,
@@ -98,7 +98,7 @@
   content: "";
   flex: 1;
   height: 1px;
-  background: #2a2f3a;
+  background: var(--auth-border);
 }
 
 .auth-divider span {
@@ -130,24 +130,24 @@
 
 /* GitHub */
 .social-btn.github {
-  background: #1f2937;
-  color: #fff;
+  background: var(--auth-field-hover);
+  color: var(--auth-on-brand);
   border: none;
 }
 
 .social-btn.github:hover {
-  background: #111827;
+  background: var(--auth-field);
 }
 
 /* Google */
 .social-btn.google {
-  background: #1f2937;   /* same as GitHub */
-  color: #fff;
+  background: var(--auth-field-hover);   /* same as GitHub */
+  color: var(--auth-on-brand);
   border: none;
 }
 
 .social-btn.google:hover {
-  background: #111827;
+  background: var(--auth-field);
 }
 
 .icon {
@@ -155,9 +155,9 @@
 }
 
 .social-btn.github .icon {
-  color: #fff;
+  color: var(--auth-on-brand);
 }
 
 .social-btn.google .icon {
-  color: #ea4335;  /* Google red accent */
+  color: var(--auth-google);  /* Google red accent */
 }

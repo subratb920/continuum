@@ -2,13 +2,13 @@
   max-width: 820px;
   margin: 0 auto;
   padding: 24px 24px 64px;
-  color: #222;
+  color: var(--text);
   line-height: 1.55;
 }
 
 .help-back {
   font-size: 13px;
-  color: #0066cc;
+  color: var(--link);
   text-decoration: none;
 }
 
@@ -18,7 +18,7 @@
 }
 
 .help-tagline {
-  color: #555;
+  color: var(--text-3);
   margin: 0 0 16px;
 }
 
@@ -27,32 +27,32 @@
   flex-wrap: wrap;
   gap: 8px;
   padding: 12px 0;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid var(--border);
   margin-bottom: 8px;
   position: sticky;
   top: 0;
-  background: #fafafa;
+  background: var(--surface-subtle);
   z-index: 1;
 }
 
 .help-nav a {
   font-size: 13px;
-  color: #333;
+  color: var(--text-2);
   text-decoration: none;
   padding: 4px 10px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .help-nav a:hover {
-  border-color: #4f6ef7;
-  color: #4f6ef7;
+  border-color: var(--brand);
+  color: var(--brand-text);
 }
 
 .help-section {
   padding: 24px 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-subtle);
   scroll-margin-top: 56px;
 }
 
@@ -73,8 +73,8 @@
 .help-quote {
   margin: 16px 0;
   padding: 10px 16px;
-  border-left: 3px solid #4f6ef7;
-  background: #fff;
+  border-left: 3px solid var(--brand);
+  background: var(--surface);
   font-style: italic;
 }
 
@@ -95,12 +95,12 @@
 
 .help-steps li span,
 .help-principles li span {
-  color: #555;
+  color: var(--text-3);
 }
 
 .help-tip {
-  background: #fff;
-  border: 1px solid #e5e5e5;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px 16px;
   margin-top: 16px;
@@ -121,8 +121,8 @@
 }
 
 .help-card {
-  background: #fff;
-  border: 1px solid #e5e5e5;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px 14px;
 }
@@ -130,7 +130,7 @@
 .help-card p {
   margin: 6px 0 0;
   font-size: 14px;
-  color: #555;
+  color: var(--text-3);
 }
 
 .help-card-head {
@@ -149,19 +149,19 @@
 }
 
 .help-badge-available {
-  background: #e7f6ec;
-  color: #1e7a3c;
+  background: var(--success-soft);
+  color: var(--success-text);
 }
 
 .help-badge-future {
-  background: #f1ecfd;
-  color: #5b3cc4;
+  background: var(--violet-soft);
+  color: var(--violet-text);
 }
 
 .help-table {
   width: 100%;
   border-collapse: collapse;
-  background: #fff;
+  background: var(--surface);
   font-size: 14px;
 }
 
@@ -169,16 +169,16 @@
 .help-table td {
   text-align: left;
   padding: 8px 12px;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--border);
 }
 
 .help-table th {
-  background: #f4f4f5;
+  background: var(--hover);
 }
 
 .help-note {
   font-size: 13px;
-  color: #777;
+  color: var(--text-muted);
 }
 
 .help-glossary div {
@@ -191,16 +191,16 @@
 
 .help-glossary dd {
   margin: 2px 0 0;
-  color: #555;
+  color: var(--text-3);
 }
 
 /* Roadmap is future work: visually separated */
 .help-roadmap {
   margin-top: 16px;
   padding: 24px;
-  border: 1px dashed #c9bdf2;
+  border: 1px dashed var(--violet-border);
   border-radius: 10px;
-  background: #fbfaff;
+  background: var(--surface-subtle);
 }
 
 .help-roadmap-head {
@@ -215,8 +215,8 @@
 }
 
 .help-horizon {
-  background: #fff;
-  border: 1px solid #e5e5e5;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px 14px;
   margin-top: 10px;
@@ -231,5 +231,5 @@
 
 .help-horizon-tag {
   font-size: 12px;
-  color: #5b3cc4;
+  color: var(--violet-text);
 }

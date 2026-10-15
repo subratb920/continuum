@@ -21,10 +21,10 @@
 }
 
 .delete-warning {
-  background: #fdecec;
-  border: 1px solid #f3b4b4;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-border);
   border-radius: 6px;
-  color: #8a1f1f;
+  color: var(--danger-text);
   font-size: 14px;
   padding: 12px 14px;
   margin-bottom: 16px;
@@ -39,7 +39,7 @@
 }
 
 .delete-error {
-  color: #d33;
+  color: var(--danger-text);
   font-size: 13px;
   margin-bottom: 12px;
 }
@@ -52,22 +52,22 @@
 }
 
 .field-error {
-  color: #d33;
+  color: var(--danger-text);
   font-size: 13px;
   margin-bottom: 12px;
 }
 
 .field-hint {
-  color: #666;
+  color: var(--text-muted);
   font-size: 13px;
   margin-bottom: 12px;
 }
 
 .current-name {
-  background: #f4f4f5;
-  border: 1px solid #e4e4e7;
+  background: var(--hover);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  color: #444;
+  color: var(--text-2);
   padding: 10px;
   margin-bottom: 12px;
 }
@@ -78,8 +78,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: #f4f4f5;
-  border: 1px solid #e4e4e7;
+  background: var(--hover);
+  border: 1px solid var(--border);
   border-radius: 4px;
   font-size: 13px;
   padding: 8px 10px;
@@ -88,9 +88,9 @@
 
 .activate-deactivate-btn {
   background: transparent;
-  border: 1px solid #d33;
+  border: 1px solid var(--danger);
   border-radius: 6px;
-  color: #d33;
+  color: var(--danger-text);
   cursor: pointer;
   font-size: 12px;
   padding: 4px 10px;

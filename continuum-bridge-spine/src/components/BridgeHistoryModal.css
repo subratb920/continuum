@@ -5,7 +5,7 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -17,11 +17,11 @@
 ------------------------------ */
 
 .modal-window {
-  background: #ffffff;
+  background: var(--surface);
   width: 480px;
   max-width: 90%;
   border-radius: 12px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 40px rgb(var(--shadow-rgb) / 0.15);
   overflow: hidden;
 }
 
@@ -31,7 +31,7 @@
 
 .modal-header {
   padding: 16px 20px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border);
 }
 
 /* Bridge name centred (draft and history windows) */
@@ -47,7 +47,7 @@
 
 .modal-meta {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--text-muted);
   margin-bottom: 16px;
 }
 
@@ -76,15 +76,15 @@
 .goal-status {
   font-size: 11px;
   text-transform: capitalize;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .goal-status.completed {
-  color: #16a34a;
+  color: var(--success-text);
 }
 
 .goal-status.incomplete {
-  color: #dc2626;
+  color: var(--danger-text);
 }
 
 
@@ -94,7 +94,7 @@
 
 .modal-footer {
   padding: 12px 20px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border);
   display: flex;
   justify-content: flex-end;
 }
@@ -106,7 +106,7 @@
 .bridge-times {
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -120,13 +120,13 @@
 
 .bridge-time-label {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--text-muted);
   font-weight: 500;
 }
 
 .bridge-time-value {
   font-size: 13px;
-  color: #111827;
+  color: var(--text);
 }
 
 /* "Ticket: PROJ-123" on one line; a long link is cut with … (the full address shows on hover) */
@@ -151,8 +151,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   padding: 2px 8px;
-  background: #eef2ff;
-  color: #4338ca;
+  background: var(--selected);
+  color: var(--accent-text);
   border-radius: 6px;
   font-size: 12px;
   text-decoration: none;
@@ -160,5 +160,5 @@
 }
 
 .ticket-badge:hover {
-  background: #e0e7ff;
+  background: var(--accent-ring);
 }

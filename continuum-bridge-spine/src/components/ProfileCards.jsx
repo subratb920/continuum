@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchProjects, requestCallback } from "../api";
-import { resetPreferences, resolvedTheme, setPreference, usePreferences } from "../utils/preferences";
+import { resetPreferences, resolvedTheme, setPreference, THEMES, usePreferences } from "../utils/preferences";
 import { DEPLOY_AVAILABLE, deployHomeUrl } from "../deployLinks";
 import { BUILD, diagnostics, mailto, SUPPORT_EMAIL, SUPPORT_PHONE } from "../utils/support";
 import "./ProfileCards.css";
@@ -361,7 +361,7 @@ function AppearanceSection({ prefs, set }) {
     <>
       <h3 className="pcard-section">Theme</h3>
       <Row label="Colour theme" hint={prefs.theme === "system" ? `Follows this device (now ${resolvedTheme(prefs)}).` : "Dark uses ChatGPT's dark colours."}>
-        <Choice label="Theme" value={prefs.theme} onChange={(v) => set("theme", v)} options={[["light", "Light"], ["dark", "Dark"], ["system", "System"]]} />
+        <Choice label="Theme" value={prefs.theme} onChange={(v) => set("theme", v)} options={[...THEMES.map((t) => [t.id, t.label]), ["system", "System"]]} />
       </Row>
       <h3 className="pcard-section">Display</h3>
       <Toggle checked={prefs.reduceMotion} onChange={(v) => set("reduceMotion", v)} label="Reduce motion" hint="No pulsing dots, sliding drawers or animations." />

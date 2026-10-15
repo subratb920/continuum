@@ -1,5 +1,5 @@
 .empty-console {
-  color: #222;
+  color: var(--text);
 }
 
 .empty-console > p {
@@ -15,7 +15,7 @@
 .empty-console ol {
   margin: 0 0 16px;
   padding-left: 20px;
-  color: #444;
+  color: var(--text-2);
   font-size: 14px;
 }
 
@@ -24,13 +24,13 @@
 }
 
 .empty-console .you-are-here {
-  color: #4f6ef7;
+  color: var(--brand-text);
   font-size: 13px;
 }
 
 .empty-console a {
   font-size: 14px;
-  color: #0066cc;
+  color: var(--link);
   text-decoration: none;
 }
 

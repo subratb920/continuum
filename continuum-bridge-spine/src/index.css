@@ -7,8 +7,8 @@
 body {
   margin: 0;
   font-family: system-ui, sans-serif;
-  color: #111;
-  background: #fff;
+  color: var(--text);
+  background: var(--page);
 }
 
 .app {
@@ -18,10 +18,10 @@ body {
 }
 
 .left, .right {
-  background: #f8fafc;
+  background: var(--pane);
   padding: 16px;
   font-size: 14px;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .center {
@@ -35,8 +35,8 @@ body {
 .primary {
   margin-top: 24px;
   padding: 10px 18px;
-  background: #3b82f6;
-  color: white;
+  background: var(--brand);
+  color: var(--on-accent);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -45,20 +45,20 @@ body {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.2);
+  background: var(--scrim);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .modal {
-  background: white;
+  background: var(--page);
   padding: 32px;
   width: 520px;
   border-radius: 12px;
 }
 
 .accent {
-  color: #3b82f6;
+  color: var(--link);
   font-weight: 600;
 }

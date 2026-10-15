@@ -25,7 +25,7 @@
 
 .duration-picker-label {
   font-size: 11px;
-  color: #777;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 2px;
@@ -41,18 +41,18 @@
   font-size: 26px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: #222;
-  background: #f9f9f9;
-  border: 1px solid #ddd;
+  color: var(--text);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
   outline: none;
   cursor: text;
 }
 
 .duration-picker-box:focus {
-  background: #fff;
-  border-color: #b5b5b5;
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
+  background: var(--surface);
+  border-color: var(--border-emphasis);
+  box-shadow: 0 0 0 3px rgb(var(--shadow-rgb) / 0.06);
 }
 
 .duration-picker-box:disabled {
@@ -62,7 +62,7 @@
 .duration-picker-sep {
   font-size: 24px;
   font-weight: 600;
-  color: #999;
+  color: var(--text-faint);
   margin: 0 10px;
   /* line up with the boxes, not the arrows */
   padding-top: 14px;
@@ -78,33 +78,33 @@
   border: none;
   border-radius: 6px;
   background: none;
-  color: #555;
+  color: var(--text-3);
   cursor: pointer;
 }
 
 .duration-picker-arrow:hover:not(:disabled) {
-  background: #f0f0f0;
-  color: #222;
+  background: var(--hover);
+  color: var(--text);
 }
 
 .duration-picker-arrow:disabled {
-  color: #ccc;
+  color: var(--text-faint);
   cursor: not-allowed;
 }
 
 .duration-picker-reset {
   font-size: 12px;
   padding: 5px 10px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
-  background: #fff;
-  color: #555;
+  background: var(--surface);
+  color: var(--text-3);
   cursor: pointer;
 }
 
 .duration-picker-reset:hover:not(:disabled) {
-  background: #f0f0f0;
-  color: #222;
+  background: var(--hover);
+  color: var(--text);
 }
 
 .duration-picker-reset:disabled {
@@ -113,5 +113,5 @@
 }
 
 .duration-picker.is-disabled .duration-picker-box {
-  color: #aaa;
+  color: var(--text-faint);
 }

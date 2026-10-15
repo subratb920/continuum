@@ -9,14 +9,14 @@
   gap: 10px;
   min-height: 0;
   font-size: 13px;
-  color: #374151;
+  color: var(--text-2);
 }
 
 /* ---------- Header ---------- */
 
 .bridge-spine-head {
   padding: 2px 2px 6px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border);
 }
 
 .bridge-spine-title {
@@ -28,15 +28,15 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .bridge-count {
   min-width: 18px;
   padding: 1px 6px;
   border-radius: 999px;
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--control);
+  color: var(--text-2);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0;
@@ -47,7 +47,7 @@
   margin-top: 4px;
   font-size: 13px;
   font-weight: 600;
-  color: #111827;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -57,28 +57,28 @@
 
 .bridge-empty {
   margin: 8px 2px;
-  color: #6b7280;
+  color: var(--text-muted);
   font-size: 13px;
   line-height: 1.5;
 }
 
 .bridge-error p {
   margin: 0 0 8px;
-  color: #b91c1c;
+  color: var(--danger-text);
 }
 
 .bridge-retry {
   padding: 5px 10px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
-  background: #fff;
-  color: #1f2937;
+  background: var(--surface);
+  color: var(--text);
   font-size: 12px;
   cursor: pointer;
 }
 
 .bridge-retry:hover {
-  background: #f3f4f6;
+  background: var(--hover);
 }
 
 /* ---------- Timeline ---------- */
@@ -95,7 +95,7 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #9ca3af;
+  color: var(--text-faint);
 }
 
 .bridge-group:first-child .bridge-day {
@@ -118,7 +118,7 @@
   bottom: 6px;
   width: 2px;
   border-radius: 2px;
-  background: #e5e7eb;
+  background: var(--control);
 }
 
 .bridge-entry {
@@ -139,36 +139,36 @@
   height: 12px;
   box-sizing: border-box;
   border-radius: 50%;
-  border: 2px solid #cbd5e1;
-  background: #fff;
+  border: 2px solid var(--control-strong);
+  background: var(--surface);
   z-index: 1;
 }
 
 .bridge-finalized .bridge-dot {
-  border-color: #94a3b8;
-  background: #94a3b8;
+  border-color: var(--dim);
+  background: var(--dim);
 }
 
 .bridge-abandoned .bridge-dot {
-  border-color: #fca5a5;
-  background: #fff;
+  border-color: var(--danger-border);
+  background: var(--surface);
 }
 
 .bridge-in-progress .bridge-dot {
-  border-color: #22c55e;
-  background: #22c55e;
+  border-color: var(--success);
+  background: var(--success);
   animation: bridge-pulse 1.6s infinite;
 }
 
 @keyframes bridge-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55);
+    box-shadow: 0 0 0 0 rgb(var(--success-rgb) / 0.55);
   }
   70% {
-    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+    box-shadow: 0 0 0 6px rgb(var(--success-rgb) / 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    box-shadow: 0 0 0 0 rgb(var(--success-rgb) / 0);
   }
 }
 
@@ -183,32 +183,32 @@
 .bridge-card {
   display: flex;
   align-items: flex-start;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   transition:
     border-color 0.15s,
     box-shadow 0.15s;
 }
 
 .bridge-card:hover {
-  border-color: #c7d2fe;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  border-color: var(--accent-border);
+  box-shadow: 0 2px 8px rgb(var(--shadow-rgb) / 0.06);
 }
 
 .bridge-in-progress .bridge-card {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
+  border-color: var(--success-border);
+  background: var(--success-soft);
 }
 
 .bridge-abandoned .bridge-card {
-  background: #fafafa;
+  background: var(--surface-subtle);
 }
 
 /* The current bridge */
 .bridge-entry.is-current .bridge-card {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 2px #e0e7ff;
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px var(--accent-ring);
 }
 
 .bridge-open {
@@ -230,7 +230,7 @@
 .bridge-open:focus-visible,
 .bridge-card-ticket:focus-visible,
 .bridge-retry:focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid var(--focus);
   outline-offset: 1px;
 }
 
@@ -245,14 +245,14 @@
   flex: 1;
   min-width: 0;
   font-weight: 600;
-  color: #111827;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .bridge-abandoned .bridge-name {
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .bridge-mode {
@@ -266,42 +266,42 @@
 }
 
 .mode-execution {
-  background: #eef2ff;
-  border-color: #c7d2fe;
-  color: #3730a3;
+  background: var(--selected);
+  border-color: var(--accent-border);
+  color: var(--accent-text);
 }
 
 .mode-decision {
-  background: #fef3c7;
-  border-color: #fde68a;
-  color: #92400e;
+  background: var(--warning-soft);
+  border-color: var(--warning-border);
+  color: var(--warning-text);
 }
 
 .mode-continuity {
-  background: #e0f2fe;
-  border-color: #bae6fd;
-  color: #075985;
+  background: var(--info-soft);
+  border-color: var(--info-border);
+  color: var(--info-text);
 }
 
 .mode-alignment {
-  background: #fce7f3;
-  border-color: #fbcfe8;
-  color: #9d174d;
+  background: var(--pink-soft);
+  border-color: var(--pink-border);
+  color: var(--pink-text);
 }
 
 .bridge-when {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
 .state-progress {
-  color: #15803d;
+  color: var(--success-text);
   font-weight: 600;
 }
 
 .state-abandoned {
-  color: #b91c1c;
+  color: var(--danger-text);
 }
 
 /* Goals: a small bar and "3 / 5 goals" */
@@ -316,7 +316,7 @@
   max-width: 90px;
   height: 4px;
   border-radius: 4px;
-  background: #e5e7eb;
+  background: var(--control);
   overflow: hidden;
 }
 
@@ -324,12 +324,12 @@
   display: block;
   height: 100%;
   border-radius: 4px;
-  background: #22c55e;
+  background: var(--success);
 }
 
 .bridge-goals-text {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
@@ -342,12 +342,12 @@
   height: 26px;
   margin: 6px 6px 0 0;
   border-radius: 6px;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .bridge-card-ticket:hover {
-  background: #eef2ff;
-  color: #4338ca;
+  background: var(--selected);
+  color: var(--accent-text);
 }
 
 /* Touch: roomier */

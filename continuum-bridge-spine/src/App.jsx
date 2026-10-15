@@ -520,6 +520,7 @@ export default function App() {
               initialName={createPrefill?.name ?? ""}
               importedFrom={createPrefill?.from ?? null}
               contents={createPrefill?.contents ?? null}
+              githubRepoUrl={createPrefill?.githubRepoUrl ?? null}
               onCreated={(project) => {
                 logger.ui("modal onCreated received project", project);
                 setProjects(prev => [...prev, project]);

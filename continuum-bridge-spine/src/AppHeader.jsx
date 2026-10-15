@@ -7,7 +7,7 @@ function AppHeader() {
       alignItems: "center",
       gap: "8px",
       marginBottom: "24px",
-      color: "#6b7280"
+      color: "var(--text-muted)"
     }}>
       <img src="/logo-symbol.png" alt="" height={20} />
       <span style={{ fontSize: 14 }}>Continuum Console</span>

@@ -124,7 +124,7 @@ export function patchBridgeKeepalive(id, data, tokenOverride) {
    ================================================== */
 
 /**
- * extra (Import from device): { source: "device", contents: { folder, entries: [[path, size]], truncated } }
+ * extra (Import from device): { source: "device", contents: { folder, entries: [[path, size]], truncated }, githubRepoUrl? }
  */
 export async function createProject(name, extra = {}) {
   const res = await request("POST", "/projects", { name, ...extra });
@@ -134,6 +134,7 @@ export async function createProject(name, extra = {}) {
     ...res,
     name, // backend may not return name
     source: extra.source ?? "local",
+    githubRepoUrl: extra.githubRepoUrl ?? null,
     // The summary the project list carries (the files themselves load when the tree opens)
     contents: c
       ? { folder: c.folder, fileCount: c.entries.length, totalBytes: c.entries.reduce((n, [, s]) => n + s, 0), truncated: c.truncated, importedAt: new Date().toISOString() }

@@ -7,8 +7,8 @@
   display: grid;
   grid-template-columns: var(--left-w) minmax(0, 1fr) var(--right-w);
   align-items: center;
-  border-bottom: 1px solid #eee;
-  background: #fff;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--header);
 }
 
 /* Title (and, on narrow screens, the Projects button before it) */
@@ -70,25 +70,25 @@
 .shell-nav-btn {
   font-size: 12px;
   padding: 5px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
-  background: #f9f9f9;
-  color: #222;
+  background: var(--surface-subtle);
+  color: var(--text);
   cursor: pointer;
   line-height: 1.4;
 }
 
 .shell-nav-btn:hover,
 .shell-nav-btn[aria-expanded="true"] {
-  background: #f0f0f0;
+  background: var(--hover);
 }
 
 /* Current page (e.g. Interval Setup while on the console):
    neutral — light shade, slightly darker border, semi-bold, no colour */
 .shell-nav-btn[aria-current="page"] {
-  background: #ececec;
-  border-color: #b5b5b5;
-  color: #222;
+  background: var(--selected-neutral);
+  border-color: var(--border-emphasis);
+  color: var(--text);
   font-weight: 600;
 }
 
@@ -98,8 +98,8 @@
   height: 30px;
   border-radius: 50%;
   border: none;
-  background: #4f6ef7;
-  color: #fff;
+  background: var(--brand);
+  color: var(--on-accent);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -109,8 +109,8 @@
 
 .shell-avatar:hover,
 .shell-avatar[aria-expanded="true"] {
-  background: #3d5be0;
-  box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.2);
+  background: var(--brand-hover);
+  box-shadow: 0 0 0 3px rgb(var(--brand-rgb) / 0.2);
 }
 
 /* Shared dropdown style (Create menu and profile menu) */
@@ -118,11 +118,11 @@
   position: absolute;
   right: 0;
   top: 36px;
-  background: #fff;
-  border: 1px solid #eee;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
   min-width: 200px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgb(var(--shadow-rgb) / 0.08);
   z-index: 100;
   overflow: hidden;
 }
@@ -138,11 +138,11 @@
 }
 
 .menu-dropdown button:hover:not(:disabled) {
-  background: #f5f5f5;
+  background: var(--hover);
 }
 
 .menu-dropdown button:disabled {
-  color: #999;
+  color: var(--text-faint);
   cursor: not-allowed;
 }
 
@@ -157,8 +157,8 @@
   align-items: center;
   gap: 10px;
   padding: 12px 14px;
-  border-bottom: 1px solid #eee;
-  background: #fafafa;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-subtle);
 }
 
 .profile-menu-avatar {
@@ -169,8 +169,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #4f6ef7;
-  color: #fff;
+  background: var(--brand);
+  color: var(--on-accent);
   font-size: 13px;
   font-weight: 600;
 }
@@ -184,7 +184,7 @@
 .profile-menu-email {
   font-size: 13px;
   font-weight: 600;
-  color: #222;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -197,18 +197,18 @@
   border-radius: 4px;
   font-size: 11px;
   line-height: 16px;
-  background: #eef2ff;
-  color: #4338ca;
+  background: var(--selected);
+  color: var(--accent-text);
 }
 
 .provider-github {
-  background: #f3f4f6;
-  color: #111827;
+  background: var(--hover);
+  color: var(--text);
 }
 
 .profile-menu-group {
   padding: 4px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .menu-dropdown .profile-menu-item {
@@ -218,11 +218,11 @@
   padding: 8px 10px;
   border-radius: 6px;
   font-size: 13px;
-  color: #1f2937;
+  color: var(--text);
 }
 
 .menu-dropdown .profile-menu-item:focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid var(--focus);
   outline-offset: -2px;
 }
 
@@ -237,21 +237,21 @@
 }
 
 .profile-menu-trail {
-  color: #9ca3af;
+  color: var(--text-faint);
 }
 
 .profile-menu-foot {
   padding: 8px 14px 4px;
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--text-faint);
 }
 
 /* Deploy menu: which project Deploy on Railway deploys */
 .menu-dropdown-note {
   padding: 8px 12px;
   font-size: 12px;
-  color: #555;
-  border-bottom: 1px solid #eee;
+  color: var(--text-3);
+  border-bottom: 1px solid var(--border-subtle);
   max-width: 260px;
   overflow: hidden;
   text-overflow: ellipsis;

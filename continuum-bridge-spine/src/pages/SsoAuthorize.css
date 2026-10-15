@@ -3,12 +3,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fafafa;
+  background: var(--surface-subtle);
 }
 
 .sso-card {
-  background: #fff;
-  border: 1px solid #eee;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: 28px 32px;
   max-width: 440px;
@@ -22,22 +22,22 @@
 
 .sso-card p {
   margin: 0 0 12px;
-  color: #555;
+  color: var(--text-3);
   font-size: 14px;
 }
 
 .sso-error {
-  background: #fdecec;
-  border: 1px solid #f3b4b4;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-border);
   border-radius: 6px;
-  color: #8a1f1f;
+  color: var(--danger-text);
   padding: 10px 12px;
 }
 
 /* Fills over the visible period before continuing to Continuum Deploy */
 .sso-progress {
   height: 4px;
-  background: #eef0f6;
+  background: var(--hover);
   border-radius: 2px;
   overflow: hidden;
   margin-top: 8px;
@@ -46,7 +46,7 @@
 .sso-progress-bar {
   height: 100%;
   width: 100%;
-  background: #4f6ef7;
+  background: var(--brand);
   transform-origin: left;
   animation-name: sso-fill;
   animation-timing-function: linear;

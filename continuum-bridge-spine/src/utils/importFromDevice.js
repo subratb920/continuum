@@ -34,7 +34,49 @@ function entriesOf(files, folder) {
   return { entries, truncated };
 }
 
-/** { name, folder, from, contents } for the chosen files, or null when nothing usable was chosen. */
+/**
+ * A git remote address as a GitHub web address, or null when it isn't on GitHub.
+ * git@github.com:owner/repo.git, ssh://git@github.com/owner/repo,
+ * https://user:token@github.com/owner/repo.git → https://github.com/owner/repo
+ * (any credentials in it are dropped, never kept).
+ */
+export function githubUrlFromRemote(remote) {
+  const m = /^(?:git@github\.com:|(?:ssh|git|https?):\/\/(?:[^@/]+@)?github\.com(?::\d+)?\/)([A-Za-z0-9][A-Za-z0-9-]{0,38})\/([A-Za-z0-9._-]+?)(?:\.git)?\/?$/i.exec(String(remote ?? "").trim());
+  if (!m || m[2] === "." || m[2] === "..") return null;
+  return `https://github.com/${m[1]}/${m[2]}`;
+}
+
+/** The "origin" remote's address in a .git/config file, or null. */
+export function originFromGitConfig(text) {
+  let inOrigin = false;
+  for (const raw of String(text).split(/\r?\n/)) {
+    const line = raw.trim();
+    if (line.startsWith("[")) {
+      inOrigin = /^\[remote\s+"origin"\]$/.test(line);
+      continue;
+    }
+    const m = inOrigin && /^url\s*=\s*(.+)$/.exec(line);
+    if (m) return m[1].trim();
+  }
+  return null;
+}
+
+/**
+ * The project's GitHub address, from the folder's .git/config (its "origin"
+ * remote), or null: no git, no origin, not on GitHub, or files picked one by one.
+ */
+async function githubUrlOf(files, folder) {
+  const want = folder ? `${folder}/.git/config` : null;
+  const config = want && files.find((f) => (f.webkitRelativePath || f.name) === want);
+  if (!config) return null;
+  try {
+    return githubUrlFromRemote(originFromGitConfig(await config.text()));
+  } catch {
+    return null;
+  }
+}
+
+/** { name, folder, from, contents, githubRepoUrl } for the chosen files, or null when nothing usable was chosen. */
 export async function projectFromFiles(fileList) {
   const files = [...(fileList ?? [])];
   if (!files.length) return null;
@@ -43,6 +85,7 @@ export async function projectFromFiles(fileList) {
   const folder = rel(files[0]).includes("/") ? rel(files[0]).split("/")[0] : null;
   const { entries, truncated } = entriesOf(files, folder);
   const contents = { folder: folder ?? "", entries, truncated };
+  const githubRepoUrl = await githubUrlOf(files, folder);
 
   // package.json at the top of the folder (or a package.json picked on its own)
   const pkg = files.find((f) => {
@@ -52,14 +95,14 @@ export async function projectFromFiles(fileList) {
   if (pkg) {
     try {
       const json = JSON.parse(await pkg.text());
-      if (json?.name) return { name: cleanPackageName(json.name), folder, from: `package.json in ${folder ?? "the chosen files"}`, contents };
+      if (json?.name) return { name: cleanPackageName(json.name), folder, from: `package.json in ${folder ?? "the chosen files"}`, contents, githubRepoUrl };
     } catch {
       /* not readable as JSON: use the folder's name */
     }
   }
-  if (folder) return { name: folder, folder, from: `folder ${folder}`, contents };
+  if (folder) return { name: folder, folder, from: `folder ${folder}`, contents, githubRepoUrl };
   const base = files[0].name.replace(/\.[^.]+$/, "");
-  return base ? { name: base, folder: null, from: `file ${files[0].name}`, contents } : null;
+  return base ? { name: base, folder: null, from: `file ${files[0].name}`, contents, githubRepoUrl } : null;
 }
 
 /** The event that opens the console's Create Project window with a picked folder. */

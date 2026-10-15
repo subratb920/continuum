@@ -72,7 +72,7 @@ body .shell-header {
 /* Deploy menu on touch: the first item opens Continuum Deploy itself */
 .menu-dropdown-lead {
   font-weight: 600;
-  border-bottom: 1px solid #eee !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
 }
 
 /* ---------- Tablet portrait and phones ---------- */
@@ -113,17 +113,17 @@ body .shell-header {
   .shell-icon-btn {
     width: 36px;
     height: 36px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-strong);
     border-radius: 8px;
-    background: #f9f9f9;
+    background: var(--surface-subtle);
     font-size: 18px;
     line-height: 1;
     cursor: pointer;
-    color: #222;
+    color: var(--text);
   }
   .shell-icon-btn[aria-expanded="true"] {
-    background: #ececec;
-    border-color: #b5b5b5;
+    background: var(--selected-neutral);
+    border-color: var(--border-emphasis);
   }
 
   /* Console: the middle pane alone; the side panes slide in over it */
@@ -147,8 +147,8 @@ body .shell-header {
     overflow-y: auto;
     padding-top: calc(16px + env(safe-area-inset-top));
     padding-bottom: calc(16px + env(safe-area-inset-bottom));
-    background: #f8fafc;
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.18);
+    background: var(--pane);
+    box-shadow: 0 0 40px rgb(var(--shadow-rgb) / 0.18);
     visibility: hidden; /* closed: not reachable with Tab either */
     transition:
       transform 0.22s ease,
@@ -178,7 +178,7 @@ body .shell-header {
     position: fixed;
     inset: 0;
     z-index: 1050;
-    background: rgba(15, 23, 42, 0.35);
+    background: var(--scrim);
   }
 
   /* Pages that scroll under the header: their own height no longer assumes a 48px header */
