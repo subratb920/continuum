@@ -5,6 +5,7 @@ import {
 } from "../utils/intervalAlerts";
 
 import { formatClock } from "../utils/time";
+import { extractTicketKey } from "../utils/ticket";
 
 import "./BridgeDraftModal.css";
 
@@ -222,8 +223,9 @@ export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSi
                 target="_blank"
                 rel="noopener noreferrer"
                 className="ticket-badge"
+                title={localBridge.ticketUrl}
               >
-                {localBridge.ticketUrl}
+                {extractTicketKey(localBridge.ticketUrl)}
               </a>
             </p>
           )}

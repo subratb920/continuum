@@ -11,6 +11,7 @@ import PageShell from "./layout/PageShell";
 
 import ReEntry from "./screens/ReEntry";
 import CreateProject from "./screens/CreateProject";
+import Dashboard, { DashboardNav } from "./components/Dashboard";
 import { IMPORT_EVENT } from "./utils/importFromDevice";
 import Welcome from "./screens/Welcome";
 import HelpPage from "./pages/HelpPage";
@@ -39,7 +40,7 @@ import {
 
 // Last page on reopen (see App): only these pages are remembered
 const LAST_PATH_KEY = "continuum_last_path";
-const RESTORABLE_PATHS = ["/", "/console", "/help"];
+const RESTORABLE_PATHS = ["/", "/console", "/dashboard", "/help"];
 
 function readLastPath() {
   try {
@@ -390,7 +391,7 @@ export default function App() {
      The console lives at /console.
      ========================================================= */
 
-  if (pathname !== "/console") {
+  if (pathname !== "/console" && pathname !== "/dashboard") {
     return (
       <PageShell scroll>
         <Welcome
@@ -477,8 +478,19 @@ export default function App() {
         onActivateProject={() => setShowActivateProject(true)}
         onEditProject={() => setShowEditProject(true)}
         onDeleteProject={() => setShowDeleteProject(true)}
+        leftPane={pathname === "/dashboard" ? <DashboardNav onIntervalSetup={() => navigate("/console")} /> : null}
       >
-        {projects.length === 0 ? (
+        {pathname === "/dashboard" ? (
+          // Dashboard (profile menu): the overview, in the console's middle pane
+          <Dashboard
+            projects={projects}
+            activeProject={activeProject}
+            activeBridge={activeBridge}
+            bridgeRevision={bridgeRevision}
+            onSelectProject={setSelectedProject}
+            onOpenInterval={() => navigate("/console")}
+          />
+        ) : projects.length === 0 ? (
           <EmptyConsole onCreateProject={() => setShowCreateProject(true)} />
         ) : isContextReady && hasActiveProject ? (
           <ReEntry

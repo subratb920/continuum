@@ -11,6 +11,7 @@ import { requestLogger } from "./middleware/requestLogger.js";
 import githubRoutes from "./auth/github.routes.js";
 import oauthRoutes from "./oauth/oauth.routes.js";
 import deployRoutes from "./oauth/deploy.routes.js";
+import supportRoutes from "./routes/support.routes.js";
 
 
 const app = express();
@@ -30,6 +31,7 @@ app.use("/github", requireAuth, githubRoutes);
 app.use("/projects", requireAuth, projectRoutes);
 app.use("/execution", requireAuth, executionRoutes);
 app.use("/bridges", requireAuth, bridgeRoutes);
+app.use("/support", requireAuth, supportRoutes); // Contact us: callback requests
 
 // ❗ MUST BE LAST
 app.use(errorMiddleware);

@@ -7,6 +7,8 @@
  * clicks somewhere; the notification still works if it was allowed.
  */
 
+import { getPreferences } from "./preferences";
+
 let audioCtx = null;
 
 function getAudioContext() {
@@ -18,7 +20,7 @@ function getAudioContext() {
 
 export function prepareIntervalAlerts() {
   try {
-    if ("Notification" in window && Notification.permission === "default") {
+    if (getPreferences().desktopNotifications && "Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
     }
   } catch {
@@ -33,6 +35,7 @@ export function prepareIntervalAlerts() {
 }
 
 export function playIntervalEndSound() {
+  if (!getPreferences().intervalSound) return; // Settings: off
   try {
     const ctx = getAudioContext();
     if (!ctx) return;
@@ -60,6 +63,7 @@ export function playIntervalEndSound() {
 }
 
 export function showIntervalEndNotification(bridgeName) {
+  if (!getPreferences().desktopNotifications) return; // Settings: off
   try {
     if ("Notification" in window && Notification.permission === "granted") {
       new Notification("Interval ended", {

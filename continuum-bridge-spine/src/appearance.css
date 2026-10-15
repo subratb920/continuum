@@ -1,0 +1,35 @@
+/* Settings → Appearance (classes on <html>, set by utils/preferences.js) */
+
+/* Reduce motion: no pulsing dots, sliding drawers or transitions */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
+/* Compact lists: tighter rows in the Projects and Bridge Spine panes */
+html.compact-lists .project-select {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+html.compact-lists .project-meta {
+  gap: 2px 4px;
+}
+html.compact-lists .project-list {
+  gap: 0;
+}
+html.compact-lists .bridge-open {
+  padding: 5px 8px;
+  gap: 2px;
+}
+html.compact-lists .bridge-entry {
+  margin-bottom: 3px;
+}
+html.compact-lists .bridge-dot {
+  top: 10px;
+}
+html.compact-lists .bridge-timeline {
+  gap: 8px;
+}

@@ -19,13 +19,15 @@ export default function ThreePanelLayout({
   onActivateProject,
   onEditProject,
   onDeleteProject,
+  leftPane = null, // another left pane instead of the projects (e.g. the Dashboard's navigation)
   children,
 }) {
   const { panel, close } = usePanels();
 
   return (
     <div className={`app${panel ? ` app-drawer-${panel}` : ""}`}>
-      <aside className="left" aria-label="Projects" id="console-projects">
+      <aside className="left" aria-label={leftPane ? "Navigation" : "Projects"} id="console-projects">
+        {leftPane ?? (
         <ProjectList
           projects={projects}
           activeProject={activeProject}
@@ -40,6 +42,7 @@ export default function ThreePanelLayout({
           onEditProject={() => (close(), onEditProject())}
           onDeleteProject={() => (close(), onDeleteProject())}
         />
+        )}
       </aside>
 
       <main className="center">
@@ -49,6 +52,7 @@ export default function ThreePanelLayout({
       <aside className="right" aria-label="Bridge Spine" id="console-bridges">
         <BridgeSpine
           selectedProject={selectedProject}
+          activeBridge={activeBridge}
           bridgeRevision={bridgeRevision}
           onSelectBridge={(b) => {
             onSelectBridge(b);

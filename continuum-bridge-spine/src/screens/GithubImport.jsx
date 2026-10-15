@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import "./GithubImport.css";
+import DeviceFolderOption from "../components/DeviceFolderOption";
+import { getPreferences } from "../utils/preferences";
+import { createProjectFolder, filesOfTarball, pickParentFolder, writeFiles } from "../utils/deviceFolder";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
@@ -10,6 +13,10 @@ export default function GithubImport({ onImported, onDone }) {
     const [repos, setRepos] = useState([]);
     const [selected, setSelected] = useState([]);
     const [search, setSearch] = useState("");
+    // Off unless ticked: a folder per repository on this device, with its files
+    const [makeFolders, setMakeFolders] = useState(() => getPreferences().folderOptionDefault);
+    const [progress, setProgress] = useState("");
+    const [problem, setProblem] = useState("");
 
     const filteredRepos = repos.filter((repo) =>
         repo.name.toLowerCase().includes(search.toLowerCase())
@@ -43,12 +50,46 @@ export default function GithubImport({ onImported, onDone }) {
         }
     };
 
+    /** Each repository's files into a new folder of its own, inside parent. Returns the problems. */
+    const copyToDevice = async (parent, list) => {
+        const problems = [];
+        for (const [i, repo] of list.entries()) {
+            const label = `${repo.name} (${i + 1} of ${list.length})`;
+            try {
+                setProgress(`Downloading ${label}…`);
+                const [owner, name] = repo.full_name.split("/");
+                const res = await fetch(`${API_BASE}/github/repos/${owner}/${name}/tarball${repo.default_branch ? `?ref=${encodeURIComponent(repo.default_branch)}` : ""}`, {
+                    headers: { Authorization: `Bearer ${localStorage.getItem("continuum_token")}` },
+                });
+                if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || `the server answered ${res.status}`);
+                const files = await filesOfTarball(res);
+                const folder = await createProjectFolder(parent, repo.name);
+                await writeFiles(folder.handle, files, (done, total) => setProgress(`Writing ${label}: ${done} of ${total} files…`));
+            } catch (err) {
+                problems.push(`${repo.name}: ${err.message}`);
+            }
+        }
+        setProgress("");
+        return problems;
+    };
+
     const handleImport = async () => {
+        setProblem("");
         try {
             // Selection holds repo ids (see toggleRepo / Select All)
             const selectedRepos = repos.filter((r) =>
                 selected.includes(r.id)
             );
+
+            // Where the folders go: asked first (the browser only opens its picker straight after a click)
+            let parent = null;
+            if (makeFolders) {
+                parent = await pickParentFolder();
+                if (!parent) {
+                    setProblem("Choose where the folders go, or untick “Create a folder on this device”.");
+                    return;
+                }
+            }
 
             const res = await fetch(`${API_BASE}/github/import`, {
                 method: "POST",
@@ -62,6 +103,16 @@ export default function GithubImport({ onImported, onDone }) {
             if (!res.ok) {
                 console.error("Import failed", await res.json().catch(() => ({})));
                 return;
+            }
+
+            if (parent) {
+                const problems = await copyToDevice(parent, selectedRepos);
+                if (problems.length) {
+                    // The projects are imported; say which folders couldn't be filled, and stay here
+                    await onImported?.();
+                    setProblem(`Imported, but some folders couldn't be made: ${problems.join("; ")}`);
+                    return;
+                }
             }
 
             // Show the imported projects without reloading the page
@@ -152,12 +203,24 @@ export default function GithubImport({ onImported, onDone }) {
                                 ))}
                             </div>
 
+                            <DeviceFolderOption
+                                checked={makeFolders}
+                                onChange={setMakeFolders}
+                                disabled={Boolean(progress)}
+                                hint="You choose where; each repository gets its own folder with its files (no git history)."
+                            />
+
+                            {progress && <p className="github-import-progress">{progress}</p>}
+                            {problem && <p className="github-import-problem">{problem}</p>}
+
                             <button
                                 onClick={handleImport}
-                                disabled={selected.length === 0}
+                                disabled={selected.length === 0 || Boolean(progress)}
                                 className="github-auth-btn"
                             >
-                                {selected.length === 0
+                                {progress
+                                    ? "Copying to your device…"
+                                    : selected.length === 0
                                     ? "Select repositories to import"
                                     : `Import (${selected.length})`}
                             </button>

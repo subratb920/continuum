@@ -328,10 +328,6 @@
   color: #075985;
 }
 
-.project-files {
-  white-space: nowrap;
-}
-
 .project-status {
   font-weight: 600;
   white-space: nowrap;
@@ -383,28 +379,44 @@
 
 /* ----------------------------------
    Contents (a project imported from a device)
+   Lined up under the project's name, with indent guides, icons and a
+   size column; scrolls inside so a big project doesn't push the list away.
 ---------------------------------- */
 
 .pc {
-  margin: 2px 0 8px 12px;
-  padding: 8px 6px 6px 8px;
-  border-left: 2px solid #e0e7ff;
+  margin: 0 4px 8px 29px; /* 29px: under the project name (row padding + dot + gap) */
+  padding: 6px 0 4px;
+  border-top: 1px dashed #e5e7eb;
   font-size: 12px;
 }
 
 .pc-summary {
-  margin: 0 0 6px;
+  margin: 0 0 4px;
+  padding: 0 2px;
   color: #6b7280;
+  font-size: 11px;
 }
 
 .pc-note {
-  margin: 4px 0 8px 12px;
+  margin: 4px 4px 8px 29px;
   color: #6b7280;
   font-size: 12px;
 }
 
+.pc .pc-note {
+  margin-left: 2px;
+}
+
 .pc-error {
   color: #b91c1c;
+}
+
+/* The tree scrolls on its own */
+.pc > .pc-list {
+  max-height: min(50vh, 420px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
 }
 
 .pc-list {
@@ -413,16 +425,29 @@
   padding: 0;
 }
 
-.pc-folder,
-.pc-file {
+.pc-row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   width: 100%;
   box-sizing: border-box;
-  padding: 3px 4px 3px calc(4px + var(--depth, 0) * 12px);
-  border-radius: 4px;
+  min-height: 24px;
+  padding: 2px 4px 2px calc(2px + var(--depth, 0) * 14px);
+  border-radius: 5px;
   line-height: 18px;
+}
+
+/* Indent guides: one faint line per level */
+.pc-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 8px;
+  width: calc(var(--depth, 0) * 14px);
+  background: repeating-linear-gradient(to right, #e5e7eb 0 1px, transparent 1px 14px);
+  pointer-events: none;
 }
 
 .pc-folder {
@@ -434,8 +459,14 @@
   cursor: pointer;
 }
 
-.pc-folder:hover {
+.pc-folder:hover,
+.pc-file:hover {
   background: #f1f5f9;
+}
+
+.pc-folder:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: -1px;
 }
 
 .pc-file {
@@ -443,9 +474,22 @@
 }
 
 .pc-caret {
-  flex: 0 0 12px;
+  flex: 0 0 10px;
   color: #9ca3af;
-  font-size: 10px;
+  font-size: 9px;
+  text-align: center;
+}
+
+.pc-icon {
+  flex: 0 0 14px;
+}
+
+.pc-icon-folder {
+  color: #6366f1;
+}
+
+.pc-icon-file {
+  color: #9ca3af;
 }
 
 .pc-name {
@@ -456,16 +500,17 @@
   text-overflow: ellipsis;
 }
 
-.pc-folder .pc-name::after {
-  content: "/";
-  color: #9ca3af;
+.pc-folder .pc-name {
+  font-weight: 500;
 }
 
 .pc-size {
   flex-shrink: 0;
+  margin-left: 6px;
   color: #9ca3af;
-  font-size: 11px;
+  font-size: 10.5px;
   font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 /* ----------------------------------

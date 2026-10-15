@@ -1,0 +1,92 @@
+/* ==========================================================
+   Dark theme (Settings → Appearance → Dark, or System when the
+   device is dark): ChatGPT's dark palette.
+     page #212121 · panes and header #171717 · cards #2f2f2f
+     hover #3a3a3a · borders #383838
+     text #ececec / #b4b4b4 / #8e8e8e · green #10a37f
+   Most rules come from scripts/build-dark-theme.mjs
+   (theme-dark.generated.css); these hand-made ones load after it.
+   ========================================================== */
+
+:root[data-theme="dark"] {
+  color-scheme: dark; /* native controls, scrollbars, pickers */
+}
+
+:root[data-theme="dark"] body {
+  background: #212121;
+  color: #ececec;
+}
+
+/* Header and side panes: the darker sidebar tone */
+:root[data-theme="dark"] .shell-header {
+  background: #171717;
+  border-bottom-color: #2a2a2a;
+}
+
+:root[data-theme="dark"] .app > .left,
+:root[data-theme="dark"] .app > .right,
+:root[data-theme="dark"] body .app > .left,
+:root[data-theme="dark"] body .app > .right {
+  background: #171717;
+  border-color: #2a2a2a;
+  color: #b4b4b4;
+}
+
+:root[data-theme="dark"] .page-shell-body {
+  background: #212121;
+}
+
+/* Inputs: the card tone with a faint border */
+:root[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] select {
+  background-color: #2f2f2f;
+  color: #ececec;
+  border-color: #424242;
+}
+
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder {
+  color: #8e8e8e;
+}
+
+/* Plain buttons without their own style */
+:root[data-theme="dark"] button:not([class]) {
+  background: #2f2f2f;
+  color: #ececec;
+  border: 1px solid #424242;
+}
+
+:root[data-theme="dark"] a {
+  color: #ececec;
+  text-decoration-color: #8e8e8e;
+}
+
+/* Avatars: light circle, dark initials (ChatGPT style) */
+:root[data-theme="dark"] .shell-avatar,
+:root[data-theme="dark"] .profile-menu-avatar,
+:root[data-theme="dark"] .pcard-avatar {
+  background: #ececec;
+  color: #0d0d0d;
+}
+
+/* The live / active dots: ChatGPT green */
+:root[data-theme="dark"] .indicator-active,
+:root[data-theme="dark"] .bridge-in-progress .bridge-dot,
+:root[data-theme="dark"] .dash-live-dot {
+  background-color: #10a37f;
+  border-color: #10a37f;
+}
+
+/* Modal backdrops: deeper */
+:root[data-theme="dark"] .modal-backdrop,
+:root[data-theme="dark"] .pcard-backdrop {
+  background: rgba(0, 0, 0, 0.62);
+}
+
+/* Create Project form */
+:root[data-theme="dark"] .cp-close {
+  background: #2f2f2f;
+  border-color: #424242;
+  color: #ececec;
+}

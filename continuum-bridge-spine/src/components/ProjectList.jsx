@@ -3,7 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import "./ProjectList.css";
 import { getProjectMeta } from "../models/project";
 import { useAuth } from "../state/authStore";
-import { importFromDevice, formatBytes } from "../utils/importFromDevice";
+import { importFromDevice } from "../utils/importFromDevice";
+import { usePreferences } from "../utils/preferences";
 import ProjectContents from "./ProjectContents";
 
 /** Above this many projects the pane shows a search box. */
@@ -31,7 +32,8 @@ export default function ProjectList({
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [query, setQuery] = useState("");
-  const [openContents, setOpenContents] = useState(() => new Set());
+  // A device project's contents stay collapsed until its ▸ is clicked (id → open), unless Settings says otherwise
+  const [contentsToggled, setContentsToggled] = useState({});
   const { authProvider } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -76,13 +78,10 @@ export default function ProjectList({
   }
   const importGithub = () => navigate("/import", { state: { from: pathname } });
   const canImportGithub = authProvider === "github";
-  const toggleContents = (id) =>
-    setOpenContents((s) => {
-      const next = new Set(s);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  // Settings → Projects: a device project's files may open when it's selected
+  const { openFilesOnSelect } = usePreferences();
+  const isContentsOpen = (project) => contentsToggled[project._id] ?? (openFilesOnSelect && selectedProject?._id === project._id);
+  const toggleContents = (project) => setContentsToggled((t) => ({ ...t, [project._id]: !isContentsOpen(project) }));
 
   return (
     <div className="project-pane">
@@ -168,7 +167,7 @@ export default function ProjectList({
             const isSelected = selectedProject?._id === project._id;
             const meta = getProjectMeta(project);
             const hasContents = project.source === "device" && project.contents;
-            const contentsOpen = openContents.has(project._id);
+            const contentsOpen = Boolean(hasContents) && isContentsOpen(project);
             const status = isActive ? "Active" : isSelected ? "Selected" : null;
 
             return (
@@ -194,7 +193,6 @@ export default function ProjectList({
                         <span className={`project-tag tag-${project.source === "github" ? project.visibility : project.source}`}>
                           {meta.icon} {meta.label}
                         </span>
-                        {hasContents && <span className="project-files">{project.contents.fileCount} files · {formatBytes(project.contents.totalBytes)}</span>}
                         {status && <span className={`project-status status-${status.toLowerCase()}`}>{status}</span>}
                       </span>
                     </span>
@@ -208,7 +206,7 @@ export default function ProjectList({
                         aria-expanded={contentsOpen}
                         aria-label={`${contentsOpen ? "Hide" : "Show"} the contents of ${project.name}`}
                         title={contentsOpen ? "Hide contents" : "Show contents"}
-                        onClick={() => toggleContents(project._id)}
+                        onClick={() => toggleContents(project)}
                       >
                         <span aria-hidden="true">{contentsOpen ? "▾" : "▸"}</span>
                       </button>

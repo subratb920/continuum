@@ -146,9 +146,104 @@
   cursor: not-allowed;
 }
 
-/* Profile menu */
+/* Profile menu: who, then grouped items, then a small footer */
 .profile-menu {
-  min-width: 240px;
+  min-width: 264px;
+  padding: 0 0 4px;
+}
+
+.profile-menu-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #eee;
+  background: #fafafa;
+}
+
+.profile-menu-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #4f6ef7;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.profile-menu-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.profile-menu-email {
+  font-size: 13px;
+  font-weight: 600;
+  color: #222;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-menu-provider {
+  align-self: flex-start;
+  margin-top: 3px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 16px;
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.provider-github {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.profile-menu-group {
+  padding: 4px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.menu-dropdown .profile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #1f2937;
+}
+
+.menu-dropdown .profile-menu-item:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: -2px;
+}
+
+.profile-menu-icon {
+  width: 18px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.profile-menu-label {
+  flex: 1;
+}
+
+.profile-menu-trail {
+  color: #9ca3af;
+}
+
+.profile-menu-foot {
+  padding: 8px 14px 4px;
+  font-size: 11px;
+  color: #9ca3af;
 }
 
 /* Deploy menu: which project Deploy on Railway deploys */
@@ -163,20 +258,5 @@
   white-space: nowrap;
 }
 
-.profile-menu-info {
-  padding: 10px 12px;
-  border-bottom: 1px solid #eee;
-}
 
-.profile-menu-email {
-  font-size: 13px;
-  font-weight: 600;
-  color: #222;
-  word-break: break-all;
-}
 
-.profile-menu-provider {
-  font-size: 12px;
-  color: #777;
-  margin-top: 2px;
-}

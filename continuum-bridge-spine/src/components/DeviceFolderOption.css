@@ -1,0 +1,51 @@
+.device-folder-option {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  text-align: left;
+}
+
+.device-folder-option label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #1f2937;
+  cursor: pointer;
+}
+
+.device-folder-option input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.device-folder-hint {
+  margin: 4px 0 0 24px;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.45;
+}
+
+.device-folder-option.is-unsupported label,
+.device-folder-option.is-unsupported input {
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* The GitHub import screen is dark */
+.github-import-card .device-folder-option {
+  background: #0d1117;
+  border-color: #30363d;
+}
+
+.github-import-card .device-folder-option label {
+  color: #e6edf3;
+}
+
+.github-import-card .device-folder-hint {
+  color: #8b949e;
+}

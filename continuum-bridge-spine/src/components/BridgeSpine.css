@@ -1,33 +1,362 @@
+/* ----------------------------------
+   Bridge Spine pane: the selected project's bridges as a timeline,
+   newest first, grouped by day. Matches the Projects pane's look.
+---------------------------------- */
+
 .bridge-spine {
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-.bridge-spine-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  margin-bottom: 12px;
-}
-
-.bridge-item {
-  padding: 10px 12px;
-  border-radius: 6px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  font-size: 14px;
+  min-height: 0;
+  font-size: 13px;
   color: #374151;
 }
 
-.bridge-item.active {
-  border-color: #2563eb;
-  background: #eff6ff;
-  color: #1e3a8a;
+/* ---------- Header ---------- */
+
+.bridge-spine-head {
+  padding: 2px 2px 6px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.bridge-spine-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.bridge-count {
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #374151;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-align: center;
+}
+
+.bridge-spine-project {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Empty, loading, error ---------- */
+
+.bridge-empty {
+  margin: 8px 2px;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.bridge-error p {
+  margin: 0 0 8px;
+  color: #b91c1c;
+}
+
+.bridge-retry {
+  padding: 5px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #1f2937;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.bridge-retry:hover {
+  background: #f3f4f6;
+}
+
+/* ---------- Timeline ---------- */
+
+.bridge-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bridge-day {
+  margin: 0 0 6px 18px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.bridge-group:first-child .bridge-day {
+  margin-top: 2px;
+}
+
+.bridge-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+
+/* The spine: a thin line through the dots */
+.bridge-list::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 2px;
+  background: #e5e7eb;
+}
+
+.bridge-entry {
+  position: relative;
+  padding-left: 18px;
+  margin-bottom: 6px;
+}
+
+.bridge-entry:last-child {
+  margin-bottom: 0;
+}
+
+.bridge-dot {
+  position: absolute;
+  left: 0;
+  top: 13px;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  background: #fff;
+  z-index: 1;
+}
+
+.bridge-finalized .bridge-dot {
+  border-color: #94a3b8;
+  background: #94a3b8;
+}
+
+.bridge-abandoned .bridge-dot {
+  border-color: #fca5a5;
+  background: #fff;
+}
+
+.bridge-in-progress .bridge-dot {
+  border-color: #22c55e;
+  background: #22c55e;
+  animation: bridge-pulse 1.6s infinite;
+}
+
+@keyframes bridge-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bridge-in-progress .bridge-dot {
+    animation: none;
+  }
+}
+
+/* ---------- Card ---------- */
+
+.bridge-card {
+  display: flex;
+  align-items: flex-start;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.bridge-card:hover {
+  border-color: #c7d2fe;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.bridge-in-progress .bridge-card {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.bridge-abandoned .bridge-card {
+  background: #fafafa;
+}
+
+/* The current bridge */
+.bridge-entry.is-current .bridge-card {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px #e0e7ff;
+}
+
+.bridge-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bridge-open:focus-visible,
+.bridge-card-ticket:focus-visible,
+.bridge-retry:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 1px;
+}
+
+.bridge-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 
 .bridge-name {
-  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bridge-abandoned .bridge-name {
+  color: #6b7280;
+}
+
+.bridge-mode {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.mode-execution {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #3730a3;
+}
+
+.mode-decision {
+  background: #fef3c7;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.mode-continuity {
+  background: #e0f2fe;
+  border-color: #bae6fd;
+  color: #075985;
+}
+
+.mode-alignment {
+  background: #fce7f3;
+  border-color: #fbcfe8;
+  color: #9d174d;
+}
+
+.bridge-when {
+  font-size: 11px;
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+}
+
+.state-progress {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.state-abandoned {
+  color: #b91c1c;
+}
+
+/* Goals: a small bar and "3 / 5 goals" */
+.bridge-goals {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bridge-goals-bar {
+  flex: 1;
+  max-width: 90px;
+  height: 4px;
+  border-radius: 4px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.bridge-goals-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: #22c55e;
+}
+
+.bridge-goals-text {
+  font-size: 11px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+/* Ticket link */
+.bridge-card-ticket {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin: 6px 6px 0 0;
+  border-radius: 6px;
+  color: #6b7280;
+}
+
+.bridge-card-ticket:hover {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+/* Touch: roomier */
+@media (pointer: coarse) {
+  .bridge-open {
+    padding: 10px 12px;
+  }
+  .bridge-card-ticket {
+    width: 36px;
+    height: 36px;
+  }
 }

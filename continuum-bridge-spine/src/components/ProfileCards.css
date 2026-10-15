@@ -1,0 +1,707 @@
+/* Settings / Support / Contact us cards (profile menu). Own pcard- names. */
+
+.pcard-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.38);
+}
+
+.pcard {
+  width: min(480px, 100%);
+  max-height: min(86vh, 760px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.28);
+  outline: none;
+  text-align: left;
+  color: #1f2937;
+}
+
+.pcard-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.pcard-head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.pcard-head p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.pcard-close {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.pcard-close:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.pcard-body {
+  overflow-y: auto;
+  padding: 6px 20px 20px;
+  font-size: 14px;
+}
+
+.pcard-section {
+  margin: 18px 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.pcard-hint {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.pcard-text {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.pcard-text.muted {
+  margin-top: 14px;
+  color: #6b7280;
+}
+
+/* Toggles */
+.pcard-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+}
+
+.pcard-toggle-text {
+  flex: 1;
+}
+
+.pcard-toggle-label {
+  font-weight: 500;
+}
+
+.pcard-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.pcard-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: #d1d5db;
+  transition: background 0.15s;
+}
+
+.pcard-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s;
+}
+
+.pcard-toggle input:checked + .pcard-switch {
+  background: #4f46e5;
+}
+
+.pcard-toggle input:checked + .pcard-switch::after {
+  transform: translateX(16px);
+}
+
+.pcard-toggle input:focus-visible + .pcard-switch {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+.pcard-toggle.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Account facts */
+.pcard-facts {
+  margin: 0;
+}
+
+.pcard-facts > div {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.pcard-facts dt {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.pcard-facts dd {
+  margin: 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.pcard-id {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pcard-id code {
+  font-size: 12px;
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Buttons and links */
+.pcard-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.pcard-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.pcard-btn.small {
+  padding: 3px 9px;
+  font-size: 12px;
+}
+
+.pcard-btn.primary {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  color: #fff;
+}
+
+.pcard-btn.primary:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.pcard-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pcard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.pcard-inline {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #4f46e5;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.pcard-link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f9fafb;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.pcard-link-row:hover {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+}
+
+/* FAQ */
+.pcard-faq details {
+  border-bottom: 1px solid #f3f4f6;
+  padding: 8px 0;
+}
+
+.pcard-faq summary {
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.pcard-faq p {
+  margin: 6px 0 2px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.pcard-details {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 140px;
+  overflow: auto;
+  border-radius: 8px;
+  background: #f3f4f6;
+  font: 11.5px/1.5 ui-monospace, Menlo, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #374151;
+}
+
+/* Contact options */
+.pcard-options {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.pcard-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  color: inherit;
+  text-decoration: none;
+}
+
+a.pcard-option:hover {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+}
+
+.pcard-option.is-disabled {
+  background: #f9fafb;
+  color: #6b7280;
+}
+
+.pcard-option-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 16px;
+}
+
+/* Callback form */
+.pcard-form {
+  display: grid;
+  gap: 10px;
+}
+
+.pcard-form label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.pcard-form input,
+.pcard-form select,
+.pcard-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  background: #fff;
+}
+
+.pcard-form input:focus,
+.pcard-form select:focus,
+.pcard-form textarea:focus {
+  outline: 2px solid #c7d2fe;
+  border-color: #6366f1;
+}
+
+.pcard-error {
+  margin: 0;
+  font-size: 13px;
+  color: #b91c1c;
+}
+
+.pcard-done {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.pcard-foot {
+  margin: 18px 0 0;
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: center;
+}
+
+/* Phones: a sheet from the bottom */
+@media (max-width: 599px) {
+  .pcard-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .pcard {
+    width: 100%;
+    max-height: 92dvh;
+    border-radius: 16px 16px 0 0;
+  }
+  .pcard-body {
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+  .pcard-facts > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
+/* ---------- Profile ---------- */
+.pcard-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0 6px;
+}
+
+.pcard-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #4f6ef7;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.pcard-profile-who {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pcard-profile-who strong {
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pcard-badge {
+  align-self: flex-start;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.pcard-badge.is-github {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.pcard-btn.danger {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  color: #fff;
+}
+
+.pcard-btn.danger:hover {
+  background: #991b1b;
+}
+
+/* ---------- Settings: navigation pane + panel ---------- */
+.pcard.pcard-wide {
+  width: min(780px, 100%);
+  height: min(620px, 86vh);
+}
+
+.pcard-wide .pcard-body {
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  display: flex;
+}
+
+.pcard-settings {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+}
+
+.pcard-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 10px;
+  border-right: 1px solid #f0f0f0;
+  background: #fafafa;
+  border-bottom-left-radius: 14px;
+  overflow-y: auto;
+}
+
+.pcard-nav button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: #374151;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pcard-nav button:hover {
+  background: #f1f5f9;
+}
+
+.pcard-nav button.is-on {
+  background: #eef2ff;
+  color: #3730a3;
+  font-weight: 600;
+}
+
+.pcard-nav button:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: -2px;
+}
+
+.pcard-nav-icon {
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.pcard-panel {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 22px 22px;
+  font-size: 14px;
+}
+
+.pcard-panel-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 650;
+  color: #111827;
+}
+
+.pcard-panel .pcard-section:first-of-type {
+  margin-top: 12px;
+}
+
+/* A setting with a control on the right */
+.pcard-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.pcard-row-control {
+  flex-shrink: 0;
+}
+
+/* Segmented choice (Clock, Theme) */
+.pcard-choice {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 8px;
+  background: #f3f4f6;
+}
+
+.pcard-choice button {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: #4b5563;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pcard-choice button.is-on {
+  background: #fff;
+  color: #111827;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+}
+
+.pcard-choice button:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Integrations */
+.pcard-integration {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.pcard-integration-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pcard-status {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.pcard-status::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  vertical-align: 1px;
+}
+
+.pcard-status.is-on::before {
+  background: #22c55e;
+}
+
+/* Coming soon / confirm */
+.pcard-soon {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px dashed #c7d2fe;
+  border-radius: 10px;
+  background: #f8faff;
+}
+
+.pcard-soon p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.pcard-confirm {
+  padding: 12px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+}
+
+/* Phones: sections as tabs across the top */
+@media (max-width: 599px) {
+  .pcard.pcard-wide {
+    height: 92dvh;
+  }
+  .pcard-settings {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .pcard-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid #f0f0f0;
+    border-radius: 0;
+    padding: 8px;
+  }
+  .pcard-nav button {
+    flex-shrink: 0;
+  }
+  .pcard-panel {
+    padding: 12px 16px calc(20px + env(safe-area-inset-bottom));
+  }
+  .pcard-row {
+    flex-wrap: wrap;
+  }
+}

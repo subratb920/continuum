@@ -1,7 +1,10 @@
-const enabled = import.meta.env.DEV;
+import { getPreferences } from "./preferences";
+
+// Development builds always log; elsewhere only with Settings → Developer → Show debug logs
+const enabled = () => import.meta.env.DEV || getPreferences().debugLogs;
 
 function log(level, scope, message, data) {
-  if (!enabled) return;
+  if (!enabled()) return;
 
   const time = new Date().toISOString();
   console[level](

@@ -1,0 +1,18 @@
+/* Create Project form (the modal's content) */
+.cp-sub {
+  color: #666;
+}
+
+.cp-note {
+  color: #555;
+}
+
+.cp-error {
+  color: #d33;
+}
+
+.cp-close {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #1f2937;
+}

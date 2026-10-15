@@ -1,5 +1,9 @@
 import { useState } from "react";
 import { createProject } from "../api";
+import "./CreateProject.css";
+import DeviceFolderOption from "../components/DeviceFolderOption";
+import { getPreferences } from "../utils/preferences";
+import { createProjectFolder, pickParentFolder, removeProjectFolder } from "../utils/deviceFolder";
 
 /**
  * CreateProjectScreen
@@ -11,17 +15,38 @@ export default function CreateProject({ onCreated, onClose, initialName = "", im
   const [name, setName] = useState(initialName);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
+  // Off unless ticked; not offered for a folder imported from the device (it already exists)
+  const [makeFolder, setMakeFolder] = useState(() => getPreferences().folderOptionDefault);
 
   async function handleCreate() {
     if (!name.trim() || creating) return;
 
     setError("");
-    setCreating(true);
 
+    // The folder first: the browser only opens its picker straight after a click
+    let parent = null;
+    let folder = null;
+    if (makeFolder && !contents) {
+      try {
+        parent = await pickParentFolder();
+      } catch (err) {
+        setError(`The folder couldn't be created: ${err.message}`);
+        return;
+      }
+      if (!parent) {
+        setError("Choose where the project folder goes, or untick “Create a folder on this device”.");
+        return;
+      }
+    }
+
+    setCreating(true);
     try {
-      const project = await createProject(name.trim(), contents ? { source: "device", contents } : {});
+      if (parent) folder = await createProjectFolder(parent, name.trim());
+      const extra = contents ? { source: "device", contents } : folder ? { source: "device", contents: { folder: folder.name, entries: [] } } : {};
+      const project = await createProject(name.trim(), extra);
       onCreated(project);
     } catch (err) {
+      if (parent && folder) await removeProjectFolder(parent, folder.name);
       setError(err.message || "Could not create the project. Please try again.");
       setCreating(false);
     }
@@ -40,12 +65,12 @@ export default function CreateProject({ onCreated, onClose, initialName = "", im
         Continuum Console
       </h2>
 
-      <p style={{ color: "#666", marginBottom: importedFrom ? 8 : 24 }}>
+      <p className="cp-sub" style={{ marginBottom: importedFrom ? 8 : 24 }}>
         Add A Project To Run In Continuity.
       </p>
 
       {importedFrom && (
-        <p style={{ color: "#555", fontSize: 13, marginBottom: 24 }}>
+        <p className="cp-note" style={{ fontSize: 13, marginBottom: 24 }}>
           From your device ({importedFrom}){contents ? ` · ${contents.entries.length}${contents.truncated ? "+" : ""} files listed` : ""}. Only the names of its files are kept; nothing is uploaded.
         </p>
       )}
@@ -66,8 +91,17 @@ export default function CreateProject({ onCreated, onClose, initialName = "", im
         }}
       />
 
+      {!contents && (
+        <DeviceFolderOption
+          checked={makeFolder}
+          onChange={setMakeFolder}
+          disabled={creating}
+          hint="You choose where; an empty folder named after the project is made there."
+        />
+      )}
+
       {error && (
-        <p style={{ color: "#d33", fontSize: 13, marginTop: -8, marginBottom: 16 }}>
+        <p className="cp-error" style={{ fontSize: 13, marginTop: -8, marginBottom: 16 }}>
           {error}
         </p>
       )}
@@ -83,11 +117,10 @@ export default function CreateProject({ onCreated, onClose, initialName = "", im
         {onClose && (
           <button
             onClick={onClose}
+            className="cp-close"
             style={{
               padding: "8px 16px",
               fontSize: 14,
-              background: "#f3f4f6",
-              border: "1px solid #d1d5db",
               cursor: "pointer",
             }}
           >

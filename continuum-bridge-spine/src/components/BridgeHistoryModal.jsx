@@ -36,6 +36,7 @@ export default function BridgeHistoryModal({ bridge, onClose }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="ticket-badge"
+                title={bridge.ticketUrl}
               >
                 {extractTicketKey(bridge.ticketUrl)}
               </a>

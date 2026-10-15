@@ -201,3 +201,11 @@ export async function activateProject(projectId) {
 export async function deactivateProject() {
   await request("POST", "/execution/deactivate-project");
 }
+/* ==================================================
+   Support
+   ================================================== */
+
+/** Contact us → Request a callback: { name, phone, bestTime: asap|morning|afternoon|evening, timezone, note } */
+export async function requestCallback(details) {
+  return request("POST", "/support/callbacks", details);
+}

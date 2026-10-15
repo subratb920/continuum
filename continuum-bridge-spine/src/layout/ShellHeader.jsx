@@ -5,6 +5,8 @@ import "./ShellHeader.css";
 import { DEPLOY_AVAILABLE, deployCloudPageUrl, deployConnectionsUrl, deployHomeUrl, deployListUrl, deployProjectUrl } from "../deployLinks";
 import { usePanels } from "./PanelsContext";
 import { importFromDevice } from "../utils/importFromDevice";
+import { ContactCard, ProfileCard, SettingsCard, SupportCard } from "../components/ProfileCards";
+import { BUILD } from "../utils/support";
 
 /** A screen without hover (phones, tablets): menus open on a tap instead. */
 const noHover = () => typeof window !== "undefined" && window.matchMedia?.("(hover: none)").matches;
@@ -141,6 +143,36 @@ export default function ShellHeader({ selectedProject = null }) {
   function handleSignOut() {
     setOpenMenu(null);
     logout();
+  }
+
+  // Profile menu: arrow keys move between its items; its cards (Settings, Support, Contact us)
+  const avatarRef = useRef(null);
+  const profileMenuRef = useRef(null);
+  const [card, setCard] = useState(null); // null | "profile" | "settings" | "support" | "contact"
+  function openCard(which) {
+    setOpenMenu(null);
+    setCard(which);
+  }
+  function closeCard() {
+    setCard(null);
+    avatarRef.current?.focus();
+  }
+  useEffect(() => {
+    if (openMenu === "profile") profileMenuRef.current?.querySelector('[role="menuitem"]')?.focus();
+  }, [openMenu]);
+  function onProfileMenuKey(e) {
+    const items = [...(profileMenuRef.current?.querySelectorAll('[role="menuitem"]') ?? [])];
+    const i = items.indexOf(document.activeElement);
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      items[(i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length]?.focus();
+    } else if (e.key === "Home" || e.key === "End") {
+      e.preventDefault();
+      items[e.key === "Home" ? 0 : items.length - 1]?.focus();
+    } else if (e.key === "Escape") {
+      setOpenMenu(null);
+      avatarRef.current?.focus();
+    }
   }
 
   return (
@@ -312,6 +344,7 @@ export default function ShellHeader({ selectedProject = null }) {
         {/* Profile avatar */}
         <div className="shell-menu">
           <button
+            ref={avatarRef}
             type="button"
             className="shell-avatar"
             onClick={() => toggle("profile")}
@@ -324,20 +357,77 @@ export default function ShellHeader({ selectedProject = null }) {
           </button>
 
           {openMenu === "profile" && (
-            <div className="menu-dropdown profile-menu" role="menu">
+            <div className="menu-dropdown profile-menu" role="menu" aria-label="Account" ref={profileMenuRef} onKeyDown={onProfileMenuKey}>
               <div className="profile-menu-info">
-                <div className="profile-menu-email">{user?.email}</div>
-                <div className="profile-menu-provider">
-                  Signed in with {authProvider === "github" ? "GitHub" : "email"}
-                </div>
+                <span className="profile-menu-avatar" aria-hidden="true">{getInitials(user?.email)}</span>
+                <span className="profile-menu-who">
+                  <span className="profile-menu-email" title={user?.email}>{user?.email}</span>
+                  <span className={`profile-menu-provider provider-${authProvider === "github" ? "github" : "email"}`}>
+                    Signed in with {authProvider === "github" ? "GitHub" : "email"}
+                  </span>
+                </span>
               </div>
 
-              <button role="menuitem" onClick={handleSignOut}>
-                Sign out
-              </button>
+              <div className="profile-menu-group">
+                <button role="menuitem" className="profile-menu-item" onClick={() => openCard("profile")}>
+                  <span className="profile-menu-icon" aria-hidden="true">👤</span>
+                  <span className="profile-menu-label">Profile</span>
+                </button>
+                <button
+                  role="menuitem"
+                  className="profile-menu-item"
+                  aria-current={pathname === "/dashboard" ? "page" : undefined}
+                  onClick={() => {
+                    setOpenMenu(null);
+                    navigate("/dashboard");
+                  }}
+                >
+                  <span className="profile-menu-icon" aria-hidden="true">📊</span>
+                  <span className="profile-menu-label">Dashboard</span>
+                </button>
+              </div>
+
+              <div className="profile-menu-group">
+                <button role="menuitem" className="profile-menu-item" onClick={() => openCard("settings")}>
+                  <span className="profile-menu-icon" aria-hidden="true">⚙</span>
+                  <span className="profile-menu-label">Settings</span>
+                </button>
+                <button role="menuitem" className="profile-menu-item" onClick={() => openCard("support")}>
+                  <span className="profile-menu-icon" aria-hidden="true">🛟</span>
+                  <span className="profile-menu-label">Support</span>
+                </button>
+                <button role="menuitem" className="profile-menu-item" onClick={() => openCard("contact")}>
+                  <span className="profile-menu-icon" aria-hidden="true">✉</span>
+                  <span className="profile-menu-label">Contact us</span>
+                </button>
+              </div>
+
+              <div className="profile-menu-group">
+                <button role="menuitem" className="profile-menu-item" onClick={handleSignOut}>
+                  <span className="profile-menu-icon" aria-hidden="true">⎋</span>
+                  <span className="profile-menu-label">Sign out</span>
+                </button>
+              </div>
+
+              <div className="profile-menu-foot">Continuum Console · build {BUILD}</div>
             </div>
           )}
         </div>
+
+        {card === "profile" && (
+          <ProfileCard
+            user={user}
+            authProvider={authProvider}
+            onClose={closeCard}
+            onSignOut={() => {
+              setCard(null);
+              handleSignOut();
+            }}
+          />
+        )}
+        {card === "settings" && <SettingsCard user={user} authProvider={authProvider} onClose={closeCard} />}
+        {card === "support" && <SupportCard user={user} authProvider={authProvider} onClose={closeCard} onContact={() => setCard("contact")} />}
+        {card === "contact" && <ContactCard user={user} authProvider={authProvider} onClose={closeCard} />}
       </div>
     </header>
   );

@@ -24,16 +24,32 @@ function treeOf(entries) {
   return root;
 }
 
+function FolderIcon({ open }) {
+  return (
+    <svg className="pc-icon pc-icon-folder" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      {open ? <path d="M1.5 4.5V12a1 1 0 001 1h10.2a1 1 0 00.97-.76l1.2-4.8A.8.8 0 0014.1 6.5H4.6a1 1 0 00-.97.76L2.4 12M1.5 4.5V3.5a1 1 0 011-1h3l1.5 1.5h5.5a1 1 0 011 1v1" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" /> : <path d="M1.5 3.5a1 1 0 011-1h3.3l1.5 1.5h6.2a1 1 0 011 1v7.5a1 1 0 01-1 1H2.5a1 1 0 01-1-1z" fill="currentColor" fillOpacity="0.18" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />}
+    </svg>
+  );
+}
+
+function FileIcon() {
+  return (
+    <svg className="pc-icon pc-icon-file" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <path d="M4 1.5h5l3.5 3.5v8.5a1 1 0 01-1 1H4a1 1 0 01-1-1v-11a1 1 0 011-1z M9 1.5V5h3.5" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function Folder({ node, depth, startOpen }) {
   const [open, setOpen] = useState(startOpen);
   const folders = [...node.folders.values()].sort((a, b) => a.name.localeCompare(b.name));
   const files = [...node.files].sort((a, b) => a.name.localeCompare(b.name));
   return (
     <li>
-      <button type="button" className="pc-folder" style={{ "--depth": depth }} aria-expanded={open} onClick={() => setOpen((o) => !o)} title={`${node.count} files · ${formatBytes(node.bytes)}`}>
+      <button type="button" className="pc-row pc-folder" style={{ "--depth": depth }} aria-expanded={open} onClick={() => setOpen((o) => !o)} title={`${node.name}/`}>
         <span className="pc-caret" aria-hidden="true">{open ? "▾" : "▸"}</span>
+        <FolderIcon open={open} />
         <span className="pc-name">{node.name}</span>
-        <span className="pc-size">{node.count}</span>
       </button>
       {open && <Children folders={folders} files={files} depth={depth + 1} />}
     </li>
@@ -47,8 +63,9 @@ function Children({ folders, files, depth }) {
         <Folder key={f.name} node={f} depth={depth} startOpen={false} />
       ))}
       {files.map((f) => (
-        <li key={f.name} className="pc-file" style={{ "--depth": depth }} title={`${f.name} · ${formatBytes(f.size)}`}>
+        <li key={f.name} className="pc-row pc-file" style={{ "--depth": depth }} title={`${f.name} · ${formatBytes(f.size)}`}>
           <span className="pc-caret" aria-hidden="true" />
+          <FileIcon />
           <span className="pc-name">{f.name}</span>
           <span className="pc-size">{formatBytes(f.size)}</span>
         </li>
@@ -88,13 +105,14 @@ export default function ProjectContents({ project }) {
   const when = d.importedAt ? new Date(d.importedAt).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" }) : null;
   return (
     <div className="pc">
-      <p className="pc-summary">
-        {d.fileCount} file{d.fileCount === 1 ? "" : "s"} · {formatBytes(d.totalBytes)}
-        {when && ` · imported ${when}`}
-        {d.folder && ` from ${d.folder}`}
-      </p>
-      {d.truncated && <p className="pc-note">Only the first {d.fileCount} files were kept.</p>}
-      {tree.count === 0 ? <p className="pc-note">No files (dependencies, build output and .env files are left out).</p> : <Children folders={[...tree.folders.values()].sort((a, b) => a.name.localeCompare(b.name))} files={tree.files} depth={0} />}
+      {(when || d.folder) && (
+        <p className="pc-summary">
+          {d.folder ? `Folder ${d.folder} on your device` : "On your device"}
+          {when && ` · ${when}`}
+        </p>
+      )}
+      {d.truncated && <p className="pc-note">The folder was too large: only part of it is listed.</p>}
+      {tree.count === 0 ? <p className="pc-note">No files yet.</p> : <Children folders={[...tree.folders.values()].sort((a, b) => a.name.localeCompare(b.name))} files={tree.files} depth={0} />}
     </div>
   );
 }

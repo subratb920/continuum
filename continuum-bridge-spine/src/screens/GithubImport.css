@@ -238,3 +238,16 @@
 .repo-list::-webkit-scrollbar-thumb:hover {
   background: #484f58;
 }
+
+/* Copying repositories into folders on the device */
+.github-import-progress {
+  margin: 0;
+  font-size: 13px;
+  color: #8b949e;
+}
+
+.github-import-problem {
+  margin: 0;
+  font-size: 13px;
+  color: #f85149;
+}
