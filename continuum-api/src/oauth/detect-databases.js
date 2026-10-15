@@ -9,6 +9,8 @@
 const DEP_FILES = new Set(["package.json", "requirements.txt", "pyproject.toml", "go.mod", "pom.xml", "build.gradle", "Gemfile", "composer.json", "schema.prisma"]);
 const COMPOSE = /^(docker-)?compose(\.[\w-]+)?\.ya?ml$/;
 const ENV_EXAMPLE = /^\.env\.(example|sample|template)$/;
+import { runtimeOf, RUNTIME_FILES } from "./detect-runtime.js";
+
 /** The settings an app runs with in the cloud (committed; secrets by name only). */
 const ENV_PRODUCTION = ".env.production";
 
@@ -104,7 +106,7 @@ export function settingNamesOf(files) {
  * Per app folder: what its own files say (database and setting names). A file
  * belongs to the deepest app folder that holds it.
  */
-export function byFolder(files, appFolders) {
+export function byFolder(files, appFolders, paths = []) {
   const owner = (path) => {
     const dir = path.split("/").slice(0, -1).join("/");
     let best = null;
@@ -112,6 +114,7 @@ export function byFolder(files, appFolders) {
     return best;
   };
   const groups = new Map();
+  for (const f of appFolders) if (paths.length) groups.set(f, []);
   for (const f of files) {
     const o = owner(f.path);
     if (o === null) continue;
@@ -127,7 +130,9 @@ export function byFolder(files, appFolders) {
       const prod = group.find((f) => f.path.split("/").pop() === ENV_PRODUCTION && f.path.split("/").slice(0, -1).join("/") === folder);
       const envProduction = prod ? parseEnvFile(prod.text) : null;
       const names = [...new Set([...settingNamesOf(group), ...Object.keys(envProduction ?? {})])];
-      return [folder, { databases: detectDatabases(group), settingNames: names, ...(exposed ? { exposedPort: exposed } : {}), ...(envProduction ? { envProduction } : {}) }];
+      // How it runs (a server, a static front end to build and serve, or nothing that starts), from its own files
+      const runtime = paths.length ? runtimeOf(files, paths, folder) : null;
+      return [folder, { databases: detectDatabases(group), settingNames: names, ...(exposed ? { exposedPort: exposed } : {}), ...(envProduction ? { envProduction } : {}), ...(runtime ? { runtime } : {}) }];
     }),
   );
 }
@@ -139,8 +144,8 @@ export function filesToRead(tree, skipDirs) {
     .filter((i) => !i.path.split("/").some((p) => skipDirs.has(p)) && i.path.split("/").length <= 3)
     .filter((i) => {
       const name = i.path.split("/").pop();
-      return DEP_FILES.has(name) || COMPOSE.test(name) || ENV_EXAMPLE.test(name) || name === "Dockerfile" || name === ENV_PRODUCTION;
+      return DEP_FILES.has(name) || COMPOSE.test(name) || ENV_EXAMPLE.test(name) || name === "Dockerfile" || name === ENV_PRODUCTION || RUNTIME_FILES.test(name);
     })
-    .slice(0, 30)
+    .slice(0, 40)
     .map((i) => i.path);
 }

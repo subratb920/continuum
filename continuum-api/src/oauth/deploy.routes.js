@@ -163,6 +163,9 @@ router.get("/projects/:id/scan", requireDeployToken, async (req, res) => {
     folders.get(folder).add(kind);
   }
 
+  // A plain HTML site (an index.html at the root, nothing else that marks an app): the whole repository
+  if (!folders.size && (tree.body.tree ?? []).some((i) => i.type === "blob" && i.path === "index.html")) folders.set("", new Set(["static"]));
+
   // continuum.deploy.json at the repository root, if present
   let manifest = null;
   let manifestError = null;
@@ -186,7 +189,7 @@ router.get("/projects/:id/scan", requireDeployToken, async (req, res) => {
       }),
     );
     databases = detectDatabases(texts);
-    perFolder = byFolder(texts, [...folders.keys()]);
+    perFolder = byFolder(texts, [...folders.keys()], (tree.body.tree ?? []).filter((i) => i.type === "blob").map((i) => i.path));
   } catch {
     databases = []; // detection is a convenience: the scan answers without it
     perFolder = {};
