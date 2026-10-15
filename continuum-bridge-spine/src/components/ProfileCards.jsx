@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchProjects, requestCallback } from "../api";
-import { resetPreferences, resolvedTheme, setPreference, THEMES, usePreferences } from "../utils/preferences";
+import { fetchProjects, requestCallback, saveAccountTheme } from "../api";
+import { getPreferences, resetPreferences, resolvedTheme, setPreference, THEMES, usePreferences } from "../utils/preferences";
 import { DEPLOY_AVAILABLE, deployHomeUrl } from "../deployLinks";
 import { BUILD, diagnostics, mailto, SUPPORT_EMAIL, SUPPORT_PHONE } from "../utils/support";
 import "./ProfileCards.css";
@@ -361,8 +361,19 @@ function AppearanceSection({ prefs, set }) {
   return (
     <>
       <h3 className="pcard-section">Theme</h3>
-      <Row label="Colour theme" hint={prefs.theme === "system" ? `Follows this device (now ${resolvedTheme(prefs)}).` : "Dark uses ChatGPT's dark colours."}>
-        <Choice label="Theme" value={prefs.theme} onChange={(v) => set("theme", v)} options={[...THEMES.map((t) => [t.id, t.label]), ["system", "System"]]} />
+      <Row
+        label="Colour theme"
+        hint={`${prefs.theme === "system" ? `Follows this device (now ${resolvedTheme(prefs)}).` : "Dark uses ChatGPT's dark colours."} Kept with your account: Continuum Deploy uses it too.`}
+      >
+        <Choice
+          label="Theme"
+          value={prefs.theme}
+          onChange={(v) => {
+            set("theme", v);
+            saveAccountTheme(v).catch(() => {}); // kept with the account: Continuum Deploy follows it
+          }}
+          options={[...THEMES.map((t) => [t.id, t.label]), ["system", "System"]]}
+        />
       </Row>
       <h3 className="pcard-section">Display</h3>
       <Toggle checked={prefs.reduceMotion} onChange={(v) => set("reduceMotion", v)} label="Reduce motion" hint="No pulsing dots, sliding drawers or animations." />
@@ -393,7 +404,17 @@ export function SettingsCard({ user, authProvider, onClose }) {
           {section === "general" && <GeneralSection prefs={prefs} set={set} />}
           {section === "projects" && <ProjectsSection prefs={prefs} set={set} />}
           {section === "integrations" && <IntegrationsSection authProvider={authProvider} />}
-          {section === "developer" && <DeveloperSection user={user} prefs={prefs} set={set} onReset={resetPreferences} />}
+          {section === "developer" && (
+            <DeveloperSection
+              user={user}
+              prefs={prefs}
+              set={set}
+              onReset={() => {
+                resetPreferences();
+                saveAccountTheme(getPreferences().theme).catch(() => {});
+              }}
+            />
+          )}
           {section === "organizations" && <OrganizationsSection user={user} />}
           {section === "appearance" && <AppearanceSection prefs={prefs} set={set} />}
         </div>

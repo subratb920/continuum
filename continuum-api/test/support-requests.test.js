@@ -4,7 +4,12 @@ import { normalizeCallback } from "../src/services/supportRequests.js";
 
 test("callback: a phone number with a country code is kept as typed", () => {
   const c = normalizeCallback({ name: " Subrat ", phone: "+91 98765 43210", bestTime: "evening", timezone: "Asia/Kolkata", note: " after 6 " });
-  assert.deepEqual(c, { name: "Subrat", phone: "+91 98765 43210", bestTime: "evening", timezone: "Asia/Kolkata", note: "after 6" });
+  assert.deepEqual(c, { name: "Subrat", phone: "+91 98765 43210", bestTime: "evening", timezone: "Asia/Kolkata", note: "after 6", source: "continuum" });
+});
+
+test("callback: requests from Continuum Deploy are marked as such; anything else counts as Continuum", () => {
+  assert.equal(normalizeCallback({ phone: "+91 98765 43210", source: "deploy" }).source, "deploy");
+  assert.equal(normalizeCallback({ phone: "+91 98765 43210", source: "elsewhere" }).source, "continuum");
 });
 
 test("callback: an unknown time becomes as soon as possible", () => {

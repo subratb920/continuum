@@ -13,6 +13,7 @@ import oauthRoutes from "./oauth/oauth.routes.js";
 import deployRoutes from "./oauth/deploy.routes.js";
 import supportRoutes from "./routes/support.routes.js";
 import createRoutes from "./create/routes.js";
+import meRoutes from "./routes/me.routes.js";
 
 
 const app = express();
@@ -34,6 +35,7 @@ app.use("/execution", requireAuth, executionRoutes);
 app.use("/bridges", requireAuth, bridgeRoutes);
 app.use("/support", requireAuth, supportRoutes); // Contact us: callback requests
 app.use("/create", requireAuth, createRoutes); // New Project wizard: catalogue and generated projects
+app.use("/me", requireAuth, meRoutes); // the user's own preferences (theme), shared with Continuum Deploy
 
 // ❗ MUST BE LAST
 app.use(errorMiddleware);

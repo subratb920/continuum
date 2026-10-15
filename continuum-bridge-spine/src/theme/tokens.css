@@ -13,7 +13,6 @@
    translucent uses: rgb(var(--success-rgb) / 0.55).
    ========================================================== */
 
-:root,
 :root[data-theme="light"] {
   --color-scheme: light; /* native controls, scrollbars */
 
@@ -60,7 +59,7 @@
   /* Brand (avatars, welcome actions) */
   --brand: #4f6ef7;
   --brand-hover: #3d5be0;
-  --brand-text: #4f6ef7;
+  --brand-text: #3d5be0; /* text in the brand blue: 4.5:1 on white */
   --on-brand: #ffffff;
   --brand-rgb: 79 110 247;
 
@@ -99,7 +98,8 @@
   --scrim: rgba(15, 23, 42, 0.38);
 }
 
-/* Dark: ChatGPT's dark palette */
+/* Dark: ChatGPT's dark palette. Also the default (no theme chosen yet) */
+:root,
 :root[data-theme="dark"] {
   --color-scheme: dark;
 
@@ -154,7 +154,7 @@
   --danger-hover: #dc2626;
   --danger-soft: rgba(239, 68, 68, 0.14);
   --danger-border: rgba(239, 68, 68, 0.4);
-  --danger-text: #f87171;
+  --danger-text: #fca5a5; /* readable on the dark red tint */
   --on-danger: #ffffff;
   --warning: #f59e0b;
   --warning-soft: rgba(245, 158, 11, 0.16);

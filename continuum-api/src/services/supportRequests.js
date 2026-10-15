@@ -25,7 +25,9 @@ export function normalizeCallback(body) {
   const bestTime = BEST_TIMES.includes(b.bestTime) ? b.bestTime : "asap";
   const timezone = typeof b.timezone === "string" ? b.timezone.slice(0, 64) : null;
   const note = typeof b.note === "string" ? b.note.trim().slice(0, 1000) : "";
-  return { name, phone, bestTime, timezone, note };
+  // Which app the request came from (Continuum, or Continuum Deploy's Contact us)
+  const source = b.source === "deploy" ? "deploy" : "continuum";
+  return { name, phone, bestTime, timezone, note, source };
 }
 
 export function createSupportService(db) {

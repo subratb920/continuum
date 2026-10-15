@@ -21,7 +21,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
   // Developer
   debugLogs: false,
   // Appearance
-  theme: "light", // a THEMES id, or "system" (follows the device: light or dark)
+  theme: "dark", // a THEMES id, or "system" (follows the device: light or dark)
   reduceMotion: false,
   compactLists: false,
 });
@@ -121,3 +121,12 @@ export function applyAppearance(prefs = getPreferences()) {
 
 // "System": follow the device when it switches between light and dark
 darkQuery?.addEventListener?.("change", () => applyAppearance());
+
+/** Did the user ever pick a theme on this device? (stored, not just the default) */
+export function themeChosenHere() {
+  try {
+    return Boolean(JSON.parse(localStorage.getItem(KEY) || "{}").theme);
+  } catch {
+    return false;
+  }
+}

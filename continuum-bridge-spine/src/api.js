@@ -255,3 +255,16 @@ export async function fetchGithubCreateStatus() {
 export async function checkGithubRepoName(name) {
   return request("GET", `/create/github/available?name=${encodeURIComponent(name)}`);
 }
+
+/* ==================================================
+   Preferences kept with the account (Continuum Deploy follows the theme)
+   ================================================== */
+
+/** { theme, chosen } (chosen: false while the user never picked one) */
+export async function fetchAccountPreferences() {
+  return request("GET", "/me/preferences");
+}
+
+export async function saveAccountTheme(theme) {
+  return request("PATCH", "/me/preferences", { theme });
+}

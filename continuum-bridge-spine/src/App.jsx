@@ -28,10 +28,13 @@ import GithubImport from "./screens/GithubImport";
 const NewProject = lazy(() => import("./screens/NewProject/NewProject"));
 
 import {
+  fetchAccountPreferences,
   fetchActiveProject,
   fetchBridges,
   fetchProjects,
+  saveAccountTheme,
 } from "./api";
+import { getPreferences, setPreference, themeChosenHere } from "./utils/preferences";
 
 import { logger } from "./utils/logger";
 import { normalizeBridge } from "./utils/normalizeBridge";
@@ -173,6 +176,18 @@ export default function App() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+
+  // The theme lives with the account (Continuum Deploy follows it): take it on sign-in.
+  // A theme picked on this device before it was kept with the account is uploaded once.
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    fetchAccountPreferences()
+      .then(({ theme, chosen }) => {
+        if (!chosen && themeChosenHere()) saveAccountTheme(getPreferences().theme).catch(() => {});
+        else if (theme && theme !== getPreferences().theme) setPreference("theme", theme);
+      })
+      .catch(() => {});
   }, [status]);
 
   useEffect(() => {

@@ -11,6 +11,9 @@
 //                                   Dockerfile, and a signed one-hour download address
 //   GET /deploy/archives/:token     that commit's source (tar.gz), streamed from GitHub
 //                                   with the user's sign-in; only with a valid address
+//   GET /deploy/me/appearance       the user's colour theme (Deploy follows Continuum's)
+//   POST /deploy/support/callbacks  "Request a callback" from Deploy's Contact us (same
+//                                   requests and daily limit as Continuum's own)
 
 import { Router } from "express";
 import { getDB } from "../config/db.js";
@@ -19,6 +22,8 @@ import { randomToken, signJwt, verifyJwt } from "./oauth.crypto.js";
 import { byFolder, detectDatabases, filesToRead } from "./detect-databases.js";
 import { ObjectId } from "mongodb";
 import fetch from "node-fetch";
+import { getTheme } from "../services/appearance.js";
+import { createSupportService } from "../services/supportRequests.js";
 
 const router = Router();
 
@@ -41,6 +46,16 @@ function repoOf(p) {
   const m = /github\.com\/([^/]+\/[^/.]+)/i.exec(p.githubRepoUrl ?? "");
   return m ? m[1] : null;
 }
+
+router.get("/me/appearance", requireDeployToken, async (req, res) => {
+  res.json({ theme: await getTheme(getDB(), req.deployUser.id) });
+});
+
+router.post("/support/callbacks", requireDeployToken, async (req, res) => {
+  const saved = await createSupportService(getDB()).requestCallback({ id: req.deployUser.id }, { ...req.body, source: "deploy" });
+  req.log.info({ userId: req.deployUser.id, requestId: String(saved.id), bestTime: saved.bestTime, source: "deploy" }, "Callback requested");
+  res.status(201).json({ id: saved.id, bestTime: saved.bestTime, createdAt: saved.createdAt });
+});
 
 router.get("/projects", requireDeployToken, async (req, res) => {
   const projects = await getDB()
