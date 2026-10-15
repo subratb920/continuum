@@ -14,15 +14,15 @@
 /* ---------- Pane widths (the header lines up with them) ---------- */
 @media (min-width: 1600px) {
   :root {
-    --left-w: 260px;
+    --left-w: 300px;
     --right-w: 300px;
   }
 }
 
 @media (min-width: 900px) and (max-width: 1199px) {
   :root {
-    --left-w: 180px;
-    --right-w: 220px;
+    --left-w: 240px;
+    --right-w: 240px;
   }
   body .center {
     padding: 24px;

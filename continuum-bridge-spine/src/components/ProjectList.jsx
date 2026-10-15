@@ -6,6 +6,7 @@ import { useAuth } from "../state/authStore";
 import { importFromDevice } from "../utils/importFromDevice";
 import { usePreferences } from "../utils/preferences";
 import ProjectContents from "./ProjectContents";
+import Tip from "./Tip";
 import { LuMonitor, LuSquarePen } from "react-icons/lu";
 
 /** github.com/owner/repo → github.dev/owner/repo (GitHub's editor in the browser); null otherwise */
@@ -102,17 +103,18 @@ export default function ProjectList({
         </h2>
 
         <div className="project-menu-anchor">
-          <button
-            type="button"
-            className="project-add"
-            onClick={() => setShowMenu((s) => !s)}
-            title="New project and project actions"
-            aria-label="New project and project actions"
-            aria-haspopup="menu"
-            aria-expanded={showMenu}
-          >
-            <GearIcon />
-          </button>
+          <Tip text="Projects menu" detail="New project, import, activate, edit or delete">
+            <button
+              type="button"
+              className="project-add"
+              onClick={() => setShowMenu((s) => !s)}
+              aria-label="New project and project actions"
+              aria-haspopup="menu"
+              aria-expanded={showMenu}
+            >
+              <GearIcon />
+            </button>
+          </Tip>
 
           {showMenu && (
             <div className="project-action-menu" role="menu">
@@ -208,61 +210,65 @@ export default function ProjectList({
 
                   <span className="project-actions">
                     {hasContents && (
-                      <button
-                        type="button"
-                        className="project-icon-btn"
-                        aria-expanded={contentsOpen}
-                        aria-label={`${contentsOpen ? "Hide" : "Show"} the contents of ${project.name}`}
-                        title={contentsOpen ? "Hide contents" : "Show contents"}
-                        onClick={() => toggleContents(project)}
-                      >
-                        <span aria-hidden="true">{contentsOpen ? "▾" : "▸"}</span>
-                      </button>
+                      <Tip text={contentsOpen ? "Hide files" : "Show files"} detail="The project's files on this device">
+                        <button
+                          type="button"
+                          className="project-icon-btn"
+                          aria-expanded={contentsOpen}
+                          aria-label={`${contentsOpen ? "Hide" : "Show"} the contents of ${project.name}`}
+                          onClick={() => toggleContents(project)}
+                        >
+                          <span aria-hidden="true">{contentsOpen ? "▾" : "▸"}</span>
+                        </button>
+                      </Tip>
                     )}
                     {/* A workspace (VS Code with a terminal): any project (one without GitHub is put on GitHub first) */}
-                    <button
-                      type="button"
-                      className="project-icon-btn project-link"
-                      title="Open a workspace"
-                      aria-label={`Open a workspace for ${project.name}`}
-                      onClick={() => navigate("/workspaces", { state: { projectId: project._id } })}
+                    <Tip
+                      text="Open a workspace"
+                      detail={project.githubRepoUrl ? "VS Code in your browser, with a terminal" : "VS Code in your browser (puts the project on GitHub first)"}
                     >
-                      <LuMonitor aria-hidden="true" />
-                    </button>
+                      <button
+                        type="button"
+                        className="project-icon-btn project-link"
+                        aria-label={`Open a workspace for ${project.name}`}
+                        onClick={() => navigate("/workspaces", { state: { projectId: project._id } })}
+                      >
+                        <LuMonitor aria-hidden="true" />
+                      </button>
+                    </Tip>
                     {/* Edit the repository in the browser (github.dev), from any device */}
                     {githubDevUrl(project.githubRepoUrl) && (
-                      <a
-                        href={githubDevUrl(project.githubRepoUrl)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="project-icon-btn project-link"
-                        title="Edit in browser (github.dev)"
-                        aria-label={`Edit ${project.name} in the browser`}
-                      >
-                        <LuSquarePen aria-hidden="true" />
-                      </a>
+                      <Tip text="Edit in browser" detail="Quick edits on github.dev (no terminal)">
+                        <a
+                          href={githubDevUrl(project.githubRepoUrl)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="project-icon-btn project-link"
+                          aria-label={`Edit ${project.name} in the browser`}
+                        >
+                          <LuSquarePen aria-hidden="true" />
+                        </a>
+                      </Tip>
                     )}
                     {project.githubRepoUrl ? (
-                      <a
-                        href={project.githubRepoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="project-icon-btn project-link"
-                        title="Open on GitHub"
-                        aria-label={`Open ${project.name} on GitHub`}
-                      >
-                        <GithubMark />
-                      </a>
-                    ) : (
-                      project.source === "device" && (
-                        <span
-                          className="project-icon-btn project-link is-off"
-                          role="img"
-                          title="No GitHub remote found in this folder"
-                          aria-label={`${project.name} has no GitHub remote`}
+                      <Tip text="Open on GitHub" detail={project.githubRepoUrl.replace(/^https:\/\/github\.com\//, "")}>
+                        <a
+                          href={project.githubRepoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="project-icon-btn project-link"
+                          aria-label={`Open ${project.name} on GitHub`}
                         >
                           <GithubMark />
-                        </span>
+                        </a>
+                      </Tip>
+                    ) : (
+                      project.source === "device" && (
+                        <Tip text="Not on GitHub" detail="This folder has no GitHub remote">
+                          <span className="project-icon-btn project-link is-off" role="img" tabIndex={0} aria-label={`${project.name} has no GitHub remote`}>
+                            <GithubMark />
+                          </span>
+                        </Tip>
                       )
                     )}
                   </span>

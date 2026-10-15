@@ -340,11 +340,29 @@
    Row actions
 ---------------------------------- */
 
+/* The row's icons: shown on the row under the mouse, with keyboard focus, or
+   selected, laid over the end of the name, so every name has the full width
+   the rest of the time (the pane can be narrow) */
 .project-actions {
-  display: flex;
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: none;
   align-items: flex-start;
   gap: 2px;
-  padding: 6px 6px 0 0;
+  padding: 6px 6px 0 14px;
+  border-radius: 0 8px 0 0;
+  background: linear-gradient(to right, transparent, var(--row-bg, var(--hover)) 12px);
+}
+
+.project-item:hover .project-actions,
+.project-item:focus-within .project-actions,
+.project-item.selected .project-actions {
+  display: flex;
+}
+
+.project-item.selected {
+  --row-bg: var(--selected);
 }
 
 .project-icon-btn {

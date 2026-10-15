@@ -1,7 +1,8 @@
-/* The console's side panes: the header lines up with them (sizes change in responsive.css) */
+/* The console's side panes: the same width on both sides, wide enough for
+   project names; the header lines up with them (sizes change in responsive.css) */
 :root {
-  --left-w: 220px;
-  --right-w: 260px;
+  --left-w: 270px;
+  --right-w: 270px;
 }
 
 body {

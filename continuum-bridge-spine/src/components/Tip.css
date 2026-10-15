@@ -1,0 +1,67 @@
+/* The icon's wrapper: takes no room of its own */
+.tip-anchor {
+  display: inline-flex;
+}
+
+/* Tooltips for icons (Tip.jsx): a small dark-on-light / light-on-dark label with an arrow */
+.tip {
+  position: fixed;
+  z-index: 1000;
+  transform: translate(-50%, -100%);
+  max-width: 260px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--text);
+  color: var(--surface);
+  box-shadow: 0 4px 12px rgb(var(--shadow-rgb) / 0.18);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+  pointer-events: none;
+  animation: tip-in 120ms ease-out;
+}
+
+.tip.tip-below {
+  transform: translate(-50%, 0);
+}
+
+.tip::after {
+  content: "";
+  position: absolute;
+  left: calc(50% + var(--tip-arrow, 0px));
+  top: 100%;
+  border: 5px solid transparent;
+  border-top-color: var(--text);
+  transform: translateX(-50%);
+}
+
+.tip.tip-below::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: var(--text);
+}
+
+.tip-text {
+  display: block;
+  font-weight: 500;
+}
+
+.tip-detail {
+  display: block;
+  margin-top: 2px;
+  opacity: 0.75;
+  overflow-wrap: anywhere;
+}
+
+@keyframes tip-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tip {
+    animation: none;
+  }
+}
