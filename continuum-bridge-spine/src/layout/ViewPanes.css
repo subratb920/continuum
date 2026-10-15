@@ -71,3 +71,14 @@
   font-size: 13px;
   line-height: 1.4;
 }
+
+.view-options-divider {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border-subtle);
+}
+
+.view-option-icon .menu-logo {
+  width: 18px;
+  height: 18px;
+}

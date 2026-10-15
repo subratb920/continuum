@@ -1,5 +1,6 @@
 import { useAuth } from "../state/authStore";
-import { CREATE_URL, DEPLOY_TARGETS, useShellActions } from "./shellActions";
+import { useShellActions } from "./shellActions";
+import { createItems, deployItems } from "./menuItems";
 import "./ViewPanes.css";
 
 /**
@@ -7,17 +8,20 @@ import "./ViewPanes.css";
  * (chosen from the header's ☰ menu) instead of header menus.
  */
 
-function Option({ icon, title, hint, onClick, disabled = false }) {
+function Option({ item }) {
   return (
-    <button type="button" className="view-option" onClick={onClick} disabled={disabled}>
-      <span className="view-option-icon" aria-hidden="true">
-        {icon}
-      </span>
-      <span className="view-option-text">
-        <strong>{title}</strong>
-        {hint && <span className="view-option-hint">{hint}</span>}
-      </span>
-    </button>
+    <>
+      {item.divider && <div className="view-options-divider" role="separator" />}
+      <button type="button" className="view-option" onClick={item.onClick} disabled={item.disabled}>
+        <span className="view-option-icon" aria-hidden="true">
+          {item.icon}
+        </span>
+        <span className="view-option-text">
+          <strong>{item.title}</strong>
+          <span className="view-option-hint">{item.hint}</span>
+        </span>
+      </button>
+    </>
   );
 }
 
@@ -28,16 +32,9 @@ export function CreatePane({ selectedProject }) {
     <section className="view-pane" aria-label="Create">
       <h2 className="view-pane-title">Create</h2>
       <div className="view-options">
-        <Option icon="✨" title="New project" hint="Pick a stack (React, Node, Spring, Python…), its dependencies and git." onClick={actions.newProject} />
-        <Option icon="📁" title="Import from device" hint="A project folder on this device." onClick={actions.importFromDevice} />
-        <Option
-          icon="📦"
-          title="Import from GitHub"
-          hint={authProvider === "github" ? "Your GitHub repositories." : "Sign in with GitHub to import a repository."}
-          onClick={actions.importFromGithub}
-          disabled={authProvider !== "github"}
-        />
-        {CREATE_URL && <Option icon="🚀" title="Create via Backstage" hint="Your organisation's templates." onClick={actions.externalCreate} />}
+        {createItems(actions, authProvider).map((item) => (
+          <Option key={item.key} item={item} />
+        ))}
       </div>
     </section>
   );
@@ -59,19 +56,12 @@ export function DeployPane({ selectedProject }) {
             <>{selectedProject.name} has no GitHub repository to deploy.</>
           )
         ) : (
-          "No project selected: each cloud opens its deployments."
+          "No project selected: each cloud opens its own page."
         )}
       </p>
       <div className="view-options">
-        <Option icon="🚀" title="Open Continuum Deploy" hint="All clouds, in a new tab." onClick={() => actions.openDeployApp(null)} />
-        {DEPLOY_TARGETS.map((t) => (
-          <Option
-            key={t.label}
-            icon="☁️"
-            title={`Deploy on ${t.label}`}
-            hint={t.soon ? "Coming soon" : t.deploysProject && deployable ? `Deploys ${deployable.name}` : undefined}
-            onClick={() => actions.openDeployApp(t)}
-          />
+        {deployItems(actions).map((item) => (
+          <Option key={item.key} item={item} />
         ))}
       </div>
     </section>

@@ -3,7 +3,9 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/authStore";
 import "./ShellHeader.css";
 import { usePanels } from "./PanelsContext";
-import { CREATE_URL, DEPLOY_AVAILABLE, DEPLOY_TARGETS, useShellActions } from "./shellActions";
+import { DEPLOY_AVAILABLE, useShellActions } from "./shellActions";
+import { createItems, deployItems } from "./menuItems";
+import MenuItem from "./MenuItem";
 import { ContactCard, ProfileCard, SettingsCard, SupportCard } from "../components/ProfileCards";
 import { BUILD } from "../utils/support";
 
@@ -209,29 +211,10 @@ export default function ShellHeader({ selectedProject = null }) {
               </button>
 
               {openMenu === "create" && (
-                <div className="menu-dropdown" role="menu">
-                  <button role="menuitem" onClick={actions.newProject}>
-                    ✨ New project…
-                  </button>
-
-                  {CREATE_URL && (
-                    <button role="menuitem" onClick={actions.externalCreate}>
-                      🚀 Create via Backstage
-                    </button>
-                  )}
-
-                  <button role="menuitem" onClick={actions.importFromDevice}>
-                    📁 Import from device
-                  </button>
-
-                  {/* GitHub sign-ins only; greyed out for email sign-ins */}
-                  <button
-                    role="menuitem"
-                    disabled={authProvider !== "github"}
-                    onClick={actions.importFromGithub}
-                  >
-                    📦 Import Repo (Github)
-                  </button>
+                <div className="menu-dropdown menu-rich" role="menu">
+                  {createItems(actions, authProvider).map((item) => (
+                    <MenuItem key={item.key} item={item} />
+                  ))}
                 </div>
               )}
             </div>
@@ -251,19 +234,13 @@ export default function ShellHeader({ selectedProject = null }) {
                 onClick={() => (noHover() ? toggle("deploy") : actions.openDeployApp(null))}
                 aria-haspopup="menu"
                 aria-expanded={openMenu === "deploy"}
-                title="Open Continuum Deploy (all clouds)"
+                title="Open Continuum Deploy (every cloud)"
               >
                 Deploy ▾
               </button>
 
               {openMenu === "deploy" && (
-                <div className="menu-dropdown" role="menu">
-                  {/* On a touch screen the button opens this list, so the main page is here too */}
-                  {noHover() && (
-                    <button role="menuitem" className="menu-dropdown-lead" onClick={() => actions.openDeployApp(null)}>
-                      🚀 Open Continuum Deploy (all clouds)
-                    </button>
-                  )}
+                <div className="menu-dropdown menu-rich" role="menu">
                   {selectedProject && (
                     <div className="menu-dropdown-note">
                       {deployable ? (
@@ -275,16 +252,8 @@ export default function ShellHeader({ selectedProject = null }) {
                       )}
                     </div>
                   )}
-                  {DEPLOY_TARGETS.map((target) => (
-                    <button
-                      key={target.label}
-                      role="menuitem"
-                      disabled={!target.cloud}
-                      onClick={() => actions.openDeployApp(target)}
-                      title={target.soon ? `${target.label}: coming soon` : target.deploysProject && deployable ? `Deploy ${deployable.name} on ${target.label}` : undefined}
-                    >
-                      ☁️ Deploy on {target.label}
-                    </button>
+                  {deployItems(actions).map((item) => (
+                    <MenuItem key={item.key} item={item} />
                   ))}
                 </div>
               )}

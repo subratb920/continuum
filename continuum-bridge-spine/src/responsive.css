@@ -69,12 +69,6 @@ body .shell-header {
   }
 }
 
-/* Deploy menu on touch: the first item opens Continuum Deploy itself */
-.menu-dropdown-lead {
-  font-weight: 600;
-  border-bottom: 1px solid var(--border-subtle) !important;
-}
-
 /* ---------- Tablet portrait and phones ---------- */
 @media (max-width: 899px) {
   /* Header: one row — ☰ + title … avatar. Interval Setup, Create, Deploy, Projects

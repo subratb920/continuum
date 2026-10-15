@@ -25,7 +25,7 @@ export default function BridgeHistoryModal({ bridge, onClose }) {
 
         <section className="modal-body">
           <p className="modal-meta">
-            {bridge.interval.mode} · Planned {formatDuration(bridge.interval.duration)}
+            {bridge.interval.mode} · Interval duration {formatDuration(bridge.interval.duration)}
           </p>
 
           {bridge.ticketUrl && (

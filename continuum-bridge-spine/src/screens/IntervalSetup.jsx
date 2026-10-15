@@ -163,9 +163,9 @@ export default function IntervalSetup({
           )}
         </section>
 
-        {/* Interval Length */}
+        {/* Interval Duration */}
         <section className="interval-section">
-          <h3>Interval Length</h3>
+          <h3>Interval Duration</h3>
           <DurationPicker
             value={duration}
             onChange={setDuration}

@@ -35,7 +35,7 @@ export function formatClock(ms) {
     : `${minutes}:${seconds}`;
 }
 
-// Planned interval length in minutes → "30 min", "1 h 30 min", "4 h"
+// Interval duration in minutes → "30 min", "1 h 30 min", "4 h"
 export function formatDuration(totalMinutes) {
   const minutes = Number(totalMinutes) || 0;
   const h = Math.floor(minutes / 60);

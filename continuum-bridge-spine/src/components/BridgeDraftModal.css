@@ -5,7 +5,7 @@
   margin-bottom: 16px;
 }
 
-/* Remaining time with the Stop button beside it */
+/* Elapsed time with the Stop button beside it */
 .draft-timer-row {
   display: flex;
   align-items: center;
@@ -37,7 +37,7 @@
 }
 
 /* Calm, not shouting: the same weight and colour as the rest of the window */
-.draft-timer-remaining {
+.draft-timer-clock {
   font-size: 32px;
   font-weight: 500;
   line-height: 1.15;
@@ -47,7 +47,7 @@
 }
 
 @media (max-width: 599px) {
-  .draft-timer-remaining {
+  .draft-timer-clock {
     font-size: 28px;
   }
 }

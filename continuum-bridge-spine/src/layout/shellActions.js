@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { DEPLOY_AVAILABLE, deployCloudPageUrl, deployConnectionsUrl, deployHomeUrl, deployListUrl, deployProjectUrl } from "../deployLinks";
+import { DEPLOY_AVAILABLE, deployCloudPageUrl, deployHomeUrl, deployListUrl, deployProjectUrl } from "../deployLinks";
 import { importFromDevice } from "../utils/importFromDevice";
 
 /**
@@ -12,21 +12,11 @@ export const CREATE_URL = import.meta.env.VITE_CREATE_URL || "";
 
 export { DEPLOY_AVAILABLE };
 
-// Deploy: AWS, Railway and GCP are live. deploysProject: deploying a selected
-// project works there (Railway and GCP; AWS opens its connections). soon: not supported
-// yet; opens that cloud's own page in Continuum Deploy, which says so.
+// Deploy menu: the clouds that deploy a selected project (Railway and GCP);
+// every other cloud is on Continuum Deploy's start screen ("Show all").
 export const DEPLOY_TARGETS = [
-  { label: "AWS", cloud: "aws" },
   { label: "Railway", cloud: "railway", deploysProject: true },
-  { label: "GCP", cloud: "gcp", deploysProject: true },
-  { label: "Microsoft Azure", cloud: "azure", soon: true },
-  { label: "Vercel", cloud: "vercel", soon: true },
-  { label: "Netlify", cloud: "netlify", soon: true },
-  { label: "Cloudflare", cloud: "cloudflare", soon: true },
-  { label: "DigitalOcean", cloud: "digitalocean", soon: true },
-  { label: "Heroku", cloud: "heroku", soon: true },
-  { label: "Render", cloud: "render", soon: true },
-  { label: "Oracle Cloud", cloud: "oracle", soon: true },
+  { label: "Google Cloud (GCP)", cloud: "gcp", deploysProject: true },
 ];
 
 /** The actions; `done` runs first (e.g. close the menu it was chosen from). */
@@ -42,20 +32,15 @@ export function useShellActions(selectedProject, done = () => {}) {
     /** Continuum Deploy, in a new tab so a running interval here is never interrupted */
     openDeployApp(target) {
       done();
-      // Deploy itself opens the start screen. A cloud that deploys: the selected project's deploy page,
-      // or (none selected) that cloud's deployments. Clouds that don't deploy yet open their connections.
-      // GCP without a project: its own step-by-step page (account, infrastructure, projects)
+      // No cloud ("Show all"): the start screen with every cloud. A cloud: the selected project's
+      // deploy page, or (none selected) Railway's deployments / GCP's step-by-step page
       const url = !target
         ? deployHomeUrl()
-        : target.soon
-          ? deployCloudPageUrl(target.cloud)
-          : !target.deploysProject
-            ? deployConnectionsUrl(target.cloud)
-            : deployable
-              ? deployProjectUrl(deployable._id, target.cloud)
-              : target.cloud === "gcp"
-                ? deployCloudPageUrl("gcp")
-                : deployListUrl(target.cloud);
+        : deployable
+          ? deployProjectUrl(deployable._id, target.cloud)
+          : target.cloud === "gcp"
+            ? deployCloudPageUrl("gcp")
+            : deployListUrl(target.cloud);
       window.open(url, "_blank", "noopener");
     },
 

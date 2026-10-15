@@ -161,7 +161,7 @@ function BridgeCard({ bridge, isActive, onSelect }) {
 
           <span className="bridge-when">
             {timeOf(startOfBridge(bridge))}
-            {bridge.interval.duration > 0 && ` · ${formatDuration(bridge.interval.duration)}`}
+            {bridge.interval.duration > 0 && ` · duration ${formatDuration(bridge.interval.duration)}`}
             {inProgress && <span className="bridge-state state-progress"> · In progress</span>}
             {bridge.status === "abandoned" && <span className="bridge-state state-abandoned"> · Abandoned</span>}
           </span>

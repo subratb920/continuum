@@ -129,7 +129,7 @@ export default function Dashboard({ projects, activeProject, activeBridge, bridg
     };
   }, [projects, bridgeRevision]);
 
-  // The interval in progress counts down
+  // The interval in progress: its elapsed time, kept current
   useEffect(() => {
     if (!activeBridge) return;
     const t = setInterval(() => setNow(Date.now()), 30_000);
@@ -330,15 +330,15 @@ function Tile({ label, value, sub }) {
   );
 }
 
-/** "Execution · 30 min · 12 min left" (or "time's up"). */
+/** "Execution · duration 30 min · 12 min elapsed" (or "time's up"). */
 function nowLine(b, now) {
   const parts = [];
   const mode = MODES.find(([k]) => k === modeOf(b))?.[1];
   if (mode) parts.push(mode);
-  if (b.interval.duration) parts.push(formatDuration(b.interval.duration));
+  if (b.interval.duration) parts.push(`duration ${formatDuration(b.interval.duration)}`);
   if (b.interval.startedAt && b.interval.duration) {
-    const left = Math.round((new Date(b.interval.startedAt).getTime() + b.interval.duration * 60_000 - now) / 60_000);
-    parts.push(left > 0 ? `${left} min left` : "time's up");
+    const elapsed = Math.max(0, Math.floor((now - new Date(b.interval.startedAt).getTime()) / 60_000));
+    parts.push(elapsed < b.interval.duration ? `${formatDuration(elapsed)} elapsed` : "time's up");
   }
   return parts.join(" · ");
 }

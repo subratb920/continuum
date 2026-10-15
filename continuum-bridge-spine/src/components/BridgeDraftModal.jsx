@@ -15,7 +15,7 @@ const ENDED_TITLE = "⏰ Interval ended · Continuum";
  * BridgeDraftModal
  * ----------------
  * Open for the whole running interval.
- * - Timer counts down from the server's start time and duration.
+ * - Timer counts up (elapsed) from the server's start time, up to the duration.
  * - While running: no footer; a Stop button sits next to the timer.
  *   onStop(bridge) freezes the timer (interval.endedAt set, still a
  *   draft) and the user can still record goals, then save.
@@ -150,7 +150,6 @@ export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSi
     }
   }
 
-  const remainingMs = Math.min(durationMs, Math.max(0, endsAt - effectiveNow));
   const elapsedMs = Math.min(durationMs, Math.max(0, effectiveNow - startedAt));
   const progress = hasTimer ? (elapsedMs / durationMs) * 100 : 0;
 
@@ -167,8 +166,8 @@ export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSi
           {hasTimer && (
             <div className="draft-timer" aria-live="polite">
               <div className="draft-timer-row">
-                <div className="draft-timer-remaining">
-                  {formatClock(remainingMs)}
+                <div className="draft-timer-clock">
+                  {formatClock(elapsedMs)}
                 </div>
 
                 {running && (
@@ -183,7 +182,7 @@ export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSi
                 )}
               </div>
               <div className="draft-timer-label">
-                {expired ? "Time's up" : stopped ? "Stopped" : "remaining"}
+                {expired ? "Time's up" : stopped ? "Stopped" : "elapsed"}
               </div>
 
               <div className="draft-timer-bar">
@@ -194,7 +193,7 @@ export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSi
               </div>
 
               <div className="draft-timer-elapsed">
-                {formatClock(elapsedMs)} / {formatClock(durationMs)}
+                of {formatClock(durationMs)} interval duration
               </div>
             </div>
           )}

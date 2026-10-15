@@ -3,7 +3,7 @@
 .duration-picker {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
 }
 
 .duration-picker-boxes {
@@ -32,14 +32,15 @@
 }
 
 /* Editable box (text input styled as a single-value tile) */
+/* Same size as the rest of the form's text, so the value reads as part of it */
 .duration-picker-box {
-  width: 64px;
+  width: 48px;
   box-sizing: border-box;
-  padding: 8px 0;
+  padding: 6px 0;
   text-align: center;
   font-family: inherit;
-  font-size: 26px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: var(--text);
   background: var(--surface-subtle);
@@ -60,20 +61,20 @@
 }
 
 .duration-picker-sep {
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
   color: var(--text-faint);
-  margin: 0 10px;
+  margin: 0 6px;
   /* line up with the boxes, not the arrows */
-  padding-top: 14px;
+  padding-top: 18px;
 }
 
 .duration-picker-arrow {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 22px;
+  width: 28px;
+  height: 20px;
   padding: 0;
   border: none;
   border-radius: 6px;
