@@ -3,6 +3,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh; /* phones: the visible height, without the browser's bars */
 }
 
 .page-shell > .shell-header {

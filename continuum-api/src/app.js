@@ -16,7 +16,8 @@ import deployRoutes from "./oauth/deploy.routes.js";
 const app = express();
 
 app.use(corsMiddleware());
-app.use(express.json());
+// 1 MB: a device import sends its file list (paths and sizes, at most 5000)
+app.use(express.json({ limit: "1mb" }));
 
 // 👇 must come AFTER body parsing, BEFORE routes
 app.use(requestLogger);

@@ -1,6 +1,13 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import "./ProjectList.css";
 import { getProjectMeta } from "../models/project";
+import { useAuth } from "../state/authStore";
+import { importFromDevice, formatBytes } from "../utils/importFromDevice";
+import ProjectContents from "./ProjectContents";
+
+/** Above this many projects the pane shows a search box. */
+const SEARCH_FROM = 8;
 
 /**
  * ProjectList
@@ -8,6 +15,8 @@ import { getProjectMeta } from "../models/project";
  * - Selecting a project ≠ activating it
  * - Active project is driven ONLY by backend execution state
  * - Selected project controls what is being viewed
+ * - The active project comes first, then the rest A–Z
+ * - A project imported from a device can show its contents (files) under it
  * - Project action menu is locally anchored (no portals)
  */
 export default function ProjectList({
@@ -21,9 +30,14 @@ export default function ProjectList({
   onDeleteProject,
 }) {
   const [showMenu, setShowMenu] = useState(false);
+  const [query, setQuery] = useState("");
+  const [openContents, setOpenContents] = useState(() => new Set());
+  const { authProvider } = useAuth();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   /* ---------------------------------------------------------
-     Close menu on outside click
+     Close menu on outside click or Escape
      --------------------------------------------------------- */
   useEffect(() => {
     if (!showMenu) return;
@@ -33,14 +47,42 @@ export default function ProjectList({
         setShowMenu(false);
       }
     }
+    function handleKey(e) {
+      if (e.key === "Escape") setShowMenu(false);
+    }
 
     document.addEventListener("mousedown", handleOutsideClick);
-    return () =>
+    document.addEventListener("keydown", handleKey);
+    return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleKey);
+    };
   }, [showMenu]);
 
   // Edit / Delete / Activate need at least one project to pick from
   const hasProjects = projects.length > 0;
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const isActive = (p) => activeProject?._id === p._id;
+    return projects
+      .filter((p) => !q || p.name.toLowerCase().includes(q))
+      .sort((a, b) => (isActive(a) !== isActive(b) ? (isActive(a) ? -1 : 1) : a.name.localeCompare(b.name)));
+  }, [projects, query, activeProject]);
+
+  function run(action) {
+    setShowMenu(false);
+    action();
+  }
+  const importGithub = () => navigate("/import", { state: { from: pathname } });
+  const canImportGithub = authProvider === "github";
+  const toggleContents = (id) =>
+    setOpenContents((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   return (
     <div className="project-pane">
@@ -48,152 +90,150 @@ export default function ProjectList({
          Header
       ---------------------------------- */}
       <div className="project-pane-header">
-        <span className="project-pane-title">Projects</span>
+        <h2 className="project-pane-title">
+          Projects
+          {hasProjects && <span className="project-count">{projects.length}</span>}
+        </h2>
 
         <div className="project-menu-anchor">
           <button
             type="button"
             className="project-add"
-            onClick={() => setShowMenu(true)}
-            title="Project actions"
-            aria-label="Project actions"
+            onClick={() => setShowMenu((s) => !s)}
+            title="New project and project actions"
             aria-haspopup="menu"
             aria-expanded={showMenu}
           >
-            +
+            + New <span aria-hidden="true">▾</span>
           </button>
 
           {showMenu && (
-            <div
-              className="project-action-menu"
-              role="menu"
-            >
-              <button
-                role="menuitem"
-                onClick={() => {
-                  setShowMenu(false);
-                  onCreateProject();
-                }}
-              >
-                Create Project
+            <div className="project-action-menu" role="menu">
+              <button role="menuitem" onClick={() => run(onCreateProject)}>
+                Create project
               </button>
-
-              <button
-                role="menuitem"
-                disabled={!hasProjects}
-                onClick={() => {
-                  setShowMenu(false);
-                  onEditProject();
-                }}
-              >
-                Edit Project
+              <button role="menuitem" onClick={() => run(() => importFromDevice())}>
+                Import from device
               </button>
-
-              <button
-                role="menuitem"
-                disabled={!hasProjects}
-                onClick={() => {
-                  setShowMenu(false);
-                  onDeleteProject();
-                }}
-              >
-                Delete Project
+              <button role="menuitem" disabled={!canImportGithub} title={canImportGithub ? undefined : "Sign in with GitHub to import a repository"} onClick={() => run(importGithub)}>
+                Import from GitHub
               </button>
-
-              <button
-                role="menuitem"
-                disabled={!hasProjects}
-                onClick={() => {
-                  setShowMenu(false);
-                  onActivateProject(selectedProject);
-                }}
-              >
-                Activate Project
-              </button>
-
 
               <hr />
 
-              <button
-                role="menuitem"
-                onClick={() => setShowMenu(false)}
-              >
-                Cancel
+              <button role="menuitem" disabled={!hasProjects} onClick={() => run(onEditProject)}>
+                Edit project
+              </button>
+              <button role="menuitem" disabled={!hasProjects} onClick={() => run(() => onActivateProject(selectedProject))}>
+                Activate project
+              </button>
+              <button role="menuitem" className="danger" disabled={!hasProjects} onClick={() => run(onDeleteProject)}>
+                Delete project
               </button>
             </div>
           )}
         </div>
       </div>
 
+      {projects.length > SEARCH_FROM && (
+        <input
+          type="search"
+          className="project-search"
+          placeholder="Search projects"
+          aria-label="Search projects"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      )}
+
       {/* ----------------------------------
          Project List
       ---------------------------------- */}
-      <div className="project-list">
-        {!hasProjects && (
-          <p className="project-list-empty">No projects yet.</p>
-        )}
+      {!hasProjects ? (
+        <div className="project-list-empty">
+          <p>No projects yet.</p>
+          <button type="button" className="project-empty-btn primary-action" onClick={() => importFromDevice()}>
+            Import from device
+          </button>
+          <button type="button" className="project-empty-btn" disabled={!canImportGithub} onClick={importGithub}>
+            Import from GitHub
+          </button>
+        </div>
+      ) : (
+        <ul className="project-list">
+          {shown.length === 0 && <li className="project-list-none">No project matches “{query}”.</li>}
 
-        {projects.map((project) => {
-          const isActive =
-            activeProject?._id === project._id;
+          {shown.map((project) => {
+            const isActive = activeProject?._id === project._id;
+            const isSelected = selectedProject?._id === project._id;
+            const meta = getProjectMeta(project);
+            const hasContents = project.source === "device" && project.contents;
+            const contentsOpen = openContents.has(project._id);
+            const status = isActive ? "Active" : isSelected ? "Selected" : null;
 
-          const isSelected =
-            selectedProject?._id === project._id;
+            return (
+              <li key={project._id} className="project-entry">
+                <div className={["project-item", isSelected && "selected", isActive && "active"].filter(Boolean).join(" ")}>
+                  <button
+                    type="button"
+                    className="project-select"
+                    onClick={() => onSelectProject(project)}
+                    aria-current={isSelected ? "true" : undefined}
+                    title={project.name}
+                  >
+                    {/* Status indicator — ALWAYS rendered */}
+                    <span
+                      className={["project-indicator", isActive && "indicator-active", !isActive && isSelected && "indicator-selected", !isActive && !isSelected && "indicator-inactive"].filter(Boolean).join(" ")}
+                      aria-hidden="true"
+                    />
 
-          return (
-            <button
-              key={project._id}
-              type="button"
-              onClick={() => onSelectProject(project)}
-              className={[
-                "project-item",
-                isSelected && "selected",
-                isActive && "active",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              aria-current={isSelected}
-            >
-              {/* Status indicator — ALWAYS rendered */}
-              <span
-                className={[
-                  "project-indicator",
-                  isActive && "indicator-active",
-                  !isActive && isSelected && "indicator-selected",
-                  !isActive && !isSelected && "indicator-inactive",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                aria-hidden="true"
-              />
+                    <span className="project-content">
+                      <span className="project-name">{project.name}</span>
 
-              <div className="project-content">
-                <span className="project-name">
-                  {project.name}
-                </span>
+                      <span className="project-meta">
+                        <span className={`project-tag tag-${project.source === "github" ? project.visibility : project.source}`}>
+                          {meta.icon} {meta.label}
+                        </span>
+                        {hasContents && <span className="project-files">{project.contents.fileCount} files · {formatBytes(project.contents.totalBytes)}</span>}
+                        {status && <span className={`project-status status-${status.toLowerCase()}`}>{status}</span>}
+                      </span>
+                    </span>
+                  </button>
 
-                <span className="project-meta">
-                  {getProjectMeta(project).icon}{" "}
-                  {getProjectMeta(project).label}
-                </span>
-              </div>
-              {project.githubRepoUrl && (
-                <a
-                  href={project.githubRepoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="project-link"
-                  title="Open on GitHub"
-                  aria-label={`Open ${project.name} on GitHub`}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <GithubMark />
-                </a>
-              )}
-            </button>
-          );
-        })}
-      </div>
+                  <span className="project-actions">
+                    {hasContents && (
+                      <button
+                        type="button"
+                        className="project-icon-btn"
+                        aria-expanded={contentsOpen}
+                        aria-label={`${contentsOpen ? "Hide" : "Show"} the contents of ${project.name}`}
+                        title={contentsOpen ? "Hide contents" : "Show contents"}
+                        onClick={() => toggleContents(project._id)}
+                      >
+                        <span aria-hidden="true">{contentsOpen ? "▾" : "▸"}</span>
+                      </button>
+                    )}
+                    {project.githubRepoUrl && (
+                      <a
+                        href={project.githubRepoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="project-icon-btn project-link"
+                        title="Open on GitHub"
+                        aria-label={`Open ${project.name} on GitHub`}
+                      >
+                        <GithubMark />
+                      </a>
+                    )}
+                  </span>
+                </div>
+
+                {hasContents && contentsOpen && <ProjectContents project={project} />}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

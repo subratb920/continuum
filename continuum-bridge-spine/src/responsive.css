@@ -1,0 +1,260 @@
+/* ==========================================================
+   responsive.css: Continuum on every screen
+   ----------------------------------------------------------
+   ≥1600px   wide:    side panes a little wider
+   1200–1599 desktop: as designed (220 · Interval Setup · 260)
+   900–1199  laptop / tablet landscape: narrower side panes
+   <900      tablet portrait / phone: Interval Setup full width;
+             Projects and Bridge Spine open as drawers from the header
+   <600      phone: modals become bottom sheets, forms stack
+   Loaded after every other stylesheet; "body" in front of a
+   selector makes a rule win over the component's own.
+   ========================================================== */
+
+/* ---------- Pane widths (the header lines up with them) ---------- */
+@media (min-width: 1600px) {
+  :root {
+    --left-w: 260px;
+    --right-w: 300px;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1199px) {
+  :root {
+    --left-w: 180px;
+    --right-w: 220px;
+  }
+  body .center {
+    padding: 24px;
+  }
+  body .shell-nav {
+    padding-left: 24px; /* = .center padding: Interval Setup stays above its box */
+  }
+}
+
+/* Every pane scrolls on its own: the header stays in view, even in a short window */
+body .app > .left,
+body .app > .center,
+body .app > .right {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* The drawer buttons exist only where the panes are drawers */
+.shell-panel-btn {
+  display: none;
+}
+
+/* Phones with a notch (index.html: viewport-fit=cover) */
+body .shell-header {
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Touch screens: bigger targets, and 16px text so iPhones don't zoom into inputs */
+@media (pointer: coarse) {
+  body .shell-nav-btn,
+  body .menu-dropdown button {
+    min-height: 40px;
+  }
+  body .shell-avatar {
+    width: 36px;
+    height: 36px;
+  }
+  body input,
+  body textarea,
+  body select {
+    font-size: 16px;
+  }
+}
+
+/* Deploy menu on touch: the first item opens Continuum Deploy itself */
+.menu-dropdown-lead {
+  font-weight: 600;
+  border-bottom: 1px solid #eee !important;
+}
+
+/* ---------- Tablet portrait and phones ---------- */
+@media (max-width: 899px) {
+  /* Header: two rows — ☰ + title … Bridges + Help + avatar / Interval Setup · + Create · Deploy */
+  body .shell-header {
+    height: auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand actions"
+      "nav nav";
+    row-gap: 6px;
+    padding-bottom: 8px;
+    padding-top: calc(6px + env(safe-area-inset-top));
+  }
+  body .shell-brand {
+    grid-area: brand;
+    padding-left: calc(12px + env(safe-area-inset-left));
+  }
+  body .shell-nav {
+    grid-area: nav;
+    padding: 0 12px;
+  }
+  body .shell-nav-inner {
+    margin-left: 0;
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+  body .shell-actions {
+    grid-area: actions;
+    padding-right: calc(12px + env(safe-area-inset-right));
+  }
+  body .shell-panel-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .shell-icon-btn {
+    width: 36px;
+    height: 36px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #f9f9f9;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    color: #222;
+  }
+  .shell-icon-btn[aria-expanded="true"] {
+    background: #ececec;
+    border-color: #b5b5b5;
+  }
+
+  /* Console: the middle pane alone; the side panes slide in over it */
+  body .app {
+    grid-template-columns: minmax(0, 1fr);
+    position: relative;
+  }
+  body .center {
+    padding: 20px 16px calc(24px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    min-height: 0;
+  }
+  body .app > .left,
+  body .app > .right {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    width: min(320px, 86vw);
+    box-sizing: border-box;
+    z-index: 1100;
+    overflow-y: auto;
+    padding-top: calc(16px + env(safe-area-inset-top));
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    background: #f8fafc;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.18);
+    visibility: hidden; /* closed: not reachable with Tab either */
+    transition:
+      transform 0.22s ease,
+      visibility 0s linear 0.22s;
+  }
+  body .app > .left {
+    left: 0;
+    transform: translateX(-100%);
+    padding-left: calc(12px + env(safe-area-inset-left));
+  }
+  body .app > .right {
+    right: 0;
+    transform: translateX(100%);
+    padding-right: calc(12px + env(safe-area-inset-right));
+  }
+  body .app.app-drawer-projects > .left,
+  body .app.app-drawer-bridges > .right {
+    transform: none;
+    visibility: visible;
+    transition: transform 0.22s ease;
+  }
+  /* Windows (modals) open above the drawers */
+  body .modal-backdrop {
+    z-index: 1200;
+  }
+  .app-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    background: rgba(15, 23, 42, 0.35);
+  }
+
+  /* Pages that scroll under the header: their own height no longer assumes a 48px header */
+  body .github-import-root {
+    min-height: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body .app > .left,
+  body .app > .right {
+    transition: none !important;
+  }
+}
+
+/* ---------- Phones ---------- */
+@media (max-width: 599px) {
+  body .shell-title {
+    font-size: 15px;
+  }
+  body .menu-dropdown {
+    max-width: calc(100vw - 24px);
+  }
+
+  /* Every modal becomes a sheet from the bottom that scrolls inside */
+  body .modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+  body .modal-window,
+  body .modal,
+  body .activate-modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92vh;
+    max-height: 92dvh;
+    overflow-y: auto;
+    box-sizing: border-box;
+    border-radius: 16px 16px 0 0;
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+  }
+  body .modal-actions {
+    flex-wrap: wrap;
+  }
+
+  /* Interval Setup: the choices wrap, the goal box and its button stack */
+  body .radio {
+    display: inline-block;
+    margin: 4px 16px 4px 0;
+  }
+  body .goal-input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  body fieldset {
+    min-width: 0;
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
+/* ---------- Sign-in, the Deploy sign-in page and full-screen states ---------- */
+body .auth-root {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 16px;
+  box-sizing: border-box;
+}
+body .auth-card {
+  width: 100%;
+  max-width: 360px;
+  box-sizing: border-box;
+}
+@media (max-width: 399px) {
+  body .auth-card {
+    padding: 24px 18px;
+  }
+}

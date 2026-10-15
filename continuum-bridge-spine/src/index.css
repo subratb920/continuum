@@ -1,3 +1,9 @@
+/* The console's side panes: the header lines up with them (sizes change in responsive.css) */
+:root {
+  --left-w: 220px;
+  --right-w: 260px;
+}
+
 body {
   margin: 0;
   font-family: system-ui, sans-serif;
@@ -7,7 +13,7 @@ body {
 
 .app {
   display: grid;
-  grid-template-columns: 220px 1fr 260px;
+  grid-template-columns: var(--left-w) minmax(0, 1fr) var(--right-w);
   height: 100vh;
 }
 

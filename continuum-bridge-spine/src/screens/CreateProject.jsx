@@ -7,8 +7,8 @@ import { createProject } from "../api";
  * Create-project form rendered inside the Create Project modal.
  * (First-time users see screens/Welcome.jsx instead.)
  */
-export default function CreateProject({ onCreated, onClose }) {
-  const [name, setName] = useState("");
+export default function CreateProject({ onCreated, onClose, initialName = "", importedFrom = null, contents = null }) {
+  const [name, setName] = useState(initialName);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
@@ -19,7 +19,7 @@ export default function CreateProject({ onCreated, onClose }) {
     setCreating(true);
 
     try {
-      const project = await createProject(name.trim());
+      const project = await createProject(name.trim(), contents ? { source: "device", contents } : {});
       onCreated(project);
     } catch (err) {
       setError(err.message || "Could not create the project. Please try again.");
@@ -40,9 +40,15 @@ export default function CreateProject({ onCreated, onClose }) {
         Continuum Console
       </h2>
 
-      <p style={{ color: "#666", marginBottom: 24 }}>
+      <p style={{ color: "#666", marginBottom: importedFrom ? 8 : 24 }}>
         Add A Project To Run In Continuity.
       </p>
+
+      {importedFrom && (
+        <p style={{ color: "#555", fontSize: 13, marginBottom: 24 }}>
+          From your device ({importedFrom}){contents ? ` · ${contents.entries.length}${contents.truncated ? "+" : ""} files listed` : ""}. Only the names of its files are kept; nothing is uploaded.
+        </p>
+      )}
 
       <input
         autoFocus

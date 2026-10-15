@@ -3,6 +3,11 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/authStore";
 import "./ShellHeader.css";
 import { DEPLOY_AVAILABLE, deployCloudPageUrl, deployConnectionsUrl, deployHomeUrl, deployListUrl, deployProjectUrl } from "../deployLinks";
+import { usePanels } from "./PanelsContext";
+import { importFromDevice } from "../utils/importFromDevice";
+
+/** A screen without hover (phones, tablets): menus open on a tap instead. */
+const noHover = () => typeof window !== "undefined" && window.matchMedia?.("(hover: none)").matches;
 
 // continuum-create (Backstage), if this setup has one: VITE_CREATE_URL. Unset: its menu item is hidden.
 const CREATE_URL = import.meta.env.VITE_CREATE_URL || "";
@@ -51,12 +56,13 @@ function getInitials(email) {
  * selectedProject (console only): Deploy on Railway or GCP deploys that project's
  * GitHub repository; without one it opens that cloud's deployments list.
  */
-export default function ShellHeader({ onManualCreate, selectedProject = null }) {
+export default function ShellHeader({ selectedProject = null }) {
   const { user, authProvider, logout } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
   const [openMenu, setOpenMenu] = useState(null); // null | "create" | "deploy" | "profile"
+  const panels = usePanels();
 
   // Close on outside click (outside any header menu) or Escape
   useEffect(() => {
@@ -87,10 +93,12 @@ export default function ShellHeader({ onManualCreate, selectedProject = null }) 
   // Deploy opens on hover or keyboard focus; a short delay lets the pointer cross to the list
   const deployCloseTimer = useRef(null);
   function openDeploy() {
+    if (noHover()) return; // touch: the tap opens it (hover events would fight the tap)
     clearTimeout(deployCloseTimer.current);
     setOpenMenu("deploy");
   }
   function closeDeploySoon() {
+    if (noHover()) return;
     clearTimeout(deployCloseTimer.current);
     deployCloseTimer.current = setTimeout(() => setOpenMenu((m) => (m === "deploy" ? null : m)), 200);
   }
@@ -124,9 +132,10 @@ export default function ShellHeader({ onManualCreate, selectedProject = null }) 
     setOpenMenu(null);
   }
 
-  function handleManual() {
-    onManualCreate?.();
+  // Import from device: pick a folder; the console's Create Project window opens with its name
+  function handleImportFromDevice() {
     setOpenMenu(null);
+    importFromDevice(() => pathname !== "/console" && navigate("/console"));
   }
 
   function handleSignOut() {
@@ -135,10 +144,28 @@ export default function ShellHeader({ onManualCreate, selectedProject = null }) 
   }
 
   return (
-    <header className="shell-header">
-      <Link to="/" className="shell-title">
-        Continuum Console
-      </Link>
+    <header className={`shell-header${panels.enabled ? " has-panels" : ""}`}>
+      <div className="shell-brand">
+        {panels.enabled && (
+          <button
+            type="button"
+            className="shell-icon-btn shell-panel-btn"
+            aria-label="Projects"
+            title="Projects"
+            aria-controls="console-projects"
+            aria-expanded={panels.panel === "projects"}
+            onClick={() => {
+              setOpenMenu(null);
+              panels.toggle("projects");
+            }}
+          >
+            <span aria-hidden="true">☰</span>
+          </button>
+        )}
+        <Link to="/" className="shell-title">
+          Continuum Console
+        </Link>
+      </div>
 
       {/* Middle column: spans the Interval Setup box — Interval Setup on
           its left edge, + Create and Deploy on its right edge */}
@@ -177,8 +204,8 @@ export default function ShellHeader({ onManualCreate, selectedProject = null }) 
                     </button>
                   )}
 
-                  <button role="menuitem" onClick={handleManual}>
-                    📝 Create Manually
+                  <button role="menuitem" onClick={handleImportFromDevice}>
+                    📁 Import from device
                   </button>
 
                   {/* GitHub sign-ins only; greyed out for email sign-ins */}
@@ -208,7 +235,7 @@ export default function ShellHeader({ onManualCreate, selectedProject = null }) 
               <button
                 type="button"
                 className="shell-nav-btn"
-                onClick={() => openDeployApp(null)}
+                onClick={() => (noHover() ? toggle("deploy") : openDeployApp(null))}
                 aria-haspopup="menu"
                 aria-expanded={openMenu === "deploy"}
                 title="Open Continuum Deploy (all clouds)"
@@ -218,6 +245,12 @@ export default function ShellHeader({ onManualCreate, selectedProject = null }) 
 
               {openMenu === "deploy" && (
                 <div className="menu-dropdown" role="menu">
+                  {/* On a touch screen the button opens this list, so the main page is here too */}
+                  {noHover() && (
+                    <button role="menuitem" className="menu-dropdown-lead" onClick={() => openDeployApp(null)}>
+                      🚀 Open Continuum Deploy (all clouds)
+                    </button>
+                  )}
                   {selectedProject && (
                     <div className="menu-dropdown-note">
                       {deployable ? (
@@ -249,6 +282,20 @@ export default function ShellHeader({ onManualCreate, selectedProject = null }) 
       </nav>
 
       <div className="shell-actions">
+        {panels.enabled && (
+          <button
+            type="button"
+            className="shell-nav-btn shell-panel-btn"
+            aria-controls="console-bridges"
+            aria-expanded={panels.panel === "bridges"}
+            onClick={() => {
+              setOpenMenu(null);
+              panels.toggle("bridges");
+            }}
+          >
+            Bridges
+          </button>
+        )}
         {/* Help — same control style as + Create */}
         <button
           type="button"

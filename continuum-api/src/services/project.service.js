@@ -5,6 +5,7 @@ import { EXECUTION_COLLECTION } from "../models/execution.model.js";
 import { withSystemContext } from "../logging/childLogger.js";
 import { createProjectDoc } from "../models/project.model.js";
 import { AppError } from "../errors/AppError.js";
+import { normalizeContents } from "./projectContents.js";
 
 const MAX_NAME_LENGTH = 100;
 
@@ -28,8 +29,9 @@ export async function createProjectService(db) {
   async function listProjects(userId) {
     const uid = toObjectId(userId);
 
+    // A device project's file list is fetched on its own (getProjectContents); the list carries its summary
     const projects = await projectCol
-      .find({ userId: uid })
+      .find({ userId: uid }, { projection: { "contents.entries": 0 } })
       .sort({ createdAt: -1 }) // 🔥 FIX
       .toArray();
 
@@ -37,39 +39,62 @@ export async function createProjectService(db) {
   }
 
   /**
-   * Create a LOCAL project
+   * Create a LOCAL project, or one imported from the user's device
+   * (source "device", with the file list taken when the folder was picked).
    */
-  async function createProject(userId, name) {
+  async function createProject(userId, name, { source = "local", contents = undefined } = {}) {
     const uid = toObjectId(userId);
 
     if (!name || !name.trim()) {
       throw new Error("Project name is required");
     }
+    if (source !== "local" && source !== "device") {
+      throw new AppError("source must be local or device.", 400, "VALIDATION_ERROR");
+    }
+    const files = source === "device" ? normalizeContents(contents ?? { entries: [] }) : null;
 
     const cleanName = name.trim();
 
-    // 🔥 prevent duplicates
+    // 🔥 prevent duplicates (importing the same folder again refreshes its contents)
     const existing = await projectCol.findOne({
       userId: uid,
       name: cleanName,
-      source: "local",
+      source,
     });
 
     if (existing) {
+      if (files) await projectCol.updateOne({ _id: existing._id }, { $set: { contents: files, updatedAt: new Date() } });
       return existing._id;
     }
 
-    log.info({ userId: uid, name: cleanName }, "Creating project");
+    log.info({ userId: uid, name: cleanName, source, files: files?.fileCount }, "Creating project");
 
     const doc = createProjectDoc({
       name: cleanName,
       userId: uid,
-      source: "local",
+      source,
     });
+    if (files) doc.contents = files;
 
     const { insertedId } = await projectCol.insertOne(doc);
 
     return insertedId;
+  }
+
+  /**
+   * A device project's file list (paths and sizes)
+   */
+  async function getProjectContents(userId, projectId) {
+    if (!ObjectId.isValid(projectId)) {
+      throw new AppError("Invalid project id.", 400, "INVALID_ID");
+    }
+    const project = await projectCol.findOne(
+      { _id: toObjectId(projectId), userId: toObjectId(userId) },
+      { projection: { contents: 1, source: 1 } }
+    );
+    if (!project) throw new AppError("Project not found.", 404, "NOT_FOUND");
+    if (!project.contents) throw new AppError("This project has no contents (only projects imported from a device do).", 404, "NO_CONTENTS");
+    return project.contents;
   }
 
   /**
@@ -215,6 +240,7 @@ export async function createProjectService(db) {
   return {
     listProjects,
     createProject,
+    getProjectContents,
     createProjectFromGithub,
     renameProject,
     deleteProject,

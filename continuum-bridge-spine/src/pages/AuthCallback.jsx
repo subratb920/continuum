@@ -37,7 +37,7 @@ export default function AuthCallback() {
   return (
     <div
       style={{
-        height: "100vh",
+        minHeight: "100dvh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

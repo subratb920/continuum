@@ -123,13 +123,27 @@ export function patchBridgeKeepalive(id, data, tokenOverride) {
    Project APIs
    ================================================== */
 
-export async function createProject(name) {
-  const res = await request("POST", "/projects", { name });
+/**
+ * extra (Import from device): { source: "device", contents: { folder, entries: [[path, size]], truncated } }
+ */
+export async function createProject(name, extra = {}) {
+  const res = await request("POST", "/projects", { name, ...extra });
+  const c = extra.contents;
 
   return normalizeProject({
     ...res,
     name, // backend may not return name
+    source: extra.source ?? "local",
+    // The summary the project list carries (the files themselves load when the tree opens)
+    contents: c
+      ? { folder: c.folder, fileCount: c.entries.length, totalBytes: c.entries.reduce((n, [, s]) => n + s, 0), truncated: c.truncated, importedAt: new Date().toISOString() }
+      : undefined,
   });
+}
+
+/** A device project's files: { folder, importedAt, fileCount, totalBytes, truncated, entries: [[path, size]] } */
+export async function fetchProjectContents(projectId) {
+  return request("GET", `/projects/${projectId}/contents`);
 }
 
 export async function fetchProjects() {

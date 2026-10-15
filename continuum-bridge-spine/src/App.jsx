@@ -11,6 +11,7 @@ import PageShell from "./layout/PageShell";
 
 import ReEntry from "./screens/ReEntry";
 import CreateProject from "./screens/CreateProject";
+import { IMPORT_EVENT } from "./utils/importFromDevice";
 import Welcome from "./screens/Welcome";
 import HelpPage from "./pages/HelpPage";
 import EmptyConsole from "./components/EmptyConsole";
@@ -83,6 +84,16 @@ export default function App() {
   const [bridgeRevision, setBridgeRevision] = useState(0);
 
   const [showCreateProject, setShowCreateProject] = useState(false);
+  // Import from device (header): the Create Project window opens with the folder's name
+  const [createPrefill, setCreatePrefill] = useState(null);
+  useEffect(() => {
+    const onImport = (e) => {
+      setCreatePrefill(e.detail);
+      setShowCreateProject(true);
+    };
+    window.addEventListener(IMPORT_EVENT, onImport);
+    return () => window.removeEventListener(IMPORT_EVENT, onImport);
+  }, []);
   const [showActivateProject, setShowActivateProject] = useState(false);
   const [showEditProject, setShowEditProject] = useState(false);
   const [showDeleteProject, setShowDeleteProject] = useState(false);
@@ -453,7 +464,7 @@ export default function App() {
      ========================================================= */
 
   return (
-    <PageShell selectedProject={selectedProject}>
+    <PageShell selectedProject={selectedProject} panels>
       <ThreePanelLayout
         projects={projects}
         activeProject={activeProject}
@@ -493,13 +504,21 @@ export default function App() {
         <div className="modal-backdrop">
           <div className="modal-window">
             <CreateProject
+              key={createPrefill ? `import:${createPrefill.name}` : "new"}
+              initialName={createPrefill?.name ?? ""}
+              importedFrom={createPrefill?.from ?? null}
+              contents={createPrefill?.contents ?? null}
               onCreated={(project) => {
                 logger.ui("modal onCreated received project", project);
                 setProjects(prev => [...prev, project]);
                 setSelectedProject(project);
                 setShowCreateProject(false);
+                setCreatePrefill(null);
               }}
-              onClose={() => setShowCreateProject(false)}
+              onClose={() => {
+                setShowCreateProject(false);
+                setCreatePrefill(null);
+              }}
             />
           </div>
         </div>

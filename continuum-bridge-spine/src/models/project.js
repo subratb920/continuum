@@ -16,6 +16,9 @@ export function normalizeProject(raw) {
     visibility: raw.visibility ?? "local",
     fullName: raw.fullName ?? null,
 
+    // Imported from a device: { folder, fileCount, totalBytes, truncated, importedAt } (files load separately)
+    contents: raw.contents ?? null,
+
     // existing
     bridgeCount: raw.bridgeCount ?? 0,
   };
@@ -37,6 +40,13 @@ export function getProjectMeta(project) {
     return {
       icon: project.visibility === "private" ? "🔒" : "🔓",
       label: project.visibility,
+    };
+  }
+
+  if (project.source === "device") {
+    return {
+      icon: "💻",
+      label: "device",
     };
   }
 
