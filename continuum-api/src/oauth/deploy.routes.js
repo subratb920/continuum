@@ -4,7 +4,8 @@
 // token Continuum issued to it at sign-in (EdDSA, audience continuum-deploy).
 // Never accepts Continuum's own session tokens, and never changes anything.
 //   GET /deploy/projects            the signed-in user's projects (id, name, GitHub repo)
-//   GET /deploy/projects/:id/scan   app folders in that project's repository, and its
+//   GET /deploy/projects/:id/scan   app folders in that project's repository at the branch's
+//                                   latest commit (reported as commit), and its
 //                                   continuum.deploy.json if present (read with the
 //                                   user's GitHub sign-in; the GitHub token never leaves)
 //   POST /deploy/projects/:id/source  the branch's latest commit, the folders with a
@@ -107,15 +108,20 @@ router.get("/projects/:id/branches", requireDeployToken, async (req, res) => {
   if (info.status === 401) return res.status(409).json({ error: "Continuum's GitHub access has expired. Sign in to Continuum with GitHub again." });
   if (info.status !== 200) return res.status(502).json({ error: `GitHub couldn't show ${repo} (HTTP ${info.status}).` });
   const names = [];
+  const heads = {}; // branch → its latest commit (so Deploy can tell when its settings are behind)
   for (let page = 1; page <= 3; page++) {
     const r = await github(token, `/repos/${repo}/branches?per_page=100&page=${page}`);
     if (r.status !== 200 || !Array.isArray(r.body)) break;
-    names.push(...r.body.map((b) => b.name).filter((n) => typeof n === "string"));
+    for (const b of r.body) {
+      if (typeof b.name !== "string") continue;
+      names.push(b.name);
+      if (typeof b.commit?.sha === "string") heads[b.name] = b.commit.sha;
+    }
     if (r.body.length < 100) break;
   }
   const defaultBranch = info.body.default_branch;
   const branches = [defaultBranch, ...names.filter((n) => n !== defaultBranch).sort((a, b) => a.localeCompare(b))].filter(Boolean);
-  res.json({ repo, defaultBranch, branches, truncated: names.length >= 300 });
+  res.json({ repo, defaultBranch, branches, heads, truncated: names.length >= 300 });
 });
 
 router.get("/projects/:id/scan", requireDeployToken, async (req, res) => {
@@ -135,8 +141,13 @@ router.get("/projects/:id/scan", requireDeployToken, async (req, res) => {
   if (info.status !== 200) return res.status(502).json({ error: `GitHub couldn't show ${repo} (HTTP ${info.status}).` });
   const branch = typeof req.query.branch === "string" && /^[A-Za-z0-9._/-]{1,100}$/.test(req.query.branch) ? req.query.branch : info.body.default_branch;
 
-  const tree = await github(token, `/repos/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`);
-  if (tree.status === 404) return res.status(404).json({ error: `Branch ${branch} wasn't found in ${repo}.` });
+  // The branch's latest commit: everything below is read at that one commit (a push meanwhile can't mix two)
+  const head = await github(token, `/repos/${repo}/git/ref/heads/${branch.split("/").map(encodeURIComponent).join("/")}`);
+  if (head.status === 404) return res.status(404).json({ error: `Branch ${branch} wasn't found in ${repo}.` });
+  if (head.status !== 200 || !head.body?.object?.sha) return res.status(502).json({ error: `GitHub couldn't show branch ${branch} of ${repo} (HTTP ${head.status}).` });
+  const commit = head.body.object.sha;
+
+  const tree = await github(token, `/repos/${repo}/git/trees/${commit}?recursive=1`);
   if (tree.status !== 200) return res.status(502).json({ error: `GitHub couldn't list ${repo} (HTTP ${tree.status}).` });
 
   const folders = new Map();
@@ -156,7 +167,7 @@ router.get("/projects/:id/scan", requireDeployToken, async (req, res) => {
   let manifest = null;
   let manifestError = null;
   if ((tree.body.tree ?? []).some((i) => i.type === "blob" && i.path === MANIFEST)) {
-    const file = await github(token, `/repos/${repo}/contents/${MANIFEST}?ref=${encodeURIComponent(branch)}`);
+    const file = await github(token, `/repos/${repo}/contents/${MANIFEST}?ref=${commit}`);
     try {
       manifest = JSON.parse(Buffer.from(file.body?.content ?? "", "base64").toString("utf8"));
     } catch {
@@ -170,7 +181,7 @@ router.get("/projects/:id/scan", requireDeployToken, async (req, res) => {
   try {
     const texts = await Promise.all(
       filesToRead(tree.body.tree ?? [], SKIP_DIRS).map(async (path) => {
-        const file = await github(token, `/repos/${repo}/contents/${path.split("/").map(encodeURIComponent).join("/")}?ref=${encodeURIComponent(branch)}`);
+        const file = await github(token, `/repos/${repo}/contents/${path.split("/").map(encodeURIComponent).join("/")}?ref=${commit}`);
         return { path, text: file.status === 200 ? Buffer.from(file.body?.content ?? "", "base64").toString("utf8") : "" };
       }),
     );
@@ -184,6 +195,7 @@ router.get("/projects/:id/scan", requireDeployToken, async (req, res) => {
   res.json({
     repo,
     branch,
+    commit,
     defaultBranch: info.body.default_branch,
     manifest,
     manifestError,
