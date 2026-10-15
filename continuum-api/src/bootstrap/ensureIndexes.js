@@ -50,6 +50,14 @@ export async function ensureIndexes(db) {
     }
   }
 
+  // New Project wizard: the hourly limit counts a user's recent creations
+  const creations = db.collection("project_creations");
+  if (!(await creations.indexes().catch(() => [])).find((i) => i.name === "user_created")) {
+    await creations.createIndex({ userId: 1, createdAt: -1 }, { name: "user_created" });
+    log.info("🧱 Created index: project_creations.userId+createdAt");
+    created++;
+  }
+
   if (created === 0) {
     log.info("✅ All indexes already exist");
   }

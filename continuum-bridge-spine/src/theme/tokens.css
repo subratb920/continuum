@@ -293,6 +293,66 @@
   --gh-danger-soft: #da363322;
 }
 
+/* Technology logos in the New Project wizard: each brand's own colour, the
+   same in every theme (black/white logos use the text colour instead) */
+:root {
+  --logo-astro: #bc52ee;
+  --logo-axios: #5a29e4;
+  --logo-chakra: #319795;
+  --logo-css: #663399;
+  --logo-docker: #2496ed;
+  --logo-dotenv: #d4bc1f;
+  --logo-dotnet: #512bd4;
+  --logo-drizzle: #a8c535;
+  --logo-celery: #37814a;
+  --logo-fastapi: #009688;
+  --logo-gatsby: #663399;
+  --logo-gin: #008ecf;
+  --logo-git: #f05032;
+  --logo-go: #00add8;
+  --logo-graphql: #e10098;
+  --logo-hono: #e36002;
+  --logo-html: #e34f26;
+  --logo-javascript: #e6c700;
+  --logo-kotlin: #7f52ff;
+  --logo-maven: #c71a36;
+  --logo-mongodb: #47a248;
+  --logo-mongoose: #880000;
+  --logo-mui: #007fff;
+  --logo-mysql: #4479a1;
+  --logo-nestjs: #e0234e;
+  --logo-node: #5fa04e;
+  --logo-npm: #cb3837;
+  --logo-nuxt: #00dc82;
+  --logo-passport: #34e27a;
+  --logo-pino: #687634;
+  --logo-pnpm: #f69220;
+  --logo-postgresql: #4169e1;
+  --logo-prettier: #e5a52e;
+  --logo-pydantic: #e92063;
+  --logo-pytest: #0a9edc;
+  --logo-python: #3776ab;
+  --logo-react: #3ec6ea;
+  --logo-react-hook-form: #ec5990;
+  --logo-react-router: #ca4245;
+  --logo-redis: #ff4438;
+  --logo-redux: #764abc;
+  --logo-ruff: #d7ff64;
+  --logo-spring: #6db33f;
+  --logo-sqlalchemy: #d71f00;
+  --logo-sqlite: #0f80cc;
+  --logo-svelte: #ff3e00;
+  --logo-tailwind: #06b6d4;
+  --logo-tanstack: #ff4154;
+  --logo-typescript: #3178c6;
+  --logo-uv: #de5fe9;
+  --logo-vite: #646cff;
+  --logo-vitest: #6e9f18;
+  --logo-vue: #4fc08d;
+  --logo-yarn: #2c8ebf;
+  --logo-zod: #3e67b1;
+}
+
 :root {
   color-scheme: var(--color-scheme);
 }

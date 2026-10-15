@@ -53,7 +53,8 @@ async function request(method, path, body, tokenOverride) {
   }
 
   if (!res.ok) {
-    throw new Error(data?.error || "Request failed");
+    // field: which input was wrong (e.g. the New Project wizard highlights it)
+    throw Object.assign(new Error(data?.error || "Request failed"), { field: data?.field ?? null, code: data?.code ?? null });
   }
 
   return data;
@@ -209,4 +210,48 @@ export async function deactivateProject() {
 /** Contact us → Request a callback: { name, phone, bestTime: asap|morning|afternoon|evening, timezone, note } */
 export async function requestCallback(details) {
   return request("POST", "/support/callbacks", details);
+}
+
+/* ==================================================
+   New Project wizard
+   ================================================== */
+
+/** What Continuum can create: kinds, variants, options, details, dependencies. */
+export async function fetchCreateCatalog() {
+  return request("GET", "/create/catalog");
+}
+
+/** The files a set of choices would produce: { name, files: [[path, size]] } */
+export async function previewNewProject(choices) {
+  return request("POST", "/create/preview", choices);
+}
+
+/**
+ * The generated project as a fetch Response holding a .tar.gz
+ * (read it with utils/deviceFolder.js filesOfTarball). Headers:
+ * X-Project-Name, X-Commit (when git was initialised).
+ */
+export async function generateNewProject(choices) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(`${API_BASE}/create/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(token && { Authorization: `Bearer ${token}` }) },
+    body: JSON.stringify(choices),
+  });
+  if (res.status === 401) throw new Error("UNAUTHORIZED");
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw Object.assign(new Error(data?.error || "The project couldn't be created."), { field: data?.field ?? null });
+  }
+  return res;
+}
+
+/** Whether the user can create GitHub repositories: { connected, login?, reason? } */
+export async function fetchGithubCreateStatus() {
+  return request("GET", "/create/github");
+}
+
+/** Is this repository name free on the user's GitHub? { name, owner, available } */
+export async function checkGithubRepoName(name) {
+  return request("GET", `/create/github/available?name=${encodeURIComponent(name)}`);
 }

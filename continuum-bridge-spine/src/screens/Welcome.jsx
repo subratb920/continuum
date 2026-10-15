@@ -56,6 +56,11 @@ export default function Welcome({ projectCount = 0, activeProject, onCreated, on
             A project is a long-lived piece of software work with its own Bridge Spine.
           </p>
 
+          <Link to="/new" className="welcome-btn welcome-new-project">
+            Start from a template: React, Node, Spring, Python…
+          </Link>
+          <p className="welcome-muted welcome-or">or just name it:</p>
+
           <input
             className="welcome-input"
             value={name}

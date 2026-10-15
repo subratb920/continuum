@@ -16,6 +16,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
   clock: "auto", // auto | 12 | 24
   // Projects
   folderOptionDefault: false, // tick "Create a folder on this device" by default
+  newProjectGit: true, // New project wizard: "Initialise a git repository" starts ticked
   openFilesOnSelect: false, // open a device project's files when it's selected
   // Developer
   debugLogs: false,

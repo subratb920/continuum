@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { assertProject } from "./utils/assertions";
 
@@ -24,6 +24,8 @@ import EditProjectModal from "./components/EditProjectModal";
 import DeleteProjectModal from "./components/DeleteProjectModal";
 import AuthCallback from "./pages/AuthCallback";
 import GithubImport from "./screens/GithubImport";
+// The wizard (and its technology logos) loads only when /new is opened
+const NewProject = lazy(() => import("./screens/NewProject/NewProject"));
 
 import {
   fetchActiveProject,
@@ -95,6 +97,13 @@ export default function App() {
     window.addEventListener(IMPORT_EVENT, onImport);
     return () => window.removeEventListener(IMPORT_EVENT, onImport);
   }, []);
+  // The wizard's "Empty project" card: the console opens with the name-only window
+  useEffect(() => {
+    if (pathname === "/console" && locationState?.createEmpty) {
+      setShowCreateProject(true);
+      navigate("/console", { replace: true, state: null });
+    }
+  }, [pathname, locationState, navigate]);
   const [showActivateProject, setShowActivateProject] = useState(false);
   const [showEditProject, setShowEditProject] = useState(false);
   const [showDeleteProject, setShowDeleteProject] = useState(false);
@@ -387,6 +396,30 @@ export default function App() {
   }
 
   /* =========================================================
+     ✨ NEW PROJECT (/new) — the wizard: kind, type, dependencies,
+     details, git, then the project is written to a device folder
+     ========================================================= */
+
+  if (pathname === "/new") {
+    return (
+      <PageShell scroll>
+        <Suspense fallback={null}>
+        <NewProject
+          onCreated={(project) => {
+            setProjects((prev) => [...prev.filter((p) => p._id !== project._id), project]);
+            setSelectedProject(project);
+            navigate("/console");
+          }}
+          onEmptyProject={() => navigate("/console", { state: { createEmpty: true } })}
+          onCancel={() => navigate(locationState?.from ?? "/console")}
+        />
+        </Suspense>
+        {draftModal}
+      </PageShell>
+    );
+  }
+
+  /* =========================================================
      🏠 HOME (/) — welcome page, always shown after sign-in.
      The console lives at /console.
      ========================================================= */
@@ -474,7 +507,7 @@ export default function App() {
         bridgeRevision={bridgeRevision}
         onSelectProject={setSelectedProject}
         onSelectBridge={setSelectedBridge}
-        onCreateProject={() => setShowCreateProject(true)}
+        onCreateProject={() => navigate("/new")}
         onActivateProject={() => setShowActivateProject(true)}
         onEditProject={() => setShowEditProject(true)}
         onDeleteProject={() => setShowDeleteProject(true)}
@@ -491,7 +524,7 @@ export default function App() {
             onOpenInterval={() => navigate("/console")}
           />
         ) : projects.length === 0 ? (
-          <EmptyConsole onCreateProject={() => setShowCreateProject(true)} />
+          <EmptyConsole onCreateProject={() => navigate("/new")} />
         ) : isContextReady && hasActiveProject ? (
           <ReEntry
             key={activeBridge ? activeBridge._id : "idle"}

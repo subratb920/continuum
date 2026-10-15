@@ -206,6 +206,7 @@ function ProjectsSection({ prefs, set }) {
     <>
       <h3 className="pcard-section">New projects</h3>
       <Toggle checked={prefs.folderOptionDefault} onChange={(v) => set("folderOptionDefault", v)} label="Create a folder on this device, by default" hint="Ticks the option in Create project and Import from GitHub (you can still untick it)." />
+      <Toggle checked={prefs.newProjectGit} onChange={(v) => set("newProjectGit", v)} label="Initialise git in new projects, by default" hint="Ticks “Initialise a git repository” in the New project wizard (you can still untick it)." />
       <h3 className="pcard-section">Projects pane</h3>
       <Toggle checked={prefs.openFilesOnSelect} onChange={(v) => set("openFilesOnSelect", v)} label="Open a device project's files when it's selected" hint="Off: they open with the ▸ next to the project." />
       <h3 className="pcard-section">Your projects</h3>

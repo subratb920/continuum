@@ -9,6 +9,7 @@ export function errorMiddleware(err, req, res, next) {
     return res.status(err.statusCode).json({
       error: err.message,
       code: err.code,
+      ...(err.field && { field: err.field }), // e.g. the wizard field to highlight
     });
   }
 

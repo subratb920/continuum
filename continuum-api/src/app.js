@@ -12,6 +12,7 @@ import githubRoutes from "./auth/github.routes.js";
 import oauthRoutes from "./oauth/oauth.routes.js";
 import deployRoutes from "./oauth/deploy.routes.js";
 import supportRoutes from "./routes/support.routes.js";
+import createRoutes from "./create/routes.js";
 
 
 const app = express();
@@ -32,6 +33,7 @@ app.use("/projects", requireAuth, projectRoutes);
 app.use("/execution", requireAuth, executionRoutes);
 app.use("/bridges", requireAuth, bridgeRoutes);
 app.use("/support", requireAuth, supportRoutes); // Contact us: callback requests
+app.use("/create", requireAuth, createRoutes); // New Project wizard: catalogue and generated projects
 
 // ❗ MUST BE LAST
 app.use(errorMiddleware);
