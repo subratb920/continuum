@@ -104,14 +104,35 @@ export function resolvedTheme(prefs = getPreferences()) {
 }
 
 /** Appearance settings on <html>: data-theme (picks a block in theme/tokens.css) and classes (appearance.css). */
+/** A <meta name> in the page's head, created if missing */
+function setMeta(name, content) {
+  if (!content) return;
+  let m = document.head.querySelector(`meta[name="${name}"]`);
+  if (!m) {
+    m = document.createElement("meta");
+    m.name = name;
+    document.head.appendChild(m);
+  }
+  m.content = content;
+}
+
 export function applyAppearance(prefs = getPreferences()) {
   const root = document.documentElement;
   root.dataset.theme = resolvedTheme(prefs);
+  const css = getComputedStyle(root);
   // Remembered for index.html, which paints this colour before the app loads (no flash, any theme)
-  const page = getComputedStyle(root).getPropertyValue("--page").trim();
+  const page = css.getPropertyValue("--page").trim();
   root.style.backgroundColor = page; // the canvas around the app (overscroll) follows the theme too
+  // The browser's own bars (Android address bar, Safari's tab bar, an installed app's title bar)
+  // take the header's colour, and its menus and scrollbars the theme's light or dark
+  const header = css.getPropertyValue("--header").trim();
+  const scheme = css.getPropertyValue("--color-scheme").trim();
+  setMeta("theme-color", header);
+  setMeta("color-scheme", scheme);
   try {
     localStorage.setItem("continuum_theme_page", page);
+    localStorage.setItem("continuum_theme_header", header);
+    localStorage.setItem("continuum_theme_scheme", scheme);
   } catch {
     /* no early colour next time */
   }

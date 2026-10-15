@@ -1,11 +1,13 @@
 import ProjectList from "../components/ProjectList";
 import BridgeSpine from "../components/BridgeSpine";
 import { usePanels } from "./PanelsContext";
+import { CreatePane, DeployPane } from "./ViewPanes";
 
 /**
- * The console: projects · Interval Setup · Bridge Spine. Under 900px the two
- * side panes become drawers (opened from the header), with a scrim behind
- * them; choosing a project or a bridge closes the drawer.
+ * The console: projects · Interval Setup · Bridge Spine. Under 900px one pane
+ * at a time fills the main area, chosen from the header's ☰ menu: Interval
+ * Setup (the default), Projects, Bridges, Create or Deploy. Choosing a project
+ * or a bridge goes back to Interval Setup.
  */
 export default function ThreePanelLayout({
   projects,
@@ -25,7 +27,7 @@ export default function ThreePanelLayout({
   const { panel, close } = usePanels();
 
   return (
-    <div className={`app${panel ? ` app-drawer-${panel}` : ""}`}>
+    <div className={`app${panel ? ` app-view-${panel}` : ""}`}>
       <aside className="left" aria-label={leftPane ? "Navigation" : "Projects"} id="console-projects">
         {leftPane ?? (
         <ProjectList
@@ -46,7 +48,7 @@ export default function ThreePanelLayout({
       </aside>
 
       <main className="center">
-        {children}
+        {panel === "create" ? <CreatePane selectedProject={selectedProject} /> : panel === "deploy" ? <DeployPane selectedProject={selectedProject} /> : children}
       </main>
 
       <aside className="right" aria-label="Bridge Spine" id="console-bridges">
@@ -61,7 +63,6 @@ export default function ThreePanelLayout({
         />
       </aside>
 
-      {panel && <div className="app-scrim" onClick={close} aria-hidden="true" />}
     </div>
   );
 }

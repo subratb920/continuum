@@ -4,6 +4,32 @@
 
 .interval-setup {
   max-width: 720px;
+  min-width: 0;
+}
+
+/* The setup card: the app's own card style (not the browser's grooved fieldset),
+   and allowed to shrink to the screen — a fieldset otherwise refuses to be narrower
+   than its widest content, pushing its border past the edge of a phone */
+.interval-fieldset {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  overflow-wrap: anywhere;
+}
+
+.interval-fieldset .interval-section:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 599px) {
+  .interval-fieldset {
+    padding: 14px 12px;
+  }
 }
 
 .interval-title {
@@ -54,9 +80,41 @@
 
 .goal-textarea {
   flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
   resize: vertical;
-  padding: 8px;
+  padding: 8px 10px;
+  font: inherit;
   font-size: 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.goal-textarea:focus {
+  outline: none;
+  border-color: var(--focus);
+  box-shadow: 0 0 0 1px rgb(var(--accent-rgb) / 0.2);
+}
+
+/* "Add": the app's secondary button */
+.goal-add {
+  align-self: flex-start;
+  padding: 8px 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.goal-add:hover:not(:disabled) {
+  background: var(--hover);
+  border-color: var(--border-emphasis);
 }
 
 .session-goals {
@@ -159,6 +217,8 @@ button.primary:disabled {
   padding: 8px 10px;
   border-radius: 6px;
   border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
   font-size: 13px;
   outline: none;
   transition: border-color 0.15s ease;

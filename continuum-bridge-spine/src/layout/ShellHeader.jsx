@@ -2,34 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/authStore";
 import "./ShellHeader.css";
-import { DEPLOY_AVAILABLE, deployCloudPageUrl, deployConnectionsUrl, deployHomeUrl, deployListUrl, deployProjectUrl } from "../deployLinks";
 import { usePanels } from "./PanelsContext";
-import { importFromDevice } from "../utils/importFromDevice";
+import { CREATE_URL, DEPLOY_AVAILABLE, DEPLOY_TARGETS, useShellActions } from "./shellActions";
 import { ContactCard, ProfileCard, SettingsCard, SupportCard } from "../components/ProfileCards";
 import { BUILD } from "../utils/support";
 
 /** A screen without hover (phones, tablets): menus open on a tap instead. */
 const noHover = () => typeof window !== "undefined" && window.matchMedia?.("(hover: none)").matches;
-
-// continuum-create (Backstage), if this setup has one: VITE_CREATE_URL. Unset: its menu item is hidden.
-const CREATE_URL = import.meta.env.VITE_CREATE_URL || "";
-
-// Deploy menu: AWS, Railway and GCP are live. deploysProject: deploying a selected
-// project works there (Railway and GCP; AWS opens its connections). soon: not supported
-// yet; opens that cloud's own page in Continuum Deploy, which says so.
-const DEPLOY_TARGETS = [
-  { label: "AWS", cloud: "aws" },
-  { label: "Railway", cloud: "railway", deploysProject: true },
-  { label: "GCP", cloud: "gcp", deploysProject: true },
-  { label: "Microsoft Azure", cloud: "azure", soon: true },
-  { label: "Vercel", cloud: "vercel", soon: true },
-  { label: "Netlify", cloud: "netlify", soon: true },
-  { label: "Cloudflare", cloud: "cloudflare", soon: true },
-  { label: "DigitalOcean", cloud: "digitalocean", soon: true },
-  { label: "Heroku", cloud: "heroku", soon: true },
-  { label: "Render", cloud: "render", soon: true },
-  { label: "Oracle Cloud", cloud: "oracle", soon: true },
-];
 
 /**
  * Two letters for the avatar, from the email's local part:
@@ -53,8 +32,11 @@ function getInitials(email) {
  * ShellHeader
  * -----------
  * Shared header on every signed-in page (see PageShell).
- * Actions: + Create menu, Help, and a profile avatar whose menu holds
- * the email and Sign out. Only one menu is open at a time.
+ * Wide screens: Interval Setup, + Create and Deploy, and the profile avatar
+ * (whose menu holds Help, Settings, Support… and Sign out). Small screens
+ * (under 900px): ☰ · title · avatar; the ☰ menu shows Interval Setup,
+ * Projects, Bridges, Create or Deploy in the main area (see ThreePanelLayout).
+ * Only one menu is open at a time.
  * selectedProject (console only): Deploy on Railway or GCP deploys that project's
  * GitHub repository; without one it opens that cloud's deployments list.
  */
@@ -63,7 +45,7 @@ export default function ShellHeader({ selectedProject = null }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  const [openMenu, setOpenMenu] = useState(null); // null | "create" | "deploy" | "profile"
+  const [openMenu, setOpenMenu] = useState(null); // null | "nav" | "create" | "deploy" | "profile"
   const panels = usePanels();
 
   // Close on outside click (outside any header menu) or Escape
@@ -106,38 +88,23 @@ export default function ShellHeader({ selectedProject = null }) {
   }
   useEffect(() => () => clearTimeout(deployCloseTimer.current), []);
 
-  // Only a project imported from GitHub has a repository to deploy
-  const deployable = selectedProject?.source === "github" ? selectedProject : null;
+  const actions = useShellActions(selectedProject, () => setOpenMenu(null));
+  const deployable = actions.deployable;
 
-  function openDeployApp(target) {
+  // Small screens: the ☰ menu's views (the console's panes, shown in the main area)
+  const VIEWS = [
+    ["setup", "Interval Setup", "⏱"],
+    ["projects", "Projects", "📂"],
+    ["bridges", "Bridges", "🌉"],
+    ["create", "Create", "＋"],
+    ...(DEPLOY_AVAILABLE ? [["deploy", "Deploy", "🚀"]] : []),
+  ];
+  const onConsole = panels.enabled && pathname === "/console";
+  const currentView = onConsole ? (panels.panel ?? "setup") : null;
+  function showView(view) {
     setOpenMenu(null);
-    // Deploy itself opens the start screen. A cloud that deploys: the selected project's deploy page,
-    // or (none selected) that cloud's deployments. Clouds that don't deploy yet open their connections.
-    // GCP without a project: its own step-by-step page (account, infrastructure, projects)
-    const url = !target
-      ? deployHomeUrl()
-      : target.soon
-        ? deployCloudPageUrl(target.cloud)
-        : !target.deploysProject
-          ? deployConnectionsUrl(target.cloud)
-          : deployable
-            ? deployProjectUrl(deployable._id, target.cloud)
-            : target.cloud === "gcp"
-              ? deployCloudPageUrl("gcp")
-              : deployListUrl(target.cloud);
-    // New tab, so a running interval here is never interrupted
-    window.open(url, "_blank", "noopener");
-  }
-
-  function handleExternalCreate() {
-    if (CREATE_URL) window.open(CREATE_URL, "_blank", "noopener");
-    setOpenMenu(null);
-  }
-
-  // Import from device: pick a folder; the console's Create Project window opens with its name
-  function handleImportFromDevice() {
-    setOpenMenu(null);
-    importFromDevice(() => pathname !== "/console" && navigate("/console"));
+    if (onConsole) panels.open(view === "setup" ? null : view);
+    else navigate("/console", { state: { view: view === "setup" ? null : view } });
   }
 
   function handleSignOut() {
@@ -178,22 +145,35 @@ export default function ShellHeader({ selectedProject = null }) {
   return (
     <header className={`shell-header${panels.enabled ? " has-panels" : ""}`}>
       <div className="shell-brand">
-        {panels.enabled && (
+        <div className="shell-menu shell-views">
           <button
             type="button"
             className="shell-icon-btn shell-panel-btn"
-            aria-label="Projects"
-            title="Projects"
-            aria-controls="console-projects"
-            aria-expanded={panels.panel === "projects"}
-            onClick={() => {
-              setOpenMenu(null);
-              panels.toggle("projects");
-            }}
+            aria-label="Menu"
+            title="Menu"
+            aria-haspopup="menu"
+            aria-expanded={openMenu === "nav"}
+            onClick={() => toggle("nav")}
           >
             <span aria-hidden="true">☰</span>
           </button>
-        )}
+          {openMenu === "nav" && (
+            <div className="menu-dropdown views-menu" role="menu" aria-label="Show">
+              {VIEWS.map(([id, label, icon]) => (
+                <button
+                  key={id}
+                  role="menuitem"
+                  className="profile-menu-item"
+                  aria-current={currentView === id ? "page" : undefined}
+                  onClick={() => showView(id)}
+                >
+                  <span className="profile-menu-icon" aria-hidden="true">{icon}</span>
+                  <span className="profile-menu-label">{label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <Link to="/" className="shell-title">
           Continuum Console
         </Link>
@@ -230,13 +210,17 @@ export default function ShellHeader({ selectedProject = null }) {
 
               {openMenu === "create" && (
                 <div className="menu-dropdown" role="menu">
+                  <button role="menuitem" onClick={actions.newProject}>
+                    ✨ New project…
+                  </button>
+
                   {CREATE_URL && (
-                    <button role="menuitem" onClick={handleExternalCreate}>
+                    <button role="menuitem" onClick={actions.externalCreate}>
                       🚀 Create via Backstage
                     </button>
                   )}
 
-                  <button role="menuitem" onClick={handleImportFromDevice}>
+                  <button role="menuitem" onClick={actions.importFromDevice}>
                     📁 Import from device
                   </button>
 
@@ -244,10 +228,7 @@ export default function ShellHeader({ selectedProject = null }) {
                   <button
                     role="menuitem"
                     disabled={authProvider !== "github"}
-                    onClick={() => {
-                      setOpenMenu(null);
-                      navigate("/import", { state: { from: pathname } });
-                    }}
+                    onClick={actions.importFromGithub}
                   >
                     📦 Import Repo (Github)
                   </button>
@@ -267,7 +248,7 @@ export default function ShellHeader({ selectedProject = null }) {
               <button
                 type="button"
                 className="shell-nav-btn"
-                onClick={() => (noHover() ? toggle("deploy") : openDeployApp(null))}
+                onClick={() => (noHover() ? toggle("deploy") : actions.openDeployApp(null))}
                 aria-haspopup="menu"
                 aria-expanded={openMenu === "deploy"}
                 title="Open Continuum Deploy (all clouds)"
@@ -279,7 +260,7 @@ export default function ShellHeader({ selectedProject = null }) {
                 <div className="menu-dropdown" role="menu">
                   {/* On a touch screen the button opens this list, so the main page is here too */}
                   {noHover() && (
-                    <button role="menuitem" className="menu-dropdown-lead" onClick={() => openDeployApp(null)}>
+                    <button role="menuitem" className="menu-dropdown-lead" onClick={() => actions.openDeployApp(null)}>
                       🚀 Open Continuum Deploy (all clouds)
                     </button>
                   )}
@@ -299,7 +280,7 @@ export default function ShellHeader({ selectedProject = null }) {
                       key={target.label}
                       role="menuitem"
                       disabled={!target.cloud}
-                      onClick={() => openDeployApp(target)}
+                      onClick={() => actions.openDeployApp(target)}
                       title={target.soon ? `${target.label}: coming soon` : target.deploysProject && deployable ? `Deploy ${deployable.name} on ${target.label}` : undefined}
                     >
                       ☁️ Deploy on {target.label}
@@ -314,33 +295,6 @@ export default function ShellHeader({ selectedProject = null }) {
       </nav>
 
       <div className="shell-actions">
-        {panels.enabled && (
-          <button
-            type="button"
-            className="shell-nav-btn shell-panel-btn"
-            aria-controls="console-bridges"
-            aria-expanded={panels.panel === "bridges"}
-            onClick={() => {
-              setOpenMenu(null);
-              panels.toggle("bridges");
-            }}
-          >
-            Bridges
-          </button>
-        )}
-        {/* Help — same control style as + Create */}
-        <button
-          type="button"
-          className="shell-nav-btn"
-          aria-current={pathname === "/help" ? "page" : undefined}
-          onClick={() => {
-            setOpenMenu(null);
-            navigate("/help");
-          }}
-        >
-          Help
-        </button>
-
         {/* Profile avatar */}
         <div className="shell-menu">
           <button
@@ -391,6 +345,18 @@ export default function ShellHeader({ selectedProject = null }) {
                 <button role="menuitem" className="profile-menu-item" onClick={() => openCard("settings")}>
                   <span className="profile-menu-icon" aria-hidden="true">⚙</span>
                   <span className="profile-menu-label">Settings</span>
+                </button>
+                <button
+                  role="menuitem"
+                  className="profile-menu-item"
+                  aria-current={pathname === "/help" ? "page" : undefined}
+                  onClick={() => {
+                    setOpenMenu(null);
+                    navigate("/help");
+                  }}
+                >
+                  <span className="profile-menu-icon" aria-hidden="true">❔</span>
+                  <span className="profile-menu-label">Help</span>
                 </button>
                 <button role="menuitem" className="profile-menu-item" onClick={() => openCard("support")}>
                   <span className="profile-menu-icon" aria-hidden="true">🛟</span>

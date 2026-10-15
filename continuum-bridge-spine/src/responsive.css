@@ -77,29 +77,23 @@ body .shell-header {
 
 /* ---------- Tablet portrait and phones ---------- */
 @media (max-width: 899px) {
-  /* Header: two rows — ☰ + title … Bridges + Help + avatar / Interval Setup · + Create · Deploy */
+  /* Header: one row — ☰ + title … avatar. Interval Setup, Create, Deploy, Projects
+     and Bridges are in the ☰ menu (ShellHeader), shown in the main area */
   body .shell-header {
     height: auto;
+    min-height: 52px;
     grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "brand actions"
-      "nav nav";
-    row-gap: 6px;
-    padding-bottom: 8px;
-    padding-top: calc(6px + env(safe-area-inset-top));
+    grid-template-areas: "brand actions";
+    align-items: center;
+    padding-top: env(safe-area-inset-top);
   }
   body .shell-brand {
     grid-area: brand;
+    gap: 8px;
     padding-left: calc(12px + env(safe-area-inset-left));
   }
   body .shell-nav {
-    grid-area: nav;
-    padding: 0 12px;
-  }
-  body .shell-nav-inner {
-    margin-left: 0;
-    flex-wrap: wrap;
-    row-gap: 6px;
+    display: none;
   }
   body .shell-actions {
     grid-area: actions;
@@ -125,60 +119,51 @@ body .shell-header {
     background: var(--selected-neutral);
     border-color: var(--border-emphasis);
   }
+  /* The ☰ menu opens under the button, from the left */
+  body .views-menu {
+    left: 0;
+    right: auto;
+    min-width: 220px;
+    padding: 4px;
+  }
+  body .views-menu .profile-menu-item[aria-current="page"] {
+    background: var(--selected);
+    font-weight: 600;
+  }
 
-  /* Console: the middle pane alone; the side panes slide in over it */
+  /* Console: one pane at a time fills the main area (Interval Setup by default) */
   body .app {
     grid-template-columns: minmax(0, 1fr);
-    position: relative;
-  }
-  body .center {
-    padding: 20px 16px calc(24px + env(safe-area-inset-bottom));
-    overflow-y: auto;
-    min-height: 0;
   }
   body .app > .left,
   body .app > .right {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    width: min(320px, 86vw);
-    box-sizing: border-box;
-    z-index: 1100;
+    display: none;
+  }
+  body .app.app-view-projects > .left,
+  body .app.app-view-bridges > .right {
+    display: block;
+    width: auto;
+    border: none;
+    padding: 16px calc(16px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+    background: var(--page);
+  }
+  body .app.app-view-projects > .center,
+  body .app.app-view-bridges > .center {
+    display: none;
+  }
+  body .center {
+    padding: 20px calc(16px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
     overflow-y: auto;
-    padding-top: calc(16px + env(safe-area-inset-top));
-    padding-bottom: calc(16px + env(safe-area-inset-bottom));
-    background: var(--pane);
-    box-shadow: 0 0 40px rgb(var(--shadow-rgb) / 0.18);
-    visibility: hidden; /* closed: not reachable with Tab either */
-    transition:
-      transform 0.22s ease,
-      visibility 0s linear 0.22s;
+    min-height: 0;
   }
-  body .app > .left {
-    left: 0;
-    transform: translateX(-100%);
-    padding-left: calc(12px + env(safe-area-inset-left));
+  /* Interval Setup centred, equal margins on both sides (tablets: wider than the card) */
+  body .interval-setup {
+    margin-left: auto;
+    margin-right: auto;
   }
-  body .app > .right {
-    right: 0;
-    transform: translateX(100%);
-    padding-right: calc(12px + env(safe-area-inset-right));
-  }
-  body .app.app-drawer-projects > .left,
-  body .app.app-drawer-bridges > .right {
-    transform: none;
-    visibility: visible;
-    transition: transform 0.22s ease;
-  }
-  /* Windows (modals) open above the drawers */
+  /* Windows (modals) above everything */
   body .modal-backdrop {
     z-index: 1200;
-  }
-  .app-scrim {
-    position: fixed;
-    inset: 0;
-    z-index: 1050;
-    background: var(--scrim);
   }
 
   /* Pages that scroll under the header: their own height no longer assumes a 48px header */

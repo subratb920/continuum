@@ -96,7 +96,7 @@ export default function IntervalSetup({
 
       <fieldset
         disabled={!isExecutable}
-        className={!isExecutable ? "disabled" : ""}
+        className={`interval-fieldset${!isExecutable ? " disabled" : ""}`}
       >
         {/* Interval Mode */}
         <section className="interval-section">
@@ -138,7 +138,7 @@ export default function IntervalSetup({
               placeholder="Describe what you want to achieve in this interval…"
               rows={4}
             />
-            <button type="button" onClick={addGoal}>
+            <button type="button" className="goal-add" onClick={addGoal}>
               Add
             </button>
           </div>

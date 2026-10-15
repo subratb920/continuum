@@ -8,6 +8,10 @@
   <link rel="icon" href="/favicon.ico" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>continuum-bridge-spine</title>
+  <!-- The browser's bars (address bar, tab bar, installed app's title bar): the header's colour.
+       Dark by default; src/utils/preferences.js keeps them in step with the chosen theme -->
+  <meta name="theme-color" content="#171717" />
+  <meta name="color-scheme" content="dark" />
   <!-- The colour theme before anything draws (no flash): the theme id and its page colour,
        remembered by src/utils/preferences.js (Settings → Appearance); works for any theme -->
   <script>
@@ -17,6 +21,11 @@
       document.documentElement.dataset.theme = t;
       var bg = localStorage.getItem("continuum_theme_page");
       if (bg) document.documentElement.style.backgroundColor = bg;
+      // The browser's bars and menus in the theme's colours from the first paint
+      var header = localStorage.getItem("continuum_theme_header");
+      var scheme = localStorage.getItem("continuum_theme_scheme");
+      if (header) document.querySelector('meta[name="theme-color"]').content = header;
+      if (scheme) document.querySelector('meta[name="color-scheme"]').content = scheme;
     } catch (e) {
       document.documentElement.dataset.theme = "dark";
     }

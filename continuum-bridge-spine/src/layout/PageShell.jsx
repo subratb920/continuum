@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import ShellHeader from "./ShellHeader";
 import { PanelsContext } from "./PanelsContext";
 
@@ -12,13 +13,22 @@ import "./PageShell.css";
  *   GitHub import); leave off for the three-panel console.
  * - selectedProject: the project chosen in the console's project pane;
  *   Deploy on <cloud> deploys it.
- * - panels: the console's side panes, which open as drawers on narrow screens.
+ * - panels: the console's side panes; on narrow screens one pane at a time
+ *   fills the main area, chosen from the header's ☰ menu.
  */
 export default function PageShell({ children, scroll = false, selectedProject = null, panels = false }) {
-  const [panel, setPanel] = useState(null);
+  // Small screens: which pane fills the main area (null: Interval Setup). Another
+  // page's ☰ menu brings its choice along (navigate state).
+  const { state: navState, pathname } = useLocation();
+  const navigate = useNavigate();
+  const [panel, setPanel] = useState(() => (panels ? (navState?.view ?? null) : null));
   const close = useCallback(() => setPanel(null), []);
+  // Taken once (above, when the console mounts); dropped from history so a reload shows Interval Setup
+  useEffect(() => {
+    if (panels && navState?.view) navigate(pathname, { replace: true, state: null });
+  }, [panels, navState, pathname, navigate]);
 
-  // Esc closes an open drawer; widening the window past the drawer size closes it too
+  // Esc goes back to Interval Setup; widening the window past 900px does too (all panes show)
   useEffect(() => {
     if (!panel) return;
     const onKey = (e) => e.key === "Escape" && close();

@@ -36,12 +36,20 @@
   padding: 8px 12px;
 }
 
+/* Calm, not shouting: the same weight and colour as the rest of the window */
 .draft-timer-remaining {
-  font-size: 44px;
-  font-weight: 600;
-  line-height: 1.1;
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: 0.5px;
   font-variant-numeric: tabular-nums;
-  color: var(--text);
+  color: var(--text-2);
+}
+
+@media (max-width: 599px) {
+  .draft-timer-remaining {
+    font-size: 28px;
+  }
 }
 
 .draft-timer-label {

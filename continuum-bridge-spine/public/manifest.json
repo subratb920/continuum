@@ -4,8 +4,8 @@
   "description": "A continuity console for disciplined execution.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#0f172a",
+  "background_color": "#212121",
+  "theme_color": "#171717",
   "icons": [
     {
       "src": "/icons/icon-128.png",
