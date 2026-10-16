@@ -19,6 +19,10 @@ export function DataProvider({ children }) {
   const [progress, setProgress] = useState({}); // runId → { stepIndex, done, total, unit }
   const [connected, setConnected] = useState(false);
   const [pendingSource, setPendingSource] = useState(null); // a source chosen in the Library, shown in the Workbench
+  const [catalog, setCatalog] = useState(null); // the pipeline steps and their settings (from the engine)
+  const [drafts, setDrafts] = useState({}); // datasetId → { open, steps } (the Clean-up panel)
+  const [versionPick, setVersionPick] = useState({}); // datasetId → the version shown
+  const [exporting, setExporting] = useState({}); // "<versionId>:<format>" → true while its download is packed
   const reloads = useRef(new Map());
 
   const putDataset = useCallback((d) => {
@@ -74,6 +78,10 @@ export function DataProvider({ children }) {
   );
 
   useEffect(() => {
+    dataApi.catalog().then(setCatalog).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     refresh();
     const stop = dataApi.subscribe(
       (e) => {
@@ -85,6 +93,7 @@ export function DataProvider({ children }) {
         });
         if (e.kind === "progress") setProgress((p) => ({ ...p, [e.runId]: { stepIndex: e.stepIndex, ...e.data } }));
         if (e.kind === "state") reloadSoon(e.datasetId);
+        if (e.kind === "state" && e.data?.run && ["succeeded", "failed", "cancelled"].includes(e.data.run)) setExporting({});
       },
       (up) => {
         setConnected(up);
@@ -107,6 +116,34 @@ export function DataProvider({ children }) {
       events,
       progress,
       pendingSource,
+      catalog,
+      drafts,
+      versionPick,
+      pickVersion: (datasetId, versionId) => setVersionPick((p) => ({ ...p, [datasetId]: versionId })),
+      setDraft: (datasetId, draft) => setDrafts((d) => ({ ...d, [datasetId]: { ...(d[datasetId] ?? { open: false, steps: [] }), ...draft } })),
+      /** "Fix this": opens the Clean-up panel with that step added (once). */
+      addStep: (datasetId, op, params = {}) =>
+        setDrafts((d) => {
+          const cur = d[datasetId] ?? { open: true, steps: [] };
+          const steps = cur.steps.some((s) => s.op === op) ? cur.steps : [...cur.steps.filter((s) => s.op !== "validate"), { op, params, enabled: true }, { op: "validate", params: {}, enabled: true }];
+          return { ...d, [datasetId]: { open: true, steps } };
+        }),
+      async runPipeline(dataset, steps, inputVersionId) {
+        await dataApi.startPipeline({ datasetId: dataset.id, inputVersionId, steps });
+        setVersionPick((p) => ({ ...p, [dataset.id]: null }));
+        setDrafts((d) => ({ ...d, [dataset.id]: { ...(d[dataset.id] ?? {}), open: false } }));
+        reloadSoon(dataset.id);
+      },
+      exporting,
+      async exportVersion(dataset, versionId, format) {
+        await dataApi.startExport(versionId, format);
+        setExporting((x) => ({ ...x, [`${versionId}:${format}`]: true }));
+        reloadSoon(dataset.id);
+      },
+      async publish(dataset, versionId) {
+        await dataApi.publish(versionId);
+        reloadSoon(dataset.id);
+      },
       refresh,
       loadVersions,
       loadEvents,
@@ -163,7 +200,7 @@ export function DataProvider({ children }) {
         reloadSoon(id);
       },
     };
-  }, [datasets, loaded, error, connected, selectedId, versions, events, progress, pendingSource, refresh, loadVersions, loadEvents, putDataset, reloadSoon]);
+  }, [datasets, loaded, error, connected, selectedId, versions, events, progress, pendingSource, catalog, drafts, versionPick, exporting, refresh, loadVersions, loadEvents, putDataset, reloadSoon]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

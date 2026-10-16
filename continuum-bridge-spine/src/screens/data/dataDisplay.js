@@ -4,12 +4,29 @@ export const STEP_LABEL = {
   fetch: "Download",
   ingest: "Read and tidy up",
   profile: "Measure",
+  dedupe: "Remove copies",
+  filter: "Filter rows",
+  fix_types: "Fix column kinds",
+  fill_missing: "Fill empty cells",
+  outliers: "Handle unusual numbers",
+  split: "Split for training and testing",
+  validate: "Check quality",
+  export: "Pack for download",
+};
+
+export const EXPORT_LABEL = {
+  hf: "Hugging Face folder (Parquet per split)",
+  parquet: "Parquet files",
+  csv: "CSV spreadsheets",
+  jsonl: "JSON Lines",
 };
 
 export const STEP_HINT = {
   fetch: "Getting the files from the source.",
   ingest: "Turning the files into one clean table, with where every row came from.",
   profile: "Counting rows, labels, gaps and copies, so you know what you have.",
+  validate: "Running the quality checks.",
+  export: "Packing the files into one download.",
 };
 
 export const MODALITY_LABEL = { text: "Text", tabular: "Table", image: "Images", audio: "Audio" };

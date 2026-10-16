@@ -47,12 +47,35 @@ export const dataApi = {
   renameDataset: (id, name) => request("PATCH", `/datasets/${id}`, { name }).then((r) => r.dataset),
   deleteDataset: (id) => request("DELETE", `/datasets/${id}`),
   listVersions: (datasetId) => request("GET", `/datasets/${datasetId}/versions`).then((r) => r.versions),
-  rows: (versionId, offset, limit) => request("GET", `/versions/${versionId}/rows${q({ offset, limit })}`),
+  rows: (versionId, offset, limit, split) => request("GET", `/versions/${versionId}/rows${q({ offset, limit, split })}`),
   profile: (versionId) => request("GET", `/versions/${versionId}/profile`).then((r) => r.profile),
   runEvents: (runId, afterSeq = 0) => request("GET", `/runs/${runId}/events${q({ afterSeq })}`).then((r) => r.events),
   cancelRun: (runId) => request("POST", `/runs/${runId}/cancel`).then((r) => r.run),
   retryRun: (runId) => request("POST", `/runs/${runId}/retry`).then((r) => r.run),
   createUpload: (name) => request("POST", "/uploads", { name }),
+  catalog: () => request("GET", "/recipes/catalog"),
+  templates: () => request("GET", "/recipes/templates").then((r) => r.templates),
+  recipes: () => request("GET", "/recipes").then((r) => r.recipes),
+  saveRecipe: (body) => request("POST", "/recipes", body).then((r) => r.recipe),
+  suggestedSteps: (datasetId) => request("GET", `/datasets/${datasetId}/suggested-recipe`).then((r) => r.steps),
+  startPipeline: (body) => request("POST", "/runs", body).then((r) => r.run),
+  changes: (versionId) => request("GET", `/versions/${versionId}/changes`).then((r) => r.changes),
+  quality: (versionId) => request("GET", `/versions/${versionId}/quality`).then((r) => r.quality),
+  publish: (versionId) => request("POST", `/versions/${versionId}/publish`).then((r) => r.version),
+  startExport: (versionId, format) => request("POST", `/versions/${versionId}/exports`, { format }).then((r) => r.run),
+
+  /** Downloads an export (the sign-in goes in a header, so it is fetched, then saved). */
+  async download(versionId, format) {
+    const res = await fetch(`${BASE}/versions/${versionId}/exports/${format}/download`, { headers: authHeader() });
+    if (!res.ok) throw new Error("That download isn't ready.");
+    const name = /filename="([^"]+)"/.exec(res.headers.get("content-disposition") ?? "")?.[1] ?? `dataset-${format}.zip`;
+    const url = URL.createObjectURL(await res.blob());
+    const a = Object.assign(document.createElement("a"), { href: url, download: name });
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  },
 
   /** One file of an upload, sent as it is (not as JSON). */
   async uploadFile(uploadId, path, file, onProgress) {

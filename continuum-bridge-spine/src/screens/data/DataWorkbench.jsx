@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useData } from "../../data/dataContext";
 import { dataApi } from "../../data/dataApi";
 import { SourceSearchBox } from "./DataLibrary";
+import DataPipeline from "./DataPipeline";
 import { useSourceSearch } from "./useSourceSearch";
 import {
   bytes,
@@ -310,7 +311,6 @@ function UploadForm() {
 function DatasetView({ dataset: d }) {
   const data = useData();
   const versions = data.versions[d.id];
-  const [versionId, setVersionId] = useState(null);
   const [renaming, setRenaming] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -319,8 +319,14 @@ function DatasetView({ dataset: d }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [d.id, d.versionCount]);
 
+  const versionId = data.versionPick[d.id] ?? null;
+  const setVersionId = (id) => data.pickVersion(d.id, id);
   const version = versions?.find((v) => v.id === versionId) ?? versions?.[0] ?? null;
   const run = d.lastRun;
+  const madeOf = (v) => {
+    const op = v.madeBy?.op;
+    return op && op !== "ingest" ? ` · ${STEP_LABEL[op] ?? op}` : "";
+  };
 
   return (
     <div className="data-dataset">
@@ -352,7 +358,7 @@ function DatasetView({ dataset: d }) {
           {versions?.length > 1 && (
             <select value={version?.id ?? ""} onChange={(e) => setVersionId(e.target.value)} aria-label="Version">
               {versions.map((v) => (
-                <option key={v.id} value={v.id}>Version {v.number}</option>
+                <option key={v.id} value={v.id}>Version {v.number}{madeOf(v)}{v.frozen ? " · published" : ""}</option>
               ))}
             </select>
           )}
@@ -370,7 +376,8 @@ function DatasetView({ dataset: d }) {
         </div>
       </header>
 
-      {run && (run.state !== "succeeded" || !version) && <BuildSteps dataset={d} run={run} />}
+      {run && (run.state !== "succeeded" || !version || run.kind === "pipeline") && <BuildSteps key={run.id} dataset={d} run={run} />}
+      {version && d.state !== "building" && <DataPipeline dataset={d} version={version} />}
       {version && <RowTable key={version.id} version={version} />}
     </div>
   );
@@ -383,7 +390,7 @@ function BuildSteps({ dataset, run }) {
   return (
     <section className="data-card">
       <div className="data-card-head">
-        <h2 className="data-card-title">Building</h2>
+        <h2 className="data-card-title">{run.kind === "pipeline" ? (active ? "Cleaning up" : run.state === "succeeded" ? "Last clean-up" : "Clean-up") : "Building"}</h2>
         {active && !run.cancelRequested && (
           <button type="button" className="data-btn" onClick={() => data.cancel(run.id)}>Cancel</button>
         )}
@@ -403,7 +410,15 @@ function BuildSteps({ dataset, run }) {
                   <strong>{STEP_LABEL[s.op] ?? s.op}</strong>
                   <span className="data-step-state">{s.state === "pending" ? "Waiting" : s.state === "running" ? "Working…" : s.state === "succeeded" ? "Done" : s.state === "failed" ? "Stopped" : "Cancelled"}</span>
                 </div>
-                <p className="data-hint">{s.error?.message ?? STEP_HINT[s.op]}</p>
+                <p className="data-hint">{s.error?.message ?? (s.state === "succeeded" && s.result ? resultLine(s) : STEP_HINT[s.op] ?? "")}</p>
+                {s.state === "succeeded" && s.result?.notes?.length > 0 && (
+                  <ul className="data-notes">
+                    {s.result.notes.map((n) => (
+                      <li key={n}>{n}</li>
+                    ))}
+                  </ul>
+                )}
+                {s.state === "succeeded" && s.outputVersionId && s.result?.removed > 0 && <ChangesSample versionId={s.outputVersionId} />}
                 {s.state === "running" && (
                   <div className={`data-meter${pct === null ? " is-unknown" : ""}`} role="progressbar" aria-label={STEP_LABEL[s.op]} aria-valuenow={pct ?? undefined} aria-valuemin={0} aria-valuemax={100}>
                     <span style={pct === null ? undefined : { width: `${pct}%` }} />
@@ -422,10 +437,52 @@ function BuildSteps({ dataset, run }) {
   );
 }
 
+/** One line for a finished step: what it did, in numbers. */
+function resultLine(s) {
+  const r = s.result;
+  if (s.op === "validate") return `Quality score ${r.score}: ${r.verdict} (${r.passed} of ${r.total} checks passed).`;
+  if (s.op === "profile") return `Measured ${count(r.rows)} rows.`;
+  if (s.op === "fetch") return `Downloaded ${bytes(r.bytes)}.`;
+  if (s.op === "ingest") return `${count(r.rows)} rows in one table.`;
+  if (s.op === "split" && r.splits) return Object.entries(r.splits).map(([k, n]) => `${k} ${count(n)}`).join(" · ");
+  if (r.removed) return `Removed ${count(r.removed)} rows; ${count(r.rows)} left.`;
+  if (r.changed) return `Changed ${count(r.changed)} cells or rows.`;
+  return "Nothing needed changing.";
+}
+
+/** A sample of what a step removed or changed, and why. */
+function ChangesSample({ versionId }) {
+  const [open, setOpen] = useState(false);
+  const [changes, setChanges] = useState(null);
+  useEffect(() => {
+    if (!open || changes) return;
+    dataApi.changes(versionId).then(setChanges).catch(() => setChanges({ sample: [] }));
+  }, [open, changes, versionId]);
+  return (
+    <div className="data-changes">
+      <button type="button" className="data-link" onClick={() => setOpen((o) => !o)}>{open ? "Hide examples" : "See examples"}</button>
+      {open && changes && (
+        changes.sample?.length ? (
+          <ul>
+            {changes.sample.slice(0, 12).map((x, i) => (
+              <li key={x._id ?? i}>
+                <span className="data-tag">{x.reason}</span> {cellText(x.row.text ?? x.row.messages ?? Object.values(x.row).filter((v) => typeof v !== "object").join(" · ")).slice(0, 220)}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="data-hint">No examples to show for this step.</p>
+        )
+      )}
+    </div>
+  );
+}
+
 const PAGE = 50;
 
 function RowTable({ version }) {
   const [page, setPage] = useState(0);
+  const [split, setSplit] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [showMeta, setShowMeta] = useState(false);
@@ -434,16 +491,16 @@ function RowTable({ version }) {
   useEffect(() => {
     let live = true;
     dataApi
-      .rows(version.id, page * PAGE, PAGE)
+      .rows(version.id, page * PAGE, PAGE, split)
       .then((r) => live && (setResult(r), setError(null)))
       .catch((e) => live && setError(e.message));
     return () => {
       live = false;
     };
-  }, [version.id, page]);
+  }, [version.id, page, split]);
 
   const columns = version.schema.filter((c) => showMeta || !c.name.startsWith("_") || (c.name === "_split" && version.splits));
-  const total = result?.total ?? version.rows;
+  const total = result?.total ?? (split ? version.splits?.[split] : version.rows) ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE));
 
   return (
@@ -452,9 +509,20 @@ function RowTable({ version }) {
         <h2 className="data-card-title">
           Rows <span className="bridge-count">{compact(total)}</span>
         </h2>
-        <label className="data-toggle">
-          <input type="checkbox" checked={showMeta} onChange={(e) => setShowMeta(e.target.checked)} /> Show where each row came from
-        </label>
+        <div className="data-actions">
+          {version.splits && Object.keys(version.splits).length > 1 && (
+            <div className="data-chips" role="group" aria-label="Which rows">
+              {[null, ...Object.keys(version.splits)].map((k) => (
+                <button key={k ?? "all"} type="button" className={`data-chip${split === k ? " is-on" : ""}`} aria-pressed={split === k} onClick={() => (setSplit(k), setPage(0))}>
+                  {k ?? "all"} {k ? `· ${compact(version.splits[k])}` : ""}
+                </button>
+              ))}
+            </div>
+          )}
+          <label className="data-toggle">
+            <input type="checkbox" checked={showMeta} onChange={(e) => setShowMeta(e.target.checked)} /> Show where each row came from
+          </label>
+        </div>
       </div>
       {error && <p className="data-error">{error}</p>}
       <div className="data-table-wrap">
