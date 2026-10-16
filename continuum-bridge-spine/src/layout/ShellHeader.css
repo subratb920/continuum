@@ -38,7 +38,7 @@
 }
 
 /* Interval Setup on the box's left border (the box is a <fieldset> with
-   the browser's default 2px side margin); + Create / Deploy at the right
+   the browser's default 2px side margin); Create/Import / Deploy at the right
    end of the middle column */
 .shell-nav-inner {
   margin-left: 2px;
@@ -66,7 +66,7 @@
   position: relative;
 }
 
-/* One style for header controls (Interval Setup, + Create, Deploy, Help) */
+/* One style for header controls (Interval Setup, Create/Import, Deploy, Help) */
 .shell-nav-btn {
   font-size: 12px;
   padding: 5px 12px;

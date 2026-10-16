@@ -4,7 +4,7 @@ import { createItems, deployItems } from "./menuItems";
 import "./ViewPanes.css";
 
 /**
- * Small screens: what + Create and Deploy offer, as panes in the main area
+ * Small screens: what Create/Import and Deploy offer, as panes in the main area
  * (chosen from the header's ☰ menu) instead of header menus.
  */
 
@@ -29,8 +29,8 @@ export function CreatePane({ selectedProject }) {
   const { authProvider } = useAuth();
   const actions = useShellActions(selectedProject);
   return (
-    <section className="view-pane" aria-label="Create">
-      <h2 className="view-pane-title">Create</h2>
+    <section className="view-pane" aria-label="Create/Import">
+      <h2 className="view-pane-title">Create/Import</h2>
       <div className="view-options">
         {createItems(actions, authProvider).map((item) => (
           <Option key={item.key} item={item} />

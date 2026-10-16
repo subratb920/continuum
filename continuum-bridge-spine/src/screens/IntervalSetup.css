@@ -38,6 +38,23 @@
   margin-bottom: 16px;
 }
 
+/* "<project> – Interval Setup": a long name is cut short (the full name on hover) */
+.interval-project {
+  display: inline-block;
+  max-width: min(60%, 420px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+/* The dash between the project's name and Interval Setup, with room on both sides */
+.interval-title-sep {
+  margin: 0 0.45em;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
 .inactive-tag {
   font-size: 13px;
   font-weight: 500;

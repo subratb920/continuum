@@ -14,6 +14,7 @@ import deployRoutes from "./oauth/deploy.routes.js";
 import supportRoutes from "./routes/support.routes.js";
 import createRoutes from "./create/routes.js";
 import publishRoutes from "./create/publish.js";
+import cloneRoutes from "./create/clone.js";
 import meRoutes from "./routes/me.routes.js";
 import { createWorkspacesRouter } from "./workspaces/routes.js";
 
@@ -33,6 +34,7 @@ app.use("/oauth", oauthRoutes); // SSO for continuum-deploy
 app.use("/deploy", deployRoutes); // read-only data for continuum-deploy (its access token only)
 app.use("/github", requireAuth, githubRoutes);
 app.use("/projects", requireAuth, publishRoutes); // "Put on GitHub" (before the JSON-only project routes)
+app.use("/projects", requireAuth, cloneRoutes); // Download from GitHub: a project's repository as a git clone
 app.use("/projects", requireAuth, projectRoutes);
 app.use("/execution", requireAuth, executionRoutes);
 app.use("/bridges", requireAuth, bridgeRoutes);

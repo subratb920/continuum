@@ -87,7 +87,18 @@ export default function IntervalSetup({
       className={`interval-setup ${!isExecutable ? "interval-locked" : ""
         }`}
     >
+      {/* "<project> – Interval Setup": on phones the projects pane isn't on screen */}
       <h2 className="interval-title">
+        {selectedProject && (
+          <>
+            <span className="interval-project" title={selectedProject.name}>
+              {selectedProject.name}
+            </span>
+            <span className="interval-title-sep">
+              –
+            </span>
+          </>
+        )}
         Interval Setup
         {!isExecutable && selectedProject && (
           <span className="inactive-tag"> · inactive project</span>

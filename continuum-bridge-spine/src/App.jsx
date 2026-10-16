@@ -112,6 +112,8 @@ export default function App() {
   const [showActivateProject, setShowActivateProject] = useState(false);
   const [showEditProject, setShowEditProject] = useState(false);
   const [showDeleteProject, setShowDeleteProject] = useState(false);
+  // The project whose settings gear (in the projects pane) opened one of those windows
+  const [projectForAction, setProjectForAction] = useState(null);
 
   const [loading, setLoading] = useState(true);
 
@@ -541,9 +543,9 @@ export default function App() {
         onSelectProject={setSelectedProject}
         onSelectBridge={setSelectedBridge}
         onCreateProject={() => navigate("/new")}
-        onActivateProject={() => setShowActivateProject(true)}
-        onEditProject={() => setShowEditProject(true)}
-        onDeleteProject={() => setShowDeleteProject(true)}
+        onActivateProject={(project) => (setProjectForAction(project), setShowActivateProject(true))}
+        onEditProject={(project) => (setProjectForAction(project), setShowEditProject(true))}
+        onDeleteProject={(project) => (setProjectForAction(project), setShowDeleteProject(true))}
         leftPane={pathname === "/dashboard" ? <DashboardNav onIntervalSetup={() => navigate("/console")} /> : null}
       >
         {/* Phones: Continuum creates on its server, the code lives in GitHub */}
@@ -612,7 +614,7 @@ export default function App() {
         <ActivateProjectModal
           projects={projects}
           activeProject={activeProject}
-          initialProject={selectedProject}
+          initialProject={projectForAction ?? selectedProject}
           onActivated={(project) => {
             handleActivate(project);
             setShowActivateProject(false);
@@ -631,6 +633,7 @@ export default function App() {
       {showEditProject && (
         <EditProjectModal
           projects={projects}
+          initialProject={projectForAction}
           onRenamed={handleProjectRenamed}
           onClose={() => setShowEditProject(false)}
         />
@@ -642,6 +645,7 @@ export default function App() {
       {showDeleteProject && (
         <DeleteProjectModal
           projects={projects}
+          initialProject={projectForAction}
           activeProject={activeProject}
           onDeleted={handleProjectDeleted}
           onClose={() => setShowDeleteProject(false)}

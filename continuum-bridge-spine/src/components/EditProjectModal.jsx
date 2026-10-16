@@ -18,8 +18,8 @@ const normalize = (name) => name.trim().toLowerCase();
  * Save stays disabled while the name is blank, unchanged
  * (capitalization alone doesn't count) or used by another project.
  */
-export default function EditProjectModal({ projects, onRenamed, onClose }) {
-  const [selectedId, setSelectedId] = useState("");
+export default function EditProjectModal({ projects, initialProject, onRenamed, onClose }) {
+  const [selectedId, setSelectedId] = useState(initialProject?._id || "");
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");

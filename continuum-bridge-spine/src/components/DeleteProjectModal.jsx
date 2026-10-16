@@ -15,10 +15,11 @@ import "./ProjectFormModal.css";
 export default function DeleteProjectModal({
   projects,
   activeProject,
+  initialProject,
   onDeleted,
   onClose,
 }) {
-  const [selectedId, setSelectedId] = useState("");
+  const [selectedId, setSelectedId] = useState(initialProject?._id || "");
   const [step, setStep] = useState("select"); // select | confirm
   const [bridgeCount, setBridgeCount] = useState(null);
   const [loading, setLoading] = useState(false);

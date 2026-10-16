@@ -40,9 +40,9 @@ export default function ThreePanelLayout({
           }}
           // Each opens a window: the drawer gets out of its way
           onCreateProject={() => (close(), onCreateProject())}
-          onActivateProject={() => (close(), onActivateProject())}
-          onEditProject={() => (close(), onEditProject())}
-          onDeleteProject={() => (close(), onDeleteProject())}
+          onActivateProject={(project) => (close(), onActivateProject(project))}
+          onEditProject={(project) => (close(), onEditProject(project))}
+          onDeleteProject={(project) => (close(), onDeleteProject(project))}
         />
         )}
       </aside>

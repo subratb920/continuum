@@ -3,7 +3,7 @@ import { DEPLOY_AVAILABLE, deployCloudPageUrl, deployHomeUrl, deployListUrl, dep
 import { importFromDevice } from "../utils/importFromDevice";
 
 /**
- * What + Create and Deploy do, shared by the header's menus (wide screens)
+ * What Create/Import and Deploy do, shared by the header's menus (wide screens)
  * and the Create and Deploy panes (small screens, from the ☰ menu).
  */
 

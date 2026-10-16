@@ -5,7 +5,7 @@ import { onPhone } from "../utils/device";
 import "./menuItems.css";
 
 /**
- * What + Create and Deploy list, shared by the header's menus (wide screens)
+ * What Create/Import and Deploy list, shared by the header's menus (wide screens)
  * and the Create and Deploy panes (small screens, from the ☰ menu). Each item:
  * an icon, a title, a one-line hint; `divider` starts a new group.
  * Logos are shown only to identify each service (Simple Icons, CC0).

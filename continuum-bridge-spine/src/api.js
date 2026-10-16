@@ -238,6 +238,18 @@ export async function deleteWorkspace(id) {
   return request("DELETE", `/workspaces/${id}`);
 }
 
+/** Download from GitHub: the project's repository as a git clone (.tar.gz Response) */
+export async function downloadProjectClone(projectId) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(`${API_BASE}/projects/${projectId}/clone`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (res.status === 401) throw new Error("UNAUTHORIZED");
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(data?.error || "GitHub couldn't give the project's files.");
+  }
+  return res;
+}
+
 /**
  * "Put on GitHub": a new repository on the user's GitHub for a project that
  * has none, with the folder's files (a .tar.gz Blob) as the first commit, or

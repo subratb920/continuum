@@ -34,7 +34,7 @@ function getInitials(email) {
  * ShellHeader
  * -----------
  * Shared header on every signed-in page (see PageShell).
- * Wide screens: Interval Setup, + Create and Deploy, and the profile avatar
+ * Wide screens: Interval Setup, Create/Import and Deploy, and the profile avatar
  * (whose menu holds Help, Settings, Support… and Sign out). Small screens
  * (under 900px): ☰ · title · avatar; the ☰ menu shows Interval Setup,
  * Projects, Bridges, Create or Deploy in the main area (see ThreePanelLayout).
@@ -99,7 +99,7 @@ export default function ShellHeader({ selectedProject = null }) {
     ["projects", "Projects", "📂"],
     ["bridges", "Bridges", "🌉"],
     ["workspaces", "Workspaces", "💻"],
-    ["create", "Create", "＋"],
+    ["create", "Create/Import", "＋"],
     ...(DEPLOY_AVAILABLE ? [["deploy", "Deploy", "🚀"]] : []),
   ];
   const onConsole = panels.enabled && pathname === "/console";
@@ -185,7 +185,7 @@ export default function ShellHeader({ selectedProject = null }) {
       </div>
 
       {/* Middle column: spans the Interval Setup box — Interval Setup on
-          its left edge, + Create and Deploy on its right edge */}
+          its left edge, Create/Import and Deploy on its right edge */}
       <nav className="shell-nav">
         <div className="shell-nav-inner">
           <button
@@ -213,7 +213,7 @@ export default function ShellHeader({ selectedProject = null }) {
               Workspaces
             </button>
 
-            {/* + Create */}
+            {/* Create/Import (no icon: like the other header buttons) */}
             <div className="shell-menu">
               <button
                 type="button"
@@ -222,7 +222,7 @@ export default function ShellHeader({ selectedProject = null }) {
                 aria-haspopup="menu"
                 aria-expanded={openMenu === "create"}
               >
-                + Create ▾
+                Create/Import ▾
               </button>
 
               {openMenu === "create" && (

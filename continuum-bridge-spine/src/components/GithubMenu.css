@@ -1,0 +1,136 @@
+/* A project's GitHub icon: Open on GitHub / Download from GitHub */
+.gh-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Fixed on screen (top/left set from the icon), so the scrolling project pane can't clip it */
+.gh-menu-list {
+  position: fixed;
+  z-index: 950;
+  width: 260px;
+  max-width: calc(100vw - 16px);
+  padding: 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 6px 18px rgb(var(--shadow-rgb) / 0.16);
+}
+
+.gh-menu-item {
+  display: grid;
+  gap: 1px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.gh-menu-item:hover:not(:disabled),
+.gh-menu-item:focus-visible {
+  background: var(--hover);
+  outline: none;
+}
+
+.gh-menu-item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.gh-menu-title {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.gh-menu-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* Clone: a small box with the git clone command; clicking it copies the command */
+.gh-clone {
+  gap: 4px;
+  margin-top: 4px;
+  border-top: 1px solid var(--border-subtle);
+  border-radius: 0 0 6px 6px;
+}
+
+.gh-clone-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.gh-clone-copy {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.gh-clone-copy.is-copied {
+  color: var(--success-text);
+}
+
+.gh-clone-cmd {
+  display: block;
+  padding: 5px 7px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  background: var(--surface-subtle);
+  color: var(--text-2);
+  font: 11.5px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.gh-menu-status {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin: 4px 6px 4px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--surface-subtle);
+  font-size: 12px;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+
+.gh-menu-status.is-done {
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+
+.gh-menu-status.is-error {
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.gh-spinner {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-top: 2px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: gh-spin 0.8s linear infinite;
+}
+
+@keyframes gh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gh-spinner {
+    animation-duration: 2.4s;
+  }
+}
