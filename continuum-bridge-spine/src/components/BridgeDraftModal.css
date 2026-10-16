@@ -150,3 +150,65 @@
     box-shadow: 0 0 0 3px rgb(var(--warning-rgb) / 0.6);
   }
 }
+
+/* ---------- Docked (Agents screen): a panel in the stage's corner, not a window over the page ---------- */
+.bridge-draft-dock {
+  position: fixed;
+  left: calc(var(--left-w) + 36px);
+  bottom: calc(var(--legal-footer-h) + 32px);
+  z-index: 900;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+}
+.bridge-draft.docked {
+  width: 100%;
+  max-width: none;
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 32px rgb(var(--shadow-rgb) / 0.25);
+}
+.bridge-draft.docked .modal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+}
+.bridge-draft.docked .modal-header h2 {
+  flex: 1;
+  font-size: 14px;
+  text-align: left;
+}
+.bridge-draft.docked .modal-body {
+  padding: 12px 14px;
+}
+.bridge-draft.docked .draft-timer-clock {
+  font-size: 24px;
+}
+/* Folded: the timer (and, once time is up, the save button) */
+.bridge-draft.folded .modal-body > :not(.draft-timer) {
+  display: none;
+}
+.bridge-draft.folded .draft-timer {
+  margin-bottom: 0;
+}
+.draft-fold-btn {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-subtle);
+  color: var(--text);
+  cursor: pointer;
+}
+.draft-fold-btn:hover {
+  background: var(--hover);
+}
+@media (max-width: 899px) {
+  .bridge-draft-dock {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    bottom: calc(var(--legal-footer-h) + 12px + env(safe-area-inset-bottom));
+  }
+}

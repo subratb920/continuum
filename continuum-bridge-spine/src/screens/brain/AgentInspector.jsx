@@ -38,7 +38,7 @@ export default function AgentInspector() {
 }
 
 function Activity() {
-  const { agents, workers, events, pending, selectedId, select, stop } = useBrain();
+  const { agents, workers, events, pending, selectedId, select, stop, retry, replay } = useBrain();
   const agent = selectedId ? agents[selectedId] : null;
   const shown = (agent ? events.filter((e) => e.agentId === agent._id) : events).filter((e) => e.kind !== "state" || agent).slice(-150).reverse();
   const asks = agent ? pending.filter((e) => e.agentId === agent._id) : [];
@@ -55,13 +55,24 @@ function Activity() {
           </div>
           <p className="inspector-task">{agent.task}</p>
           <dl className="inspector-facts">
+            {agent.goal && (<><dt>Goal</dt><dd className="inspector-goal" title={agent.goal.text}>◎ {agent.goal.text}</dd></>)}
             {agent.repo && (<><dt>Repo</dt><dd>{agent.repo}</dd></>)}
             {agent.branch && (<><dt>Branch</dt><dd className="brain-mono">{agent.branch}</dd></>)}
             <dt>Model</dt><dd className="brain-mono">{agent.model}</dd>
             {agent.error && (<><dt>Error</dt><dd className="inspector-error">{agent.error.message}</dd></>)}
           </dl>
-          {agent.kind === "worker" && ACTIVE_STATES.includes(agent.state) && agent.state !== "stopping" && (
+          {replay.live && agent.kind === "worker" && ACTIVE_STATES.includes(agent.state) && agent.state !== "stopping" && (
             <button type="button" className="brain-btn is-danger" onClick={() => stop(agent._id)}>Stop worker</button>
+          )}
+          {replay.live && agent.state === "failed" && !agent.retriedBy && (
+            <button type="button" className="brain-btn is-primary" onClick={() => retry(agent._id)} title="A fresh worker on the same task (and goal)">
+              ↻ Retry with a new worker
+            </button>
+          )}
+          {agent.retriedBy && (
+            <button type="button" className="brain-link" onClick={() => select(agent.retriedBy)}>
+              Retried by {agentName(agents[agent.retriedBy], workers)} →
+            </button>
           )}
         </div>
       ) : (
@@ -99,7 +110,7 @@ function Approvals() {
 
 /** A permission (approve / deny) or a question (its options, or your own answer). */
 function AskCard({ event, showWho = false }) {
-  const { agents, workers, reply, select } = useBrain();
+  const { agents, workers, reply, select, replay } = useBrain();
   const [answer, setAnswer] = useState("");
   const agent = agents[event.agentId];
   const send = (a) => reply(event.agentId, event._id, a);
@@ -117,7 +128,9 @@ function AskCard({ event, showWho = false }) {
       </div>
       <p className="ask-card-text">{event.text}</p>
       {event.data?.diff && <p className="ask-card-meta brain-mono">{event.data.target} · {event.data.diff}</p>}
-      {event.kind === "permission" ? (
+      {!replay.live ? (
+        <p className="brain-hint">Replaying — go live to answer.</p>
+      ) : event.kind === "permission" ? (
         <div className="ask-card-actions">
           <button type="button" className="brain-btn" onClick={() => send("deny")}>Deny</button>
           <button type="button" className="brain-btn is-primary" onClick={() => send("approve")}>Approve</button>
@@ -142,7 +155,7 @@ function AskCard({ event, showWho = false }) {
 }
 
 function Chat() {
-  const { core, events, say } = useBrain();
+  const { core, events, say, replay } = useBrain();
   const [text, setText] = useState("");
   const end = useRef(null);
   const messages = core ? events.filter((e) => e.agentId === core._id && (e.kind === "user" || e.kind === "text")) : [];
@@ -169,7 +182,7 @@ function Chat() {
         <li ref={end} aria-hidden="true" />
       </ol>
       <form className="chat-input" onSubmit={submit}>
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={core ? "Message the core…" : "Waking the brain…"} disabled={!core} aria-label="Message the core" />
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={!replay.live ? "Replaying — go live to send" : core ? "Message the core…" : "Waking the brain…"} disabled={!core || !replay.live} aria-label="Message the core" />
         <button type="submit" className="brain-btn is-primary" disabled={!text.trim()}>Send</button>
       </form>
     </div>

@@ -17,6 +17,9 @@
  * @property {string} model
  * @property {"small"|"standard"|"large"} size
  * @property {AgentState} state
+ * @property {{bridgeId: string, goalId: string, text: string}|null} [goal]  the interval goal it works on (UI-side for now; brain-api to carry it)
+ * @property {string|null} [retryOf]    the failed worker this one retries
+ * @property {string|null} [retriedBy]  the worker that retries this failed one
  * @property {{code: string, message: string}|null} error
  * @property {string} createdAt
  * @property {string|null} startedAt
@@ -41,7 +44,9 @@
  * @property {() => Promise<Agent[]>} listAgents
  * @property {(onMessage: (m: {type: "agent", agent: Agent} | {type: "event", event: AgentEvent}) => void, opts?: {after?: string}) => () => void} subscribe
  *   returns unsubscribe
- * @property {(task: string, opts?: {repo?: string}) => Promise<void>} spawn   asks the core to start a worker
+ * @property {(task: string, opts?: {repo?: string, goal?: object}) => Promise<void>} spawn   asks the core to start a worker
+ * @property {(agentId: string) => Promise<void>} [retry]  a fresh worker for a failed one's task (without it: spawn the same task)
+ * @property {(interval: {bridgeId: string, goals: {id: string, text: string}[]}|null) => void} [setInterval]  the running interval, for the core to plan from
  * @property {(agentId: string) => Promise<void>} stop
  * @property {(agentId: string, eventId: string, answer: string) => Promise<void>} reply  answers a permission or question
  * @property {(text: string) => Promise<void>} say  a message to the core

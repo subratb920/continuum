@@ -13,7 +13,7 @@ import ReEntry from "./screens/ReEntry";
 import CreateProject from "./screens/CreateProject";
 import Dashboard from "./components/Dashboard";
 import { screenForPath } from "./screens/registry";
-import { ScreenProviders } from "./screens/ScreenProviders";
+import { setRunningInterval } from "./brain/runningInterval";
 import { IMPORT_EVENT } from "./utils/importFromDevice";
 import Welcome from "./screens/Welcome";
 import HelpPage from "./pages/HelpPage";
@@ -319,6 +319,13 @@ export default function App() {
     logger.state("selectedProject updated", selectedProject);
   }, [selectedProject]);
 
+  // The brain plans from the running interval's goals (its workers link back to them)
+  useEffect(() => {
+    setRunningInterval(
+      activeBridge ? { bridgeId: activeBridge._id, goals: activeBridge.sessionGoals.map(({ id, text }) => ({ id, text })) } : null
+    );
+  }, [activeBridge]);
+
   /* =========================================================
      ⏱ RUNNING INTERVAL — draft bridge window, shown on every
      signed-in page so it stays open for the whole interval
@@ -327,6 +334,8 @@ export default function App() {
   const draftModal = activeBridge && (
     <BridgeDraftModal
       bridge={activeBridge}
+      // Agents screen: a panel in the corner, so the agents stay in view
+      docked={pathname === "/brain"}
       onUpdate={handleUpdateActiveBridge}
       onSignIn={logout}
       onStop={(bridge) => {
@@ -583,7 +592,6 @@ export default function App() {
      ========================================================= */
 
   return (
-    <ScreenProviders>
     <PageShell selectedProject={selectedProject} panels>
       <ThreePanelLayout
         projects={projects}
@@ -690,6 +698,5 @@ export default function App() {
         />
       )}
     </PageShell>
-    </ScreenProviders>
   );
 }

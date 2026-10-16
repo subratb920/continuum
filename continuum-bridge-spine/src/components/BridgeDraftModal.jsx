@@ -7,6 +7,11 @@ import {
 import { formatClock } from "../utils/time";
 import { extractTicketKey } from "../utils/ticket";
 
+import { useNavigate } from "react-router-dom";
+import { useBrain } from "../brain/brainContext";
+import GoalAgents from "../screens/brain/GoalAgents";
+import { agentWork, withAgentWork } from "../screens/brain/agentWork";
+
 import "./BridgeDraftModal.css";
 
 const ENDED_TITLE = "⏰ Interval ended · Continuum";
@@ -25,8 +30,22 @@ const ENDED_TITLE = "⏰ Interval ended · Continuum";
  *   (err.code "UNAUTHORIZED" when the session has ended).
  * - onSignIn(): signs out so the user can sign in again; the pending
  *   save is completed automatically after sign-in.
+ * - Agents: each goal shows the workers on it (click: that worker on the
+ *   Agents screen). Stop and save record their work with the goal.
+ * - docked (the Agents screen): a panel in the corner instead of a window
+ *   over the page, so the agents stay in view; it folds down to the timer.
  */
-export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSignIn }) {
+export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSignIn, docked = false }) {
+  const brain = useBrain();
+  const navigate = useNavigate();
+  const liveWorkers = brain?.live.workers ?? [];
+  const [folded, setFolded] = useState(false);
+  function openAgent(agentId) {
+    brain?.select(agentId);
+    brain?.seek(null);
+    navigate("/brain");
+  }
+
   // ✅ Local, authoritative copy
   const [localBridge, setLocalBridge] = useState(bridge);
 
@@ -116,13 +135,16 @@ export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSi
 
   // Stop: freeze the timer now; goals can still be recorded and saved
   function handleStop() {
-    const updated = {
-      ...localBridge,
-      interval: {
-        ...localBridge.interval,
-        endedAt: new Date().toISOString(),
+    const updated = withAgentWork(
+      {
+        ...localBridge,
+        interval: {
+          ...localBridge.interval,
+          endedAt: new Date().toISOString(),
+        },
       },
-    };
+      liveWorkers
+    );
 
     setLocalBridge(updated);
     onStop(updated);
@@ -134,7 +156,7 @@ export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSi
     setSaving(true);
 
     try {
-      await onEnd(localBridge);
+      await onEnd(withAgentWork(localBridge, liveWorkers));
     } catch (err) {
       if (err?.code === "UNAUTHORIZED") {
         setNeedsSignIn(true);
@@ -154,11 +176,16 @@ export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSi
   const progress = hasTimer ? (elapsedMs / durationMs) * 100 : 0;
 
   return (
-    <div className="modal-backdrop">
-      <div className={`modal-window bridge-draft${expired ? " bridge-draft-ended" : ""}`}>
+    <div className={docked ? "bridge-draft-dock" : "modal-backdrop"}>
+      <div className={`modal-window bridge-draft${expired ? " bridge-draft-ended" : ""}${docked ? " docked" : ""}${docked && folded ? " folded" : ""}`}>
 
         <header className="modal-header">
           <h2>{localBridge.name ?? "Bridge Draft"}</h2>
+          {docked && (
+            <button type="button" className="draft-fold-btn" onClick={() => setFolded((f) => !f)} aria-expanded={!folded} title={folded ? "Show the goals" : "Fold down to the timer"}>
+              {folded ? "▴" : "▾"}
+            </button>
+          )}
         </header>
 
         <section className="modal-body">
@@ -232,7 +259,10 @@ export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSi
           <ul className="goal-list">
             {sessionGoals.map((g) => (
               <li key={g.id}>
-                <span>{g.text}</span>
+                <span className="goal-text">
+                  {g.text}
+                  <GoalAgents agents={brain ? agentWork(liveWorkers, localBridge._id, g.id) : g.agents} onOpen={brain ? openAgent : undefined} />
+                </span>
 
                 <select
                   value={g.status}

@@ -11,12 +11,17 @@ import { applyAppearance } from "./utils/preferences";
 applyAppearance(); // Settings → Appearance, before the first paint
 import { AuthProvider } from "./state/authStore";
 import LegalFooter from "./legal/LegalFooter";
+import { ScreenProviders } from "./screens/ScreenProviders";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <App />
+        {/* Each screen's shared state (e.g. the brain), on every page: the agents carry on
+            while you use the rest of Continuum, and the running interval shows them */}
+        <ScreenProviders>
+          <App />
+        </ScreenProviders>
         {/* Every screen: the copyright line and the Legal page link */}
         <LegalFooter />
       </AuthProvider>

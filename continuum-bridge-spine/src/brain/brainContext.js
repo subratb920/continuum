@@ -10,7 +10,7 @@ export function useBrain() {
 
 /** How many permissions and questions wait on you (the switcher's badge). */
 export function usePendingCount() {
-  return useContext(BrainContext)?.pending.length ?? 0;
+  return useContext(BrainContext)?.livePending.length ?? 0; // live, even while replaying
 }
 
 /** An agent's latest event of some kinds (e.g. its last tool call). */
@@ -20,4 +20,9 @@ export function lastEvent(events, agentId, kinds) {
     if (e.agentId === agentId && (!kinds || kinds.includes(e.kind))) return e;
   }
   return null;
+}
+
+/** The workers on one interval goal (newest last). */
+export function workersOnGoal(workers, bridgeId, goalId) {
+  return workers.filter((w) => w.goal && w.goal.bridgeId === bridgeId && w.goal.goalId === goalId);
 }
