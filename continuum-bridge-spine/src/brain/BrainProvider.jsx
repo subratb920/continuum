@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useReducer } from "react";
+import { useEffect, useMemo, useReducer, useRef } from "react";
 import { useAuth } from "../state/authStore";
 import { BrainContext } from "./brainContext";
 import { getBrainClient } from "./brainClient";
 import { ASKING_KINDS } from "./brainTypes";
 import { useRunningInterval } from "./runningInterval";
+import { copyToLocal, WRITE_TOOLS } from "./localSync";
 
 /**
  * The brain's state, for every signed-in page (the Agents screen, the
@@ -109,13 +110,38 @@ export function BrainProvider({ children }) {
     client.setInterval?.(interval);
   }, [client, interval]);
 
+  // A file change you allowed has been made: your own folder for that project follows
+  // (only changes from now on: not the history a page replays when it opens)
+  const agentsNow = useRef({});
+  useEffect(() => {
+    agentsNow.current = state.agents;
+  }, [state.agents]);
+  const copyTimers = useRef(new Map());
+
   useEffect(() => {
     if (!signedIn) return;
     let live = true;
+    const openedAt = Date.now();
+    const timers = copyTimers.current;
+    function afterChange(e) {
+      if (e.kind !== "tool" || e.data?.status !== "completed" || !WRITE_TOOLS.includes(e.data?.tool)) return;
+      if (Date.parse(e.at) < openedAt) return;
+      clearTimeout(timers.get(e.agentId));
+      timers.set(
+        e.agentId,
+        setTimeout(() => {
+          const agent = agentsNow.current[e.agentId];
+          if (agent?.kind === "worker") copyToLocal(agent, client);
+        }, 800)
+      );
+    }
     client.listAgents().then((agents) => live && dispatch({ type: "agents", agents })).catch(() => {});
     const unsubscribe = client.subscribe((m) => {
       if (m.type === "agent") dispatch({ type: "agents", agents: [m.agent] });
-      else dispatch({ type: "event", event: m.event });
+      else {
+        dispatch({ type: "event", event: m.event });
+        afterChange(m.event);
+      }
     });
     return () => {
       live = false;
@@ -157,6 +183,10 @@ export function BrainProvider({ children }) {
       retry: (id) => (client.retry ? client.retry(id) : client.spawn(state.agents[id].task, { repo: state.agents[id].repo, goal: state.agents[id].goal })),
       reply: (agentId, eventId, answer) => client.reply(agentId, eventId, answer),
       say: (text) => client.say(text),
+      // A worker's work: its changes, copying them into your folder, and pushing them to its own branch
+      changes: client.changes ? (id) => client.changes(id) : null,
+      push: client.push ? (id, message) => client.push(id, message) : null,
+      copyToLocal: (agent, opts) => copyToLocal(agent, client, opts),
     };
   }, [state, client, interval]);
 

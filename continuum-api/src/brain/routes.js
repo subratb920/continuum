@@ -10,6 +10,9 @@
 //                                           a worker: on that project, interval goal or repository;
 //                                           with none of them, your brain picks the project
 //   POST   /brain/agents/:id/stop   DELETE /brain/agents/:id
+//   GET    /brain/agents/:id/changes        what a worker changed on its branch (with diffs)
+//   GET    /brain/agents/:id/file?path=     one file of its working copy (written into your own folder)
+//   POST   /brain/agents/:id/push {message?} its changes to its own branch on GitHub (never main)
 //   POST   /brain/agents/:id/reply {eventId, answer}
 //                                           a permission (approve | always | deny) or a question
 //   POST   /brain/core/messages {text}      a message to your brain
@@ -155,6 +158,20 @@ export function createBrainRouter(opts = {}) {
 
   router.post("/agents/:id/stop", async (req, res) => {
     res.json(toAgent(await brain(req, "POST", `/agents/${agentId(req)}/stop`)));
+  });
+
+  router.get("/agents/:id/changes", async (req, res) => {
+    res.set("Cache-Control", "no-store").json(await brain(req, "GET", `/agents/${agentId(req)}/changes`));
+  });
+
+  router.get("/agents/:id/file", async (req, res) => {
+    const path = typeof req.query.path === "string" ? req.query.path : "";
+    res.set("Cache-Control", "no-store").json(await brain(req, "GET", `/agents/${agentId(req)}/file?path=${encodeURIComponent(path)}`));
+  });
+
+  router.post("/agents/:id/push", async (req, res) => {
+    const message = typeof req.body?.message === "string" ? req.body.message : undefined;
+    res.json(await brain(req, "POST", `/agents/${agentId(req)}/push`, message ? { message } : {}));
   });
 
   router.delete("/agents/:id", async (req, res) => {

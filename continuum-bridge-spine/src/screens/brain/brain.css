@@ -616,3 +616,59 @@ button.goal-agent:hover { background: rgb(var(--c-rgb, var(--agent-off-rgb)) / 0
 @media (max-width: 599px) {
   .replay-speed { display: none; }
 }
+
+/* ---------- A worker's work: your folder, its changes, pushing them ---------- */
+.worker-work {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 0;
+}
+.worker-work-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.worker-folder-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+.worker-changes ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.worker-changes li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.worker-changes .change-size {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.worker-changes .change-added .change-size {
+  color: var(--success-text);
+}
+.worker-changes .change-deleted .change-size {
+  color: var(--danger-text);
+}
+.worker-pushed {
+  margin: 0;
+  color: var(--success-text);
+  font-size: 13px;
+}
+.worker-pushed a {
+  color: var(--link);
+}

@@ -103,6 +103,14 @@ test("brain relay: Approve is allow once, Deny is reject; a question gets its op
   assert.match(b.calls.at(-1), /POST \/agents\/a+\/questions\/que_1 {"answers":\[\["Blue"\]\]}/);
   assert.equal((await s.call("POST", `/agents/${W}/reply`, { eventId: "9".repeat(24), answer: "approve" })).status, 404);
   assert.equal((await s.call("POST", `/agents/nope/reply`, { eventId: PER, answer: "approve" })).status, 404);
+  // A worker's changes and its push go through as the signed-in user
+  await s.call("GET", `/agents/${W}/changes`);
+  assert.match(b.calls.at(-1), /^1{24} GET \/agents\/a{24}\/changes$/);
+  await s.call("POST", `/agents/${W}/push`, { message: "Add discuss.md" });
+  assert.match(b.calls.at(-1), /^1{24} POST \/agents\/a{24}\/push {"message":"Add discuss.md"}$/);
+  assert.equal((await s.call("POST", `/agents/nope/push`, {})).status, 404);
+  await s.call("GET", `/agents/${W}/file?path=${encodeURIComponent("docs/a b.md")}`);
+  assert.match(b.calls.at(-1), /GET \/agents\/a{24}\/file\?path=docs%2Fa%20b\.md$/);
   s.close();
 });
 

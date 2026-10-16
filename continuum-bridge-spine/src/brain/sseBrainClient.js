@@ -65,6 +65,10 @@ export function createSseBrainClient(base = import.meta.env.VITE_BRAIN_API_URL) 
     // A goal is sent as its ids: brain-api takes its text (and the project) from Continuum
     spawn: (task, { repo, goal } = {}) => call("POST", "/brain/agents", { task, repo, ...(goal ? { goal: { bridgeId: goal.bridgeId, goalId: goal.goalId } } : {}) }),
     stop: (agentId) => call("POST", `/brain/agents/${agentId}/stop`),
+    // A worker's changes on its branch, one file of its copy, and pushing them to its own branch on GitHub
+    changes: (agentId) => call("GET", `/brain/agents/${agentId}/changes`),
+    file: (agentId, path) => call("GET", `/brain/agents/${agentId}/file?path=${encodeURIComponent(path)}`),
+    push: (agentId, message) => call("POST", `/brain/agents/${agentId}/push`, message ? { message } : {}),
     reply: (agentId, eventId, answer) => call("POST", `/brain/agents/${agentId}/reply`, { eventId, answer }),
     say: (text) => call("POST", "/brain/core/messages", { text }),
   };

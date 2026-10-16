@@ -3,6 +3,7 @@ import { useBrain } from "../../brain/brainContext";
 import { ACTIVE_STATES, STATE_LABEL } from "../../brain/brainTypes";
 import { BRAIN_IS_MOCK } from "../../brain/brainClient";
 import { agentName, clock, KIND_ICON } from "./agentDisplay";
+import WorkerWork from "./WorkerWork";
 import "./brain.css";
 
 /**
@@ -62,6 +63,8 @@ function Activity() {
             <dt>Model</dt><dd className="brain-mono">{agent.model}</dd>
             {agent.error && (<><dt>Error</dt><dd className="inspector-error">{agent.error.message}</dd></>)}
           </dl>
+          {/* Its work: copied into your own folder, its changes, and pushing them to GitHub */}
+          <WorkerWork agent={agent} />
           {replay.live && agent.kind === "worker" && ACTIVE_STATES.includes(agent.state) && agent.state !== "stopping" && (
             <button type="button" className="brain-btn is-danger" onClick={() => stop(agent._id)}>Stop worker</button>
           )}
@@ -110,11 +113,16 @@ function Approvals() {
 }
 
 /** A permission (approve / deny) or a question (its options, or your own answer). */
+/** Options that only mean "I'll type it": the text box under the card does that. */
+const OWN_WORDS = /^\s*(type|write|enter|give|add|use)\b.*\b(own|answer|response|details)\b|^\s*(other|custom|something else)\W*$/i;
+
 function AskCard({ event, showWho = false }) {
   const { agents, workers, reply, select, replay } = useBrain();
   const [answer, setAnswer] = useState("");
   const agent = agents[event.agentId];
   const send = (a) => reply(event.agentId, event._id, a);
+  // Real choices only: an agent's "Type your own answer"-style option isn't one (the text box is)
+  const choices = (Array.isArray(event.data?.options) ? event.data.options : []).filter((o) => !OWN_WORDS.test(o));
 
   return (
     <div className={`ask-card kind-${event.kind}`}>
@@ -138,15 +146,15 @@ function AskCard({ event, showWho = false }) {
         </div>
       ) : (
         <>
-          {Array.isArray(event.data?.options) && (
+          {choices.length > 0 && (
             <div className="ask-card-actions wrap">
-              {event.data.options.map((o) => (
+              {choices.map((o) => (
                 <button key={o} type="button" className="brain-btn" onClick={() => send(o)}>{o}</button>
               ))}
             </div>
           )}
           <form className="ask-card-answer" onSubmit={(e) => (e.preventDefault(), answer.trim() && send(answer.trim()))}>
-            <input value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="Or answer in your words" aria-label="Your answer" />
+            <input value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder={choices.length ? "Or answer in your words" : "Type your answer"} aria-label="Your answer" autoFocus={!choices.length} />
             <button type="submit" className="brain-btn is-primary" disabled={!answer.trim()}>Send</button>
           </form>
         </>
