@@ -13,7 +13,8 @@ from .. import protocol
 from ..protocol import ParamError, get_param
 from ._version import read_version
 
-FORMATS = ("parquet", "csv", "jsonl", "hf")
+FORMATS = ("parquet", "csv", "jsonl", "hf", "imagefolder", "audiofolder")
+MEDIA_FORMATS = {"image": ("hf", "imagefolder", "parquet"), "audio": ("hf", "audiofolder", "parquet")}
 
 
 def _card(v, splits: dict, fmt: str, info: dict) -> str:
@@ -24,7 +25,14 @@ def _card(v, splits: dict, fmt: str, info: dict) -> str:
         files = "\n".join(f"      - split: {s}\n        path: data/{s}.parquet" for s in splits)
         licences = sorted({l["spdx"] for l in m.get("licences", []) if l.get("spdx") and l["spdx"] not in ("unknown", "other")})
         lic = f"license: {licences[0]}\n" if len(licences) == 1 else ""
-        head = f"---\n{lic}configs:\n  - config_name: default\n    data_files:\n{files}\n---\n\n"
+        features = ""
+        if m.get("modality") in ("image", "audio"):
+            feats = [f"    - name: {m['modality']}\n      dtype: {m['modality']}"]
+            for c in m.get("schema", []):
+                if c["name"] in ("label", "text"):
+                    feats.append(f"    - name: {c['name']}\n      dtype: string")
+            features = "dataset_info:\n  features:\n" + "\n".join(feats) + "\n"
+        head = f"---\n{lic}{features}configs:\n  - config_name: default\n    data_files:\n{files}\n---\n\n"
     name = info.get("name") or "Dataset"
     out = [f"# {name}", ""]
     if info.get("goal"):
@@ -62,11 +70,46 @@ def _card(v, splits: dict, fmt: str, info: dict) -> str:
     return head + "\n".join(out)
 
 
+def _media_export(v, fmt, z, parts, keep) -> None:
+    """Images or audio: the files go inside (embedded in Parquet, or as files in folders)."""
+    from . import media
+
+    kind = v.modality
+    ds = v.path.parent
+    for s, g in parts.items():
+        g = g.select(keep)
+        if fmt in ("hf", "parquet"):
+            data = []
+            for rel in g[kind].to_list():
+                data.append({"bytes": media.resolve(ds, rel).read_bytes(), "path": rel.rsplit("/", 1)[-1]})
+            g = g.with_columns(pl.Series(kind, data, dtype=pl.Struct({"bytes": pl.Binary, "path": pl.String})))
+            buf = io.BytesIO()
+            g.write_parquet(buf, compression="snappy")
+            z.writestr(f"data/{s}.parquet" if fmt == "hf" else f"{s}.parquet", buf.getvalue())
+        else:
+            meta_rows = []
+            for row in g.iter_rows(named=True):
+                rel = row[kind]
+                name = rel.rsplit("/", 1)[-1]
+                label = row.get("label")
+                folder = f"{s}/{label}" if kind == "image" and label is not None else s
+                safe = folder.replace("..", "_")
+                z.write(media.resolve(ds, rel), f"{safe}/{name}")
+                extra = {k: v_ for k, v_ in row.items() if k != kind and not isinstance(v_, (list, dict))}
+                meta_rows.append({"file_name": name if kind == "audio" or label is None else f"{label}/{name}", **extra})
+            if kind == "audio" or any("text" in r for r in meta_rows):
+                z.writestr(f"{s}/metadata.csv", pl.DataFrame(meta_rows).write_csv())
+
+
 def run(params: dict) -> None:
     v = read_version(params)
-    fmt = get_param(params, "format", str, "parquet")
+    fmt = get_param(params, "format", str, "hf" if v.modality in ("image", "audio") else "parquet")
     if fmt not in FORMATS:
         raise ParamError(f"format must be one of {', '.join(FORMATS)}.")
+    if v.modality in MEDIA_FORMATS and fmt not in MEDIA_FORMATS[v.modality]:
+        raise ParamError(f"For {v.modality} datasets choose one of {', '.join(MEDIA_FORMATS[v.modality])}.", "BAD_FORMAT")
+    if v.modality not in MEDIA_FORMATS and fmt in ("imagefolder", "audiofolder"):
+        raise ParamError("Folders of files are for images and audio.", "BAD_FORMAT")
     include_meta = get_param(params, "includeMeta", bool, False)
     out_rel = get_param(params, "output", str, required=True)
     out_dir = protocol.resolve(out_rel, "output")
@@ -82,7 +125,11 @@ def run(params: dict) -> None:
     target = out_dir / f"{fmt}.zip"
     tmp = out_dir / f".{fmt}.zip.tmp-{os.getpid()}"
     with zipfile.ZipFile(tmp, "w", compression=zipfile.ZIP_DEFLATED) as z:
-        for s, g in parts.items():
+        media_kind = v.modality in MEDIA_FORMATS
+        if media_kind:
+            keep = [c for c in keep if c not in ("width", "height", "sample_rate", "duration", "channels") or fmt in ("imagefolder", "audiofolder")]
+            _media_export(v, fmt, z, parts, keep)
+        for s, g in ({} if media_kind else parts).items():
             g = g.select(keep)
             buf = io.BytesIO()
             if fmt in ("parquet", "hf"):

@@ -671,7 +671,22 @@ D2 build notes:
 
 D2c build note: OpenML, UCI and Kaggle couldn't be reached from the development network on 2026-10-16. Their connectors are tested against recorded answers in the shape of each documented API, and still need a live check.
 
-The criteria for D3 to D6 are written when each phase starts.
+### 11.5 D3 acceptance criteria (built 2026-10-16)
+
+1. Images and audio are read from folders (the folder names the label), from Hugging Face imagefolder or audiofolder layouts (`metadata.csv` or `metadata.jsonl`), and from Hugging Face Parquet with the media inside. Damaged files are left out and counted.
+2. Each file is stored once per dataset, named by its content; versions share files.
+3. MNIST (70,000 pictures, both splits) builds in about 70 seconds. Removing copies takes out look-alikes at 97% similarity (86 found), never across different labels. Resizing all of them to 224 × 224 takes about 2½ minutes. The official test split is kept, and the score is 100.
+4. LibriSpeech (a 73-clip sample with transcripts) is resampled to 16 kHz mono FLAC and split. The Hugging Face download holds the audio inside, it plays at 16 kHz, and the README declares `dtype: audio`.
+5. In the browser: the picture grid shows the pictures with their labels, and a clip plays from the list (both through the signed-in API).
+6. Pictures that are all small (like MNIST's 28 × 28) aren't flagged as tiny; only pictures much smaller than the rest are.
+
+D3 build notes:
+- **Moved to D4 (they need a model):** the image safety filter, and near copies of audio. Audio copies are exact only for now.
+- **Moved to D4:** object-detection layouts (COCO, YOLO, Pascal VOC), and WebDataset export.
+- **Image near copies use a 64-bit difference hash with Pillow.** No extra packages are needed.
+- **New packages:** Pillow, NumPy and soundfile are in the image. Their licences (MIT-CMU; BSD with 0BSD, MIT, Zlib and CC0 parts; BSD) are permissive and pass `cdata licences`.
+
+The criteria for D4 to D6 are written when each phase starts.
 
 ## 12. Questions for the owner
 

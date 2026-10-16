@@ -162,6 +162,40 @@ Params: `input`, `output` (`exports/<versionId>`), `format` `parquet` / `csv` / 
 
 With `hf`, the zip holds `data/<split>.parquet` and a README whose `configs:` front matter lets `datasets.load_dataset` read it. The `_` columns are left out unless `includeMeta`. Result: `{ path, format, bytes, splits }`.
 
+## 3b. Images and audio (D3)
+
+**Media folder.**
+- A media dataset keeps its files once, at `datasets/<datasetId>/media/<ab>/<sha256>.<ext>`, each named by its content.
+- Rows hold that path, relative to the dataset folder, in `image` or `audio`. A step that only drops or moves rows never copies a file.
+- A version's manifest has `media: { folder: "../media", kind }`.
+
+**ingest** picks the media path by itself when the input is mostly image or audio files, or Parquet with a struct column of `bytes` (and `path`), which is how Hugging Face's Image and Audio columns are stored.
+- **Folders:** the label is the nearest folder that isn't a split folder (`train/cat/1.jpg` → `cat`). A `metadata.csv` or `metadata.jsonl` with `file_name` (Hugging Face imagefolder or audiofolder) gives label or transcript columns (`label`, `class`, …; `text`, `transcription`, `sentence`, …).
+- **Parquet:** integer labels are named from `labelNames` or the file's Hugging Face metadata.
+- Every file is opened. Unreadable ones are left out and counted (`unreadable` in the result).
+- **Rows:**
+  - images: `image`, `width`, `height`, `label`
+  - audio: `audio`, `sample_rate`, `duration` (seconds), `channels`, `label` or `text`
+- **Task:** `classify` with labels; `transcribe` for audio with transcripts; otherwise `collect`.
+
+**profile** adds `media`:
+- images: sizes, how many distinct sizes, how many under 32 pixels, a width histogram
+- audio: duration statistics and histogram, sample rates, channels, total hours
+
+Findings for media: `mixed_sizes` (suggests `resize`), `tiny_images` (`filter`), `mixed_rates` (`resample`, also when speech isn't 16 kHz), `very_short_audio` (`filter`), `long_audio`.
+
+| Op | Params (defaults) | What it does |
+|---|---|---|
+| `dedupe` | as above | Images: exact copies, plus near copies by a 64-bit difference hash. Similarity is 1 − differing bits / 64, 0.97 by default for images (measured on MNIST: at 0.8 most pairs found had different labels). Two look-alikes with different labels are never grouped. Bands of 8 bits find the likely pairs. Audio: exact copies only. |
+| `filter` | also `minWidth`, `minHeight`, `maxWidth`, `maxHeight` (images); `minSeconds`, `maxSeconds` (audio) | |
+| `split` | as above | For images, the leakage check also moves look-alikes. |
+| `resize` | `size` 224, `mode` `crop` / `pad` / `fit` / `stretch`, `format` `jpeg` / `png`, `quality` 90 | New files; `width` and `height` updated. Grayscale stays grayscale. |
+| `resample` | `sampleRate` 16000, `mono` true, `format` `flac` / `wav` | Linear resampling (NumPy); `sample_rate`, `channels` and `duration` updated. |
+| `augment` | `copies` 1; images: `flip` true, `rotate` 10, `brightness` 0.2, `crop` 0.1; audio: `noise` 0.003, `gain` 0.2, `speed` 0.1; `seed` 42 | Adds changed copies of train rows only (all rows when there's no split), flagged `augmented`, with ids `<id>-a<n>`. |
+| `export` | `format`: images `hf` / `imagefolder` / `parquet`; audio `hf` / `audiofolder` / `parquet` | `hf` and `parquet` embed each file as `{bytes, path}`, and the README declares `dtype: image` or `dtype: audio`. `imagefolder` writes `<split>/<label>/<file>`. `audiofolder` writes files plus `metadata.csv` (`file_name`, label or transcript). |
+
+Without Pillow, or without NumPy and soundfile, the media ops stop with `MEDIA_NOT_INSTALLED` rather than failing partway.
+
 ## 4. Tests
 
-Every op has a pytest in `runner-image/tests/` on small fixtures in `runner-image/tests/fixtures/`. `cdata licences` exits 1 when an installed Python package is not MIT, Apache-2.0, BSD, ISC, PSF, MPL-2.0 (certifi only) or listed in `runner-image/licence-exceptions.json`.
+Every op has a pytest in `runner-image/tests/` on small fixtures in `runner-image/tests/fixtures/`. `cdata licences` exits 1 when an installed Python package is not under a permissive licence: MIT (and MIT-0, MIT-CMU), Apache-2.0, BSD, ISC, 0BSD, Zlib, CC0-1.0, HPND, PSF, or MPL-2.0 (certifi only), or listed in `runner-image/licence-exceptions.json`. SPDX expressions are read as written: OR needs one allowed side, AND needs all.

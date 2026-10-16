@@ -15,9 +15,11 @@ from pathlib import Path
 from . import protocol
 from .protocol import CdataError
 
+# Permissive licences only (no share-alike): MIT, Apache, BSD and ISC, and the
+# few of the same family that NumPy and Pillow use (Zlib, CC0, HPND / MIT-CMU).
 ALLOWED_SPDX = {
-    "MIT", "MIT-0", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "BSD-3-Clause-Clear", "0BSD", "ISC",
-    "PSF-2.0", "Python-2.0", "Python-2.0.1",
+    "MIT", "MIT-0", "MIT-CMU", "HPND", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "BSD-3-Clause-Clear", "0BSD", "ISC",
+    "Zlib", "CC0-1.0", "PSF-2.0", "Python-2.0", "Python-2.0.1",
 }
 MPL_ONLY_FOR = {"certifi"}
 SELF = {"cdata", "continuum-data-runner"}
