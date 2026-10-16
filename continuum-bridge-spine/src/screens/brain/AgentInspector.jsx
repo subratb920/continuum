@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useBrain } from "../../brain/brainContext";
 import { ACTIVE_STATES, STATE_LABEL } from "../../brain/brainTypes";
+import { BRAIN_IS_MOCK } from "../../brain/brainClient";
 import { agentName, clock, KIND_ICON } from "./agentDisplay";
 import "./brain.css";
 
@@ -142,10 +143,11 @@ function AskCard({ event, showWho = false }) {
 }
 
 function Chat() {
-  const { core, events, say } = useBrain();
+  const { core, coreIds, events, say } = useBrain();
   const [text, setText] = useState("");
   const end = useRef(null);
-  const messages = core ? events.filter((e) => e.agentId === core._id && (e.kind === "user" || e.kind === "text")) : [];
+  // The whole conversation, across the brain's restarts
+  const messages = events.filter((e) => coreIds.has(e.agentId) && (e.kind === "user" || e.kind === "text"));
 
   useEffect(() => end.current?.scrollIntoView({ block: "end" }), [messages.length]);
 
@@ -169,7 +171,7 @@ function Chat() {
         <li ref={end} aria-hidden="true" />
       </ol>
       <form className="chat-input" onSubmit={submit}>
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={core ? "Message the core…" : "Waking the brain…"} disabled={!core} aria-label="Message the core" />
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={BRAIN_IS_MOCK && !core ? "Waking the brain…" : "Message the core…"} disabled={BRAIN_IS_MOCK && !core} aria-label="Message the core" />
         <button type="submit" className="brain-btn is-primary" disabled={!text.trim()}>Send</button>
       </form>
     </div>

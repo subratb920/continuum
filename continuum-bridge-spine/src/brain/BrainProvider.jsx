@@ -62,7 +62,9 @@ export function BrainProvider({ children }) {
     return {
       ...state,
       agentList: agents,
-      core: agents.find((a) => a.kind === "core") ?? null,
+      // Your brain: the newest one (a brain that stopped is started anew on your next message)
+      core: agents.filter((a) => a.kind === "core").sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1)).at(-1) ?? null,
+      coreIds: new Set(agents.filter((a) => a.kind === "core").map((a) => a._id)),
       workers: agents.filter((a) => a.kind === "worker"),
       pending,
       select: (id) => dispatch({ type: "select", id }),

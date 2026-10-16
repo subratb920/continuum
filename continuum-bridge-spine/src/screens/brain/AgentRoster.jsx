@@ -92,16 +92,19 @@ export default function AgentRoster() {
           </div>
         </form>
       ) : (
-        <button type="button" className="brain-btn agent-spawn-open" onClick={() => setSpawning(true)} disabled={!core}>
+        <button type="button" className="brain-btn agent-spawn-open" onClick={() => setSpawning(true)} disabled={BRAIN_IS_MOCK && !core}>
           ＋ Spawn worker
         </button>
       )}
 
-      {!core ? (
-        <p className="brain-empty">Waking the brain…</p>
+      {core ? (
+        <ul className="agent-list">{row(core)}</ul>
       ) : (
+        // The real brain starts with your first message (Chat, or a worker to start)
+        <p className="brain-empty">{BRAIN_IS_MOCK ? "Waking the brain…" : "Your brain starts with your first message."}</p>
+      )}
+      {(core || !BRAIN_IS_MOCK) && (
         <>
-          <ul className="agent-list">{row(core)}</ul>
           <h3 className="agent-list-label">Workers</h3>
           {workers.length ? <ul className="agent-list">{workers.map(row)}</ul> : <p className="brain-empty">No workers yet.</p>}
         </>

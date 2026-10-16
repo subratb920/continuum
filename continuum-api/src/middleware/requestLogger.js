@@ -16,7 +16,8 @@ export function requestLogger(req, res, next) {
   const reqLog = logger.child({
     requestId,
     method: req.method,
-    path: req.originalUrl,
+    // A sign-in token in the address (the brain's live stream) never reaches the log
+    path: req.originalUrl.replace(/([?&]token=)[^&]*/g, "$1[hidden]"),
   });
 
   req.log = reqLog;

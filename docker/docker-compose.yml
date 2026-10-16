@@ -66,6 +66,8 @@ services:
       # Continuum Workspaces: the service's internal API, and where browsers open the editors
       WORKSPACES_URL: http://continuum-workspaces:45177
       WORKSPACES_PUBLIC_URL: http://localhost:45176
+      # continuum-brain's brain-api (the Agents screen); its token is in continuum-api/.env.local
+      BRAIN_URL: http://continuum-brain-api:45179
 
     depends_on:
       mongo:
