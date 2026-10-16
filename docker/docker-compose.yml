@@ -76,6 +76,8 @@ services:
       DATA_STORE_PATH: /store
       DATA_RUNNER_URL: http://continuum-data-runner-proxy:45191
       DATA_RUNNER_TOKEN: ${DATA_RUNNER_TOKEN:-dev-data-runner-token}
+      # Seals the tokens people save for sources (Kaggle, Hugging Face). Development value only.
+      DATA_SECRET_KEY: ${DATA_SECRET_KEY:-dev-data-secret-key}
 
     volumes:
       - ../continuum-data:/continuum-data:ro

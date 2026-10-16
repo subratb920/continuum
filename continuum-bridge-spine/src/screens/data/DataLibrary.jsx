@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useSourceSearch } from "./useSourceSearch";
 import { useData } from "../../data/dataContext";
-import { compact, MODALITY_ICON, MODALITY_LABEL, STATE_LABEL, READY_MODALITIES } from "./dataDisplay";
+import { compact, CONNECTOR_LABEL, MODALITY_ICON, MODALITY_LABEL, STATE_LABEL, READY_MODALITIES } from "./dataDisplay";
+import { dataApi } from "../../data/dataApi";
+import DataSettings from "./DataSettings";
 import "./data.css";
 
 /**
@@ -22,8 +24,11 @@ export default function DataLibrary() {
         <button type="button" role="tab" aria-selected={tab === "sources"} className={tab === "sources" ? "is-on" : ""} onClick={() => setTab("sources")}>
           Sources
         </button>
+        <button type="button" role="tab" aria-selected={tab === "settings"} className={tab === "settings" ? "is-on" : ""} onClick={() => setTab("settings")}>
+          Settings
+        </button>
       </div>
-      {tab === "datasets" ? <DatasetList /> : <SourceList onChosen={() => setTab("datasets")} />}
+      {tab === "datasets" ? <DatasetList /> : tab === "sources" ? <SourceList onChosen={() => setTab("datasets")} /> : <DataSettings />}
     </div>
   );
 }
@@ -91,11 +96,40 @@ export function SourceSearchBox({ search, autoFocus }) {
   );
 }
 
+/** Paste a link: a Kaggle, Hugging Face, OpenML or UCI page, or any file or zip on the web. */
+export function AddLink({ onAdded }) {
+  const [link, setLink] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  async function add(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const source = await dataApi.addSource(link);
+      setLink("");
+      onAdded(source);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <form className="data-addlink" onSubmit={add}>
+      <input type="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="Paste a link: Kaggle, Hugging Face, OpenML, UCI or a file" aria-label="Link to data" />
+      <button type="submit" className="data-btn" disabled={busy || !link.trim()}>{busy ? "Adding…" : "Add"}</button>
+      {error && <p className="data-error">{error}</p>}
+    </form>
+  );
+}
+
 function SourceList({ onChosen }) {
   const data = useData();
   const search = useSourceSearch();
   return (
     <>
+      <AddLink onAdded={(s) => (data.chooseSource(s), onChosen?.())} />
       <SourceSearchBox search={search} />
       {search.error && <p className="data-error">{search.error}</p>}
       {search.liveError && <p className="data-hint">{search.liveError} Showing what Continuum already knows.</p>}
@@ -120,7 +154,7 @@ function SourceList({ onChosen }) {
                     {!ready && <span className="data-row-state">Soon</span>}
                   </span>
                   <span className="data-row-sub">
-                    {s.licence.name}
+                    {CONNECTOR_LABEL[s.connector] ?? s.connector} · {s.licence.name}
                     {s.size?.rows ? ` · ${s.size.approx ? "up to " : ""}${compact(s.size.rows)} rows` : ""}
                   </span>
                 </span>

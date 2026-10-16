@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useData } from "../../data/dataContext";
 import { dataApi } from "../../data/dataApi";
-import { SourceSearchBox } from "./DataLibrary";
+import { AddLink, SourceSearchBox } from "./DataLibrary";
 import DataPipeline from "./DataPipeline";
 import { useSourceSearch } from "./useSourceSearch";
 import {
   bytes,
   cellText,
+  CONNECTOR_LABEL,
   compact,
   count,
   MODALITY_ICON,
@@ -49,6 +50,7 @@ function StartView() {
       <section className="data-card">
         <h2 className="data-card-title">Start from a known source</h2>
         <SourceSearchBox search={search} />
+        <AddLink onAdded={(s) => data.chooseSource(s)} />
         {search.liveError && <p className="data-hint">{search.liveError}</p>}
         <div className="data-source-grid">
           {search.sources.slice(0, 12).map((s) => (
@@ -76,7 +78,7 @@ function SourceCard({ source: s, onUse }) {
       </div>
       <p className="data-source-desc">{s.description || s.ref}</p>
       <p className="data-source-meta">
-        {s.modalities.map((m) => MODALITY_LABEL[m]).join(", ")}
+        {CONNECTOR_LABEL[s.connector] ?? s.connector} · {s.modalities.map((m) => MODALITY_LABEL[m]).join(", ")}
         {s.size?.rows ? ` · ${s.size.approx ? "up to " : ""}${compact(s.size.rows)} rows` : ""}
       </p>
       <p className="data-source-licence" title={s.licence.plain}>
@@ -148,7 +150,7 @@ function SourceForm({ source }) {
       <section className="data-card">
         <dl className="data-facts">
           <dt>From</dt>
-          <dd>{source.connector === "huggingface" ? `Hugging Face · ${source.ref}` : source.connector}</dd>
+          <dd>{source.ref ? `${CONNECTOR_LABEL[source.connector] ?? source.connector} · ${source.ref}` : CONNECTOR_LABEL[source.connector] ?? source.connector}</dd>
           <dt>Licence</dt>
           <dd>
             <strong>{source.licence.name}</strong>: {source.licence.plain}
@@ -170,7 +172,11 @@ function SourceForm({ source }) {
         {loadError && <p className="data-error">{loadError}</p>}
         {!detail && !loadError && <p className="data-hint">Looking at what this source holds…</p>}
         {detail && detail.gated && <p className="data-error">This dataset asks you to accept its terms on Hugging Face first. Signing in to Hugging Face from Continuum comes in a later update.</p>}
-        {detail && !detail.gated && detail.convertible === false && <p className="data-error">Hugging Face hasn't made a ready-to-use copy of this dataset, so it can't be downloaded yet.</p>}
+        {detail && !detail.gated && detail.convertible === false && <p className="data-error">This source has no ready-to-use copy of the data, so it can't be downloaded yet.</p>}
+        {detail?.needsCredential && !detail.hasCredential && (
+          <p className="data-error">This source needs your {CONNECTOR_LABEL[detail.needsCredential] ?? detail.needsCredential} token. Add it under Library → Settings, then come back.</p>
+        )}
+        {detail && !detail.configs?.length && !detail.gated && <p className="data-hint">The rows are counted after the download. Archives (zip) are unpacked for you.</p>}
 
         {detail?.configs?.length > 1 && (
           <label className="data-field">
@@ -220,7 +226,7 @@ function SourceForm({ source }) {
         )}
         {error && <p className="data-error">{error}</p>}
         <div className="data-actions">
-          <button type="submit" className="data-btn is-primary" disabled={busy || !detail || detail.gated || detail.convertible === false || !name.trim()}>
+          <button type="submit" className="data-btn is-primary" disabled={busy || !detail || detail.gated || detail.convertible === false || (detail.needsCredential && !detail.hasCredential) || !name.trim()}>
             {busy ? "Starting…" : "Build dataset"}
           </button>
         </div>

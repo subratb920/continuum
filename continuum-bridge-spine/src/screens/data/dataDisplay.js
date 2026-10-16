@@ -33,6 +33,8 @@ export const STEP_HINT = {
   export: "Packing the files into one download.",
 };
 
+export const CONNECTOR_LABEL = { huggingface: "Hugging Face", openml: "OpenML", uci: "UCI", kaggle: "Kaggle", url: "Link", upload: "Your files" };
+
 export const MODALITY_LABEL = { text: "Text", tabular: "Table", image: "Images", audio: "Audio" };
 export const MODALITY_ICON = { text: "¶", tabular: "▦", image: "◩", audio: "♪" };
 export const TASK_LABEL = {

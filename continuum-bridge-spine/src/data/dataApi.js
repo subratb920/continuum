@@ -37,6 +37,16 @@ const q = (params) => {
   return s ? `?${s}` : "";
 };
 
+export function sourceFromLink(link) {
+  const text = String(link).trim();
+  let m;
+  if ((m = text.match(/^https:\/\/(?:www\.)?kaggle\.com\/datasets\/([\w.-]+\/[\w.-]+)/))) return { connector: "kaggle", ref: m[1] };
+  if ((m = text.match(/^https:\/\/huggingface\.co\/datasets\/([\w.-]+\/[\w.-]+)/))) return { connector: "huggingface", ref: m[1] };
+  if ((m = text.match(/^https:\/\/(?:www\.)?openml\.org\/(?:d\/|search\?.*\bid=)(\d+)/))) return { connector: "openml", ref: m[1] };
+  if ((m = text.match(/^https:\/\/archive\.ics\.uci\.edu\/dataset\/(\d+)/))) return { connector: "uci", ref: m[1] };
+  return { url: text };
+}
+
 export const dataApi = {
   me: () => request("GET", "/me"),
   searchSources: ({ q: text, modality, live }) => request("GET", `/sources${q({ q: text, modality, live: live ? 1 : undefined })}`),
@@ -53,6 +63,11 @@ export const dataApi = {
   cancelRun: (runId) => request("POST", `/runs/${runId}/cancel`).then((r) => r.run),
   retryRun: (runId) => request("POST", `/runs/${runId}/retry`).then((r) => r.run),
   createUpload: (name) => request("POST", "/uploads", { name }),
+  credentials: () => request("GET", "/credentials"),
+  saveCredential: (kind, value) => request("POST", `/credentials/${kind}`, { value }).then((r) => r.credential),
+  removeCredential: (kind) => request("DELETE", `/credentials/${kind}`),
+  /** A link pasted by the user: a known site's page becomes that site's source, anything else a plain link. */
+  addSource: (link) => request("POST", "/sources", sourceFromLink(link)).then((r) => r.source),
   catalog: () => request("GET", "/recipes/catalog"),
   templates: () => request("GET", "/recipes/templates").then((r) => r.templates),
   recipes: () => request("GET", "/recipes").then((r) => r.recipes),
