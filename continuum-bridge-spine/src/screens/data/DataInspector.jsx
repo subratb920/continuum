@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useData } from "../../data/dataContext";
 import { dataApi } from "../../data/dataApi";
 import { LabelBars, Histogram } from "./Charts";
-import { bytes, clock, compact, count, EXPORT_LABEL, percent, STEP_LABEL } from "./dataDisplay";
+import { bytes, clock, compact, count, EXPORT_LABEL, percent, seconds, STEP_LABEL } from "./dataDisplay";
 import "./data.css";
 
 /**
@@ -118,6 +118,38 @@ function Profile({ dataset }) {
         </section>
       )}
 
+      {profile.media?.kind === "image" && (
+        <section>
+          <h3 className="data-sub">
+            Picture sizes <span className="data-sub-note">{profile.media.distinctSizes === 1 ? "all the same" : `${compact(profile.media.distinctSizes)} different`}</span>
+          </h3>
+          <ul className="data-kv">
+            {profile.media.sizes.slice(0, 5).map((z) => (
+              <li key={`${z.width}x${z.height}`}>
+                <span>{z.width} × {z.height}</span>
+                <span>{count(z.count)}</span>
+              </li>
+            ))}
+          </ul>
+          {profile.media.distinctSizes > 1 && <Histogram bins={profile.media.histogram} unit=" px" label="How wide the pictures are, in pixels" />}
+        </section>
+      )}
+
+      {profile.media?.kind === "audio" && (
+        <section>
+          <h3 className="data-sub">
+            Clip lengths <span className="data-sub-note">{profile.media.totalHours} hours in all</span>
+          </h3>
+          <Histogram bins={profile.media.histogram} unit=" s" label="How long the clips are, in seconds" />
+          <ul className="data-kv">
+            <li><span>Middle length</span><span>{seconds(profile.media.duration?.p50)}</span></li>
+            {profile.media.sampleRates.map((r) => (
+              <li key={r.rate}><span>{count(r.rate)} samples a second</span><span>{count(r.count)}</span></li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {profile.splits && (
         <section>
           <h3 className="data-sub">Splits</h3>
@@ -167,7 +199,7 @@ function Quality({ dataset }) {
   const [error, setError] = useState(null);
   if (!version) return <p className="data-hint">No version yet.</p>;
   const q = version.quality;
-  const formats = data.catalog?.exportFormats ?? ["hf", "parquet", "csv", "jsonl"];
+  const formats = data.catalog?.exportFormatsFor?.[version.modality] ?? data.catalog?.exportFormats ?? ["hf", "parquet", "csv", "jsonl"];
   const exported = version.exports?.[format];
   const exporting = !exported && data.exporting[`${version.id}:${format}`];
 

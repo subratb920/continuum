@@ -3,6 +3,7 @@ import { useData } from "../../data/dataContext";
 import { dataApi } from "../../data/dataApi";
 import { AddLink, SourceSearchBox } from "./DataLibrary";
 import DataPipeline from "./DataPipeline";
+import { AudioList, ImageDetail, ImageGrid } from "./MediaView";
 import { useSourceSearch } from "./useSourceSearch";
 import {
   bytes,
@@ -451,6 +452,9 @@ function resultLine(s) {
   if (s.op === "fetch") return `Downloaded ${bytes(r.bytes)}.`;
   if (s.op === "ingest") return `${count(r.rows)} rows in one table.`;
   if (s.op === "split" && r.splits) return Object.entries(r.splits).map(([k, n]) => `${k} ${count(n)}`).join(" · ");
+  if (s.op === "resize") return `Resized ${count(r.rows)} pictures.`;
+  if (s.op === "resample") return `Resampled ${count(r.rows)} clips.`;
+  if (s.op === "augment") return `Added ${count(r.changed)} new examples; ${count(r.rows)} in all.`;
   if (r.removed) return `Removed ${count(r.removed)} rows; ${count(r.rows)} left.`;
   if (r.changed) return `Changed ${count(r.changed)} cells or rows.`;
   return "Nothing needed changing.";
@@ -513,7 +517,7 @@ function RowTable({ version }) {
     <section className="data-card data-rows">
       <div className="data-card-head">
         <h2 className="data-card-title">
-          Rows <span className="bridge-count">{compact(total)}</span>
+          {version.modality === "image" ? "Pictures" : version.modality === "audio" ? "Clips" : "Rows"} <span className="bridge-count">{compact(total)}</span>
         </h2>
         <div className="data-actions">
           {version.splits && Object.keys(version.splits).length > 1 && (
@@ -531,6 +535,9 @@ function RowTable({ version }) {
         </div>
       </div>
       {error && <p className="data-error">{error}</p>}
+      {version.modality === "image" && result && <ImageGrid versionId={version.id} rows={result.rows} onOpen={setOpen} />}
+      {version.modality === "audio" && result && <AudioList versionId={version.id} rows={result.rows} offset={page * PAGE} />}
+      {!["image", "audio"].includes(version.modality) && (
       <div className="data-table-wrap">
         <table className="data-table">
           <thead>
@@ -557,17 +564,18 @@ function RowTable({ version }) {
           </tbody>
         </table>
       </div>
+      )}
       <div className="data-pager">
         <button type="button" className="data-btn" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>← Previous</button>
         <span>Page {count(page + 1)} of {count(pages)}</span>
         <button type="button" className="data-btn" disabled={page + 1 >= pages} onClick={() => setPage((p) => p + 1)}>Next →</button>
       </div>
-      {open && <RowDetail row={open} onClose={() => setOpen(null)} />}
+      {open && <RowDetail row={open} versionId={version.id} onClose={() => setOpen(null)} />}
     </section>
   );
 }
 
-function RowDetail({ row, onClose }) {
+function RowDetail({ row, versionId, onClose }) {
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -579,6 +587,7 @@ function RowDetail({ row, onClose }) {
         <h2 className="data-card-title">Row</h2>
         <button type="button" className="data-btn" onClick={onClose}>Close</button>
       </div>
+      {row.image && <ImageDetail versionId={versionId} row={row} />}
       <dl className="data-facts">
         {Object.entries(row).map(([k, v]) => (
           <div key={k} className="data-fact">
