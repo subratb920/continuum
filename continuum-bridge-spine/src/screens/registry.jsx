@@ -4,6 +4,12 @@ import { usePendingCount } from "../brain/brainContext";
 import AgentRoster from "./brain/AgentRoster";
 import AgentStage from "./brain/AgentStage";
 import AgentInspector from "./brain/AgentInspector";
+import { DataProvider } from "../data/DataProvider";
+import { useBuildingCount } from "../data/dataContext";
+import { DATA_ENABLED } from "../data/dataApi";
+import DataLibrary from "./data/DataLibrary";
+import DataWorkbench from "./data/DataWorkbench";
+import DataInspector from "./data/DataInspector";
 
 /**
  * The console's screens: each one fills the three panes (left · centre · right)
@@ -45,6 +51,24 @@ export const SCREENS = [
     useBadge: usePendingCount,
     slots: () => ({ left: <AgentRoster />, center: <AgentStage />, right: <AgentInspector /> }),
   },
+  // Datasets (continuum-data): only when the engine is switched on (VITE_DATA_ENABLED)
+  ...(DATA_ENABLED
+    ? [
+        {
+          id: "data",
+          path: "/data",
+          label: "Data",
+          icon: "▦",
+          switcher: true,
+          left: { label: "Library", icon: "📚" },
+          center: { label: "Workbench", icon: "▦" },
+          right: { label: "Profile", icon: "📈" },
+          Provider: DataProvider,
+          useBadge: useBuildingCount,
+          slots: () => ({ left: <DataLibrary />, center: <DataWorkbench />, right: <DataInspector /> }),
+        },
+      ]
+    : []),
   {
     id: "dashboard",
     path: "/dashboard",
