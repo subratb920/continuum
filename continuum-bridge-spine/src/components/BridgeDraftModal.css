@@ -271,3 +271,29 @@
 .draft-pill-open.is-ended .draft-pill-meta {
   color: inherit;
 }
+
+/* ---------- Start workers for the goals (you choose, each interval) ---------- */
+.draft-workers-btn {
+  width: 100%;
+  margin: 4px 0 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.draft-workers-btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+.draft-workers-btn:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+.draft-workers-note {
+  margin: 0 0 8px;
+  color: var(--text-2);
+  font-size: 13px;
+}

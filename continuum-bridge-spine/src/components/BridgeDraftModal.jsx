@@ -8,7 +8,8 @@ import { formatClock } from "../utils/time";
 import { extractTicketKey } from "../utils/ticket";
 
 import { useNavigate } from "react-router-dom";
-import { useBrain } from "../brain/brainContext";
+import { useBrain, workersOnGoal } from "../brain/brainContext";
+import { ACTIVE_STATES } from "../brain/brainTypes";
 import GoalAgents from "../screens/brain/GoalAgents";
 import { agentWork, withAgentWork } from "../screens/brain/agentWork";
 
@@ -31,7 +32,9 @@ const ENDED_TITLE = "⏰ Interval ended · Continuum";
  * - onSignIn(): signs out so the user can sign in again; the pending
  *   save is completed automatically after sign-in.
  * - Agents: each goal shows the workers on it (click: that worker on the
- *   Agents screen). Stop and save record their work with the goal.
+ *   Agents screen). Stop and save record their work with the goal. While it
+ *   runs, "Start workers for these goals" starts one worker per goal that has
+ *   none yet (you choose each time; starting an interval never starts any).
  * - docked (the Agents screen): a panel in the corner instead of a window
  *   over the page, so the agents stay in view; it folds down to the timer.
  * - Minimize (every page): the window becomes a small timer in the corner
@@ -52,6 +55,8 @@ export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSi
   const navigate = useNavigate();
   const liveWorkers = brain?.live.workers ?? [];
   const [folded, setFolded] = useState(false);
+  const [startingWorkers, setStartingWorkers] = useState(false);
+  const [workersNote, setWorkersNote] = useState("");
   const [minimized, setMinimizedState] = useState(() => readMinimized(bridge?._id));
   function setMinimized(next) {
     setMinimizedState(next);
@@ -159,6 +164,33 @@ export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSi
 
     // 2️⃣ Bubble change upward (App will persist)
     onUpdate(updated);
+  }
+
+  // Goals without a worker at work on them yet (while the interval runs)
+  const goalsWithoutWorker =
+    brain && running ? sessionGoals.filter((g) => !workersOnGoal(liveWorkers, localBridge._id, g.id).some((w) => ACTIVE_STATES.includes(w.state))) : [];
+
+  // One worker per goal that has none; stops at the first refusal (e.g. the most at once) and says why
+  async function startWorkers() {
+    setStartingWorkers(true);
+    setWorkersNote("");
+    let started = 0;
+    let problem = "";
+    for (const g of goalsWithoutWorker) {
+      try {
+        await brain.spawn(g.text, { goal: { bridgeId: localBridge._id, goalId: g.id, text: g.text } });
+        started++;
+      } catch (err) {
+        problem = err?.message || "A worker couldn't start.";
+        break;
+      }
+    }
+    setStartingWorkers(false);
+    setWorkersNote(
+      started
+        ? `Started ${started} ${started === 1 ? "worker" : "workers"}. ${problem ? `${problem} ` : ""}Each asks in Agents → Approvals before changing anything.`
+        : problem
+    );
   }
 
   // Stop: freeze the timer now; goals can still be recorded and saved
@@ -323,6 +355,21 @@ export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSi
               </li>
             ))}
           </ul>
+
+          {goalsWithoutWorker.length > 0 && (
+            <button type="button" className="draft-workers-btn" onClick={startWorkers} disabled={startingWorkers}>
+              {startingWorkers
+                ? "Starting workers…"
+                : goalsWithoutWorker.length === sessionGoals.length
+                  ? "Start workers for these goals"
+                  : `Start workers for the ${goalsWithoutWorker.length} other ${goalsWithoutWorker.length === 1 ? "goal" : "goals"}`}
+            </button>
+          )}
+          {workersNote && (
+            <p className="draft-workers-note" role="status">
+              {workersNote}
+            </p>
+          )}
 
           <div className="bridge-times">
             <div className="bridge-time-row">
