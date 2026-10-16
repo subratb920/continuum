@@ -4,6 +4,11 @@ import { connectStore, ensureSchema } from "./store/db.js";
 import { ensureRecurring } from "./store/queue.js";
 import { ensureSeed } from "./catalogue/index.js";
 import { huggingface } from "./catalogue/huggingface.js";
+import { openml } from "./catalogue/openml.js";
+import { uci } from "./catalogue/uci.js";
+import { kaggle } from "./catalogue/kaggle.js";
+import { urlConnector } from "./catalogue/url.js";
+import { credentialStore } from "./credentials.js";
 import { localStorage } from "./storage/local.js";
 import { proxyRunner } from "./runtime/proxyRunner.js";
 import { JobRunner } from "./worker/runner.js";
@@ -31,7 +36,8 @@ export function createDataEngine(cfg, { log, fetchImpl = fetch } = {}) {
     client: null,
     storage: localStorage(cfg.storePath),
     runner: proxyRunner({ url: cfg.runnerUrl, token: cfg.runnerToken, fetchImpl }),
-    connectors: { huggingface: huggingface({ fetchImpl }) },
+    connectors: { huggingface: huggingface({ fetchImpl }), openml: openml({ fetchImpl }), uci: uci({ fetchImpl }), kaggle: kaggle({ fetchImpl }), url: urlConnector() },
+    credentials: null,
     live: null,
     worker: null,
 
@@ -41,7 +47,7 @@ export function createDataEngine(cfg, { log, fetchImpl = fetch } = {}) {
       const missing = configProblems(cfg);
       if (missing.length) throw new Error(`continuum-data needs these settings: ${missing.join(", ")}`);
       const { client, db } = await connectStore(cfg.mongoUri, cfg.dbName);
-      Object.assign(engine, { client, db });
+      Object.assign(engine, { client, db, credentials: credentialStore(db, cfg.secretKey) });
       await ensureSchema(db);
       await ensureSeed(db);
       engine.live = createLive(db, log);
@@ -52,7 +58,7 @@ export function createDataEngine(cfg, { log, fetchImpl = fetch } = {}) {
           db,
           log: log.child({ part: "data-worker" }),
           workerId: `${os.hostname()}-${process.pid}-${randomBytes(3).toString("hex")}`,
-          handlers: dataHandlers({ db, storage: engine.storage, runner: engine.runner, log }),
+          handlers: dataHandlers({ db, storage: engine.storage, runner: engine.runner, credentials: engine.credentials, log }),
           concurrency: cfg.workerConcurrency,
         });
         engine.worker.start();

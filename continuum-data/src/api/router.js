@@ -19,13 +19,15 @@ import { STEP_LABEL as STEP_LABELS } from "../worker/handlers.js";
  *   GET    /me                         limits and usage
  *   GET    /sources?q=&modality=&task=&live=1
  *   GET    /sources/:id                 one source (with its subsets and splits)
+ *   POST   /sources                     { url } or { connector, ref }: adds a source to the catalogue
+ *   GET    /credentials   POST /credentials/:kind { value }   DELETE /credentials/:kind
  *   POST   /uploads                     { name } → { uploadId }
  *   POST   /uploads/:id/files?path=     one file, as the request body
  *   GET    /datasets   POST /datasets   { name, goal, sourceId | uploadId, config, split, options }
  *   GET    /datasets/:id   PATCH   DELETE
  *   GET    /datasets/:id/versions
  *   GET    /versions/:id   /versions/:id/rows?offset=&limit=   /versions/:id/profile
- *   GET    /recipes/catalog   GET /recipes/templates   GET /recipes   POST /recipes   PUT /recipes/:id   DELETE /recipes/:id
+ *   GET    /recipes/catalog   GET /recipes/templates   GET /recipes   POST /recipes   PATCH /recipes/:id   DELETE /recipes/:id
  *   GET    /datasets/:id/suggested-recipe
  *   GET    /versions/:id/changes   /versions/:id/quality
  *   POST   /versions/:id/publish
@@ -129,6 +131,24 @@ export function createDataRouter({ engine, auth }) {
     res.json({ limits: cfg.limits, usage: u });
   }));
 
+  // ---------- Tokens for sources (sealed; only the last four characters come back) ----------
+
+  router.get("/credentials", wrap(async (req, res) => {
+    res.json({ credentials: await engine.credentials.list(req.userId), canSave: Boolean(cfg.secretKey) });
+  }));
+
+  router.post("/credentials/:kind", express.json(), wrap(async (req, res) => {
+    const saved = await engine.credentials.put(req.userId, req.params.kind, req.body?.value);
+    await col("audit_events").insertOne({ userId: req.userId, at: new Date(), action: "credential.save", target: null, details: { kind: req.params.kind } });
+    res.json({ credential: { ...saved, saved: true } });
+  }));
+
+  router.delete("/credentials/:kind", wrap(async (req, res) => {
+    await engine.credentials.remove(req.userId, req.params.kind);
+    await col("audit_events").insertOne({ userId: req.userId, at: new Date(), action: "credential.remove", target: null, details: { kind: req.params.kind } });
+    res.status(204).end();
+  }));
+
   // ---------- Sources ----------
 
   router.get("/sources", wrap(async (req, res) => {
@@ -137,11 +157,19 @@ export function createDataRouter({ engine, auth }) {
     const task = req.query.task ? String(req.query.task) : null;
     let liveError = null;
     if (q && req.query.live === "1") {
-      try {
-        await saveSources(db(), await connectors.huggingface.search({ q, modality, limit: 20 }), "search");
-      } catch (e) {
-        liveError = e instanceof DataError ? e.message : "The online search didn't answer.";
-      }
+      // Every source that can search, at once; one that doesn't answer doesn't hold up the rest
+      const token = await engine.credentials.reveal(req.userId, "kaggle").catch(() => null);
+      const searches = ["huggingface", "openml", "uci", "kaggle"].map(async (id) => {
+        try {
+          const found = await connectors[id].search({ q, modality, limit: 20, token });
+          await saveSources(db(), found, "search");
+          return null;
+        } catch (e) {
+          return e instanceof DataError ? e.message : `${id} didn't answer.`;
+        }
+      });
+      const errors = (await Promise.all(searches)).filter(Boolean);
+      if (errors.length === 4) liveError = "The online search didn't answer.";
     }
     res.json({ sources: await searchSources(db(), req.userId, { q, modality, task }), liveError });
   }));
@@ -156,8 +184,39 @@ export function createDataRouter({ engine, auth }) {
       view.convertible = d.convertible;
       view.gated = d.gated;
       if (d.description && !view.description) view.description = d.description;
+    } else if (connectors[s.connector]) {
+      const token = s.connector === "kaggle" ? await engine.credentials.reveal(req.userId, "kaggle").catch(() => null) : null;
+      const d = await connectors[s.connector].describe(s.ref, { token });
+      view.configs = [];
+      view.convertible = d.convertible !== false;
+      view.needsCredential = connectors[s.connector].needsCredential ?? null;
+      view.hasCredential = view.needsCredential ? Boolean(token) : null;
+      if (d.description && !view.description) view.description = d.description;
+      if (d.size?.rows && !view.size?.rows) view.size = { ...view.size, rows: d.size.rows };
     }
     res.json({ source: view });
+  }));
+
+  // A source from a web link or a connector's id: it joins the catalogue
+  router.post("/sources", express.json(), wrap(async (req, res) => {
+    const { url, connector, ref } = req.body ?? {};
+    const id = url ? "url" : String(connector ?? "");
+    if (!["url", "huggingface", "openml", "uci", "kaggle"].includes(id)) throw badRequest("Give a web link, or a source and its id.", "BAD_SOURCE");
+    const token = id === "kaggle" ? await engine.credentials.reveal(req.userId, "kaggle").catch(() => null) : null;
+    const d = await connectors[id].describe(url ?? ref, { token });
+    const now = new Date();
+    const { configs: _c, convertible: _v, gated, adult, popularity, ...rest } = d;
+    // Plain links stay with whoever added them; ids of the public catalogues are shared
+    const owner = id === "url" ? req.userId : null;
+    const doc = await col("sources").findOneAndUpdate(
+      { connector: d.connector, ref: d.ref, ...(owner ? { ownerUserId: owner } : {}) },
+      {
+        $set: { gated: Boolean(gated), adult: Boolean(adult), checkedAt: now, popularity: popularity ?? 0 },
+        $setOnInsert: { title: rest.title, description: rest.description ?? "", modalities: rest.modalities ?? [], tasks: rest.tasks ?? [], licence: rest.licence ?? "unknown", size: rest.size ?? {}, tags: rest.tags ?? [], uses: 0, addedBy: "user", ownerUserId: owner, createdAt: now },
+      },
+      { upsert: true, returnDocument: "after" },
+    );
+    res.status(201).json({ source: sourceView(doc) });
   }));
 
   // ---------- Uploads ----------
@@ -237,8 +296,11 @@ export function createDataRouter({ engine, auth }) {
     } else {
       source = await col("sources").findOne({ _id: oid(b.sourceId, "source"), $or: [{ ownerUserId: null }, { ownerUserId: userId }] });
       if (!source) throw notFound("That source");
-      if (source.connector !== "huggingface") throw badRequest("Datasets from this kind of source arrive in a later update.", "CONNECTOR_NOT_READY");
-      plan = await connectors.huggingface.fetchPlan(source.ref, { config: b.config, split: b.split });
+      const connector = connectors[source.connector];
+      if (!connector || source.connector === "upload") throw badRequest("Datasets from this kind of source arrive in a later update.", "CONNECTOR_NOT_READY");
+      if (connector.needsCredential && !(await engine.credentials.list(userId)).find((c) => c.kind === connector.needsCredential)?.saved)
+        throw new DataError(403, "NEEDS_TOKEN", `This source needs your ${connector.needsCredential === "kaggle" ? "Kaggle" : connector.needsCredential} token. Add it in Data settings first.`);
+      plan = source.connector === "huggingface" ? await connector.fetchPlan(source.ref, { config: b.config, split: b.split }) : await connector.fetchPlan(source.ref);
       if (plan.bytes > room) throw new DataError(413, "NO_SPACE", "This dataset is bigger than the space you have left.");
     }
 
@@ -367,7 +429,7 @@ export function createDataRouter({ engine, auth }) {
     res.status(201).json({ recipe: recipeView({ ...doc, _id: insertedId }) });
   }));
 
-  router.put("/recipes/:id", express.json(), wrap(async (req, res) => {
+  router.patch("/recipes/:id", express.json(), wrap(async (req, res) => {
     const r = await mine("recipes", req.params.id, req.userId, "That recipe");
     const set = { name: cleanName(req.body?.name ?? r.name, "recipe name"), steps: normaliseSteps(req.body?.steps ?? r.steps, r.modality), updatedAt: new Date() };
     await col("recipes").updateOne({ _id: r._id }, { $set: set });

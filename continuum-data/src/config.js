@@ -15,6 +15,7 @@ export function dataConfigFromEnv(env = process.env) {
     runnerUrl: env.DATA_RUNNER_URL || "http://continuum-data-runner-proxy:45191",
     runnerToken: env.DATA_RUNNER_TOKEN || "",
     workerConcurrency: Number(env.DATA_WORKER_CONCURRENCY || 2),
+    secretKey: env.DATA_SECRET_KEY || "",
     limits: {
       diskBytes: Number(env.DATA_DISK_GB || 20) * GB,
       uploadBytes: Number(env.DATA_UPLOAD_GB || 5) * GB,

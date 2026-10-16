@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { FINAL, updateRun, addEvent } from "../runs.js";
+import { kaggleAuth } from "../catalogue/kaggle.js";
 
 /**
  * Job handlers (spec 5.2). run.advance moves a run on by one step each time
@@ -29,7 +30,7 @@ const DEFAULT_TIMEOUT_SEC = 2 * 3600;
 const MAX_LOG_EVENTS = 400;
 const PROGRESS_EVERY_MS = 2_000;
 
-export function dataHandlers({ db, storage, runner, log }) {
+export function dataHandlers({ db, storage, runner, credentials = null, log }) {
   const datasets = db.collection("datasets");
   const versions = db.collection("versions");
   const runsCol = db.collection("runs");
@@ -171,6 +172,21 @@ export function dataHandlers({ db, storage, runner, log }) {
       }
     };
 
+    // A step that needs the user's token gets it now, in its parameters for this
+    // run only (never written to the run, the events or the logs)
+    let params = step.params;
+    if (step.credential) {
+      const token = await credentials?.reveal(run.userId, step.credential).catch(() => null);
+      if (!token) {
+        clearInterval(watch);
+        const error = { code: "NEEDS_TOKEN", message: `${label} needs your ${step.credential === "kaggle" ? "Kaggle" : step.credential} token. Add it in Data settings, then try again.` };
+        run = await updateRun(db, run, { [`steps.${i}.state`]: "failed", [`steps.${i}.endedAt`]: new Date(), [`steps.${i}.error`]: error });
+        await finish(run, "failed", { ...error, stepIndex: i });
+        return { kind: "done" };
+      }
+      params = { ...params, headers: { ...params.headers, Authorization: step.credential === "kaggle" ? kaggleAuth(token) : `Bearer ${token}` } };
+    }
+
     let exitCode;
     try {
       exitCode = await runner.run(
@@ -179,7 +195,7 @@ export function dataHandlers({ db, storage, runner, log }) {
           step: `${run._id}-${i}`,
           userId: run.userId,
           op: step.op,
-          params: step.params,
+          params,
           network: step.op === "fetch",
           timeoutSec: TIMEOUT_SEC[step.op] ?? DEFAULT_TIMEOUT_SEC,
         },

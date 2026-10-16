@@ -20,7 +20,11 @@ export function buildSteps({ runId, datasetId, versionId, source, plan, uploadId
   const output = versionPath(datasetId, versionId);
   const input = uploadId ? `uploads/${uploadId}` : `raw/${runId}`;
   const steps = [];
-  if (!uploadId) steps.push({ op: "fetch", params: { output: input, files: plan.files.map(({ url, path, bytes }) => ({ url, path, bytes, sha256: null })), maxBytes, headers: {} } });
+  if (!uploadId) {
+    const params = { output: input, files: plan.files.map(({ url, path, bytes }) => ({ url, path, bytes, sha256: null })), maxBytes, headers: {}, extract: Boolean(plan.extract) };
+    // The token itself is added by the worker for the step's run only, never stored here
+    steps.push({ op: "fetch", params, ...(plan.credential && { credential: plan.credential }) });
+  }
   steps.push({
     op: "ingest",
     params: {
