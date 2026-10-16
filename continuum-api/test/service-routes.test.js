@@ -30,7 +30,7 @@ const db = fakeDb({
     { _id: P1, userId: ME, name: "Shop", source: "github", fullName: "octo/shop", bridgeCount: 1, createdAt: new Date("2026-01-01") },
     { _id: P2, userId: OTHER, name: "Theirs", source: "local" },
   ],
-  bridges: [{ _id: new ObjectId("e".repeat(24)), projectId: P1, bridgeName: "bridge-1", index: 1, status: "draft", interval: { mode: "focus", duration: 50, startedAt: new Date("2026-01-02") }, sessionGoals: [{ id: "g", text: "Footer", status: "untouched" }, { text: "No id", status: "untouched" }] }, { _id: new ObjectId("f".repeat(24)), projectId: P2, bridgeName: "bridge-9", index: 9, status: "draft" }],
+  bridges: [{ _id: new ObjectId("e".repeat(24)), projectId: P1, bridgeName: "bridge-1", index: 1, status: "draft", interval: { mode: "focus", duration: 50, startedAt: new Date("2026-01-02") }, sessionGoals: [{ id: "g", text: "Footer", status: "untouched" }, { text: "No id", status: "untouched" }] }, { _id: new ObjectId("f".repeat(24)), projectId: P2, bridgeName: "bridge-9", index: 9, status: "draft" }, { _id: new ObjectId("1".repeat(24)), projectId: P1, index: 2, status: "finalized" }],
   execution_state: [{ userId: ME, activeProjectId: P1 }],
   users: [{ _id: ME, email: "me@example.com", name: "Me", githubAccessToken: "gho_x" }],
 });
@@ -71,6 +71,8 @@ test("service routes: the user's own projects, bridges and interval only; read-o
   assert.deepEqual(bridges[0].goals, [{ id: "g", text: "Footer", status: "untouched" }, { id: "g2", text: "No id", status: "untouched" }]);
   // One bridge, with its project: only when the project is the user's
   const one = await (await s.get(`/bridges/${"e".repeat(24)}`)).json();
+  assert.equal(one.name, "bridge-1");
+  assert.equal((await (await s.get(`/bridges/${"1".repeat(24)}`)).json()).name, "bridge-2", "an older bridge without bridgeName");
   assert.deepEqual([one.id, one.projectId, one.goals.length], ["e".repeat(24), String(P1), 2]);
   assert.equal((await s.get(`/bridges/${"f".repeat(24)}`)).status, 404, "another user's bridge");
   assert.equal((await s.get("/bridges/nope")).status, 404);

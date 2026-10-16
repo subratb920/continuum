@@ -3,6 +3,8 @@
  * VITE_DATA_API_URL (default: the Continuum API + /data), so the engine can
  * move to a server of its own without touching the screens.
  */
+import { whileVisible } from "../utils/whileVisible";
+
 const TOKEN_KEY = "continuum_token";
 
 export const DATA_ENABLED = import.meta.env.VITE_DATA_ENABLED === "true";
@@ -108,8 +110,15 @@ export const dataApi = {
   /**
    * Live run events. A fetch stream rather than EventSource, so the sign-in
    * stays in a header. Reconnects after a gap; returns a function that stops it.
+   * Open only while the tab is visible (whileVisible): back in view, it
+   * reconnects and onState(true) lets the screen catch up.
    */
   subscribe(onEvent, onState) {
+    return whileVisible(() => dataApi.follow(onEvent, onState));
+  },
+
+  /** The feed itself, until the returned function stops it. */
+  follow(onEvent, onState) {
     let stopped = false;
     let controller = null;
     (async () => {

@@ -1,3 +1,5 @@
+import { whileVisible } from "../utils/whileVisible";
+
 /**
  * The brain as brain-api will serve it (not built yet; see continuum-brain/apps/brain-api).
  * Expected endpoints, under VITE_BRAIN_API_URL:
@@ -32,7 +34,10 @@ export function createSseBrainClient(base = import.meta.env.VITE_BRAIN_API_URL) 
 
     subscribe(onMessage, { after } = {}) {
       let last = after ?? null;
+      // Open only while the tab is visible; back in view, it resumes after the last event seen
+      return whileVisible(() => {
       let source = null;
+      let retry = null;
       let closed = false;
       const open = () => {
         const q = new URLSearchParams({ token: token() ?? "", ...(last ? { after: last } : {}) });
@@ -45,14 +50,16 @@ export function createSseBrainClient(base = import.meta.env.VITE_BRAIN_API_URL) 
         });
         source.onerror = () => {
           source.close();
-          if (!closed) setTimeout(open, 3000);
+          if (!closed) retry = setTimeout(open, 3000);
         };
       };
       open();
       return () => {
         closed = true;
+        clearTimeout(retry);
         source?.close();
       };
+      });
     },
 
     // A goal is sent as its ids: brain-api takes its text (and the project) from Continuum

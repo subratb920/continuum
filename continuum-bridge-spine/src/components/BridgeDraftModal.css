@@ -212,3 +212,62 @@
     bottom: calc(var(--legal-footer-h) + 12px + env(safe-area-inset-bottom));
   }
 }
+
+/* ---------- Header: the minimize button on every page ---------- */
+.bridge-draft .modal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bridge-draft .modal-header h2 {
+  flex: 1;
+}
+
+/* ---------- Minimized: a small timer in the corner, covering nothing ---------- */
+.bridge-draft-pill {
+  position: fixed;
+  right: 16px;
+  bottom: calc(var(--legal-footer-h) + 16px + env(safe-area-inset-bottom));
+  z-index: 900;
+}
+.draft-pill-open {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 8px 24px rgb(var(--shadow-rgb) / 0.25);
+  cursor: pointer;
+  font: inherit;
+}
+.draft-pill-open:hover {
+  background: var(--hover);
+}
+.draft-pill-open.is-ended {
+  border-color: var(--warning-border);
+  background: var(--warning-soft);
+  color: var(--warning-text);
+}
+.draft-pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+.draft-pill-dot.is-running {
+  background: var(--brand);
+}
+.draft-pill-clock {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.draft-pill-meta {
+  color: var(--text-2);
+  font-size: 13px;
+}
+.draft-pill-open.is-ended .draft-pill-meta {
+  color: inherit;
+}

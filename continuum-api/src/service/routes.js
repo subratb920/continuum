@@ -44,7 +44,8 @@ export function projectView(p) {
 export function bridgeView(b) {
   return {
     id: String(b._id),
-    name: b.bridgeName,
+    // Older bridges have no bridgeName: their name, else bridge-<index> (as the UI shows them)
+    name: b.bridgeName ?? b.name ?? `bridge-${b.index ?? "?"}`,
     index: b.index,
     status: b.status,
     interval: { mode: b.interval?.mode ?? null, minutes: b.interval?.duration ?? null, startedAt: b.interval?.startedAt ?? null },

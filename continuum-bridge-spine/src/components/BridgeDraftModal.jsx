@@ -34,12 +34,34 @@ const ENDED_TITLE = "⏰ Interval ended · Continuum";
  *   Agents screen). Stop and save record their work with the goal.
  * - docked (the Agents screen): a panel in the corner instead of a window
  *   over the page, so the agents stay in view; it folds down to the timer.
+ * - Minimize (every page): the window becomes a small timer in the corner
+ *   that covers nothing; a click opens it again. Remembered per interval;
+ *   it opens by itself when time is up.
  */
+
+const minimizedKey = (id) => `continuum.draftMinimized.${id}`;
+function readMinimized(id) {
+  try {
+    return id ? localStorage.getItem(minimizedKey(id)) === "1" : false;
+  } catch {
+    return false;
+  }
+}
 export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSignIn, docked = false }) {
   const brain = useBrain();
   const navigate = useNavigate();
   const liveWorkers = brain?.live.workers ?? [];
   const [folded, setFolded] = useState(false);
+  const [minimized, setMinimizedState] = useState(() => readMinimized(bridge?._id));
+  function setMinimized(next) {
+    setMinimizedState(next);
+    try {
+      if (next) localStorage.setItem(minimizedKey(bridge?._id), "1");
+      else localStorage.removeItem(minimizedKey(bridge?._id));
+    } catch {
+      // storage unavailable: it just isn't remembered
+    }
+  }
   function openAgent(agentId) {
     brain?.select(agentId);
     brain?.seek(null);
@@ -53,6 +75,11 @@ export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSi
   useEffect(() => {
     setLocalBridge(bridge);
   }, [bridge]);
+
+  // Another interval: its own minimized state
+  useEffect(() => {
+    setMinimizedState(readMinimized(bridge?._id));
+  }, [bridge?._id]);
 
   const startedAt = new Date(
     bridge?.interval?.startedAt || bridge?.createdAt || Date.now()
@@ -96,10 +123,11 @@ export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSi
     };
   }, [running]);
 
-  // Time's up: notification + chime (once)
+  // Time's up: notification + chime (once), and the window opens to be saved
   useEffect(() => {
     if (!expired || endedBeforeOpen.current || alerted.current) return;
     alerted.current = true;
+    setMinimizedState(false);
     playIntervalEndSound();
     showIntervalEndNotification(bridge?.name ?? "Your interval");
   }, [expired, bridge?.name]);
@@ -175,6 +203,21 @@ export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSi
   const elapsedMs = Math.min(durationMs, Math.max(0, effectiveNow - startedAt));
   const progress = hasTimer ? (elapsedMs / durationMs) * 100 : 0;
 
+  // Minimized: a small timer in the corner, covering nothing
+  if (minimized) {
+    return (
+      <div className="bridge-draft-pill">
+        <button type="button" className={`draft-pill-open${expired ? " is-ended" : ""}`} onClick={() => setMinimized(false)} title="Open the running interval">
+          <span className={`draft-pill-dot${running ? " is-running" : ""}`} aria-hidden="true" />
+          {hasTimer && <span className="draft-pill-clock">{formatClock(elapsedMs)}</span>}
+          <span className="draft-pill-meta">
+            {expired ? "Time's up" : stopped ? "Stopped" : hasTimer ? `of ${formatClock(durationMs)}` : "Interval"} · {sessionGoals.length} {sessionGoals.length === 1 ? "goal" : "goals"}
+          </span>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className={docked ? "bridge-draft-dock" : "modal-backdrop"}>
       <div className={`modal-window bridge-draft${expired ? " bridge-draft-ended" : ""}${docked ? " docked" : ""}${docked && folded ? " folded" : ""}`}>
@@ -186,6 +229,9 @@ export default function BridgeDraftModal({ bridge, onUpdate, onStop, onEnd, onSi
               {folded ? "▴" : "▾"}
             </button>
           )}
+          <button type="button" className="draft-fold-btn" onClick={() => setMinimized(true)} title="Minimize: keep the timer in a corner" aria-label="Minimize the interval">
+            –
+          </button>
         </header>
 
         <section className="modal-body">
