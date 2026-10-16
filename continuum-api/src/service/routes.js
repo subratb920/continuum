@@ -7,6 +7,7 @@
 //   GET /service/projects               the user's projects (id, name, GitHub repo, bridges)
 //   GET /service/projects/:id           one of them
 //   GET /service/projects/:id/bridges   its bridges, oldest first (interval and goals)
+//   GET /service/bridges/:id            one bridge (and its project), if its project is the user's
 //   GET /service/interval               the active project and its current bridge, if any
 //   GET /service/github                 the user's GitHub sign-in and name for commits:
 //                                       only while one of their agents starts (sealed by
@@ -42,11 +43,13 @@ export function projectView(p) {
 
 export function bridgeView(b) {
   return {
+    id: String(b._id),
     name: b.bridgeName,
     index: b.index,
     status: b.status,
     interval: { mode: b.interval?.mode ?? null, minutes: b.interval?.duration ?? null, startedAt: b.interval?.startedAt ?? null },
-    goals: (b.sessionGoals ?? []).map((g) => ({ text: g.text, status: g.status ?? null })),
+    // Goal ids as the UI gives them (utils/normalizeBridge.js): their own, or g1, g2… by position
+    goals: (b.sessionGoals ?? []).map((g, i) => ({ id: String(g.id ?? `g${i + 1}`), text: g.text, status: g.status ?? null })),
     ticketUrl: b.ticketUrl ?? null,
     createdAt: b.createdAt ?? null,
   };
@@ -90,6 +93,14 @@ export function createServiceRouter(opts = {}) {
     if (!p) return res.status(404).json({ error: "No such project." });
     const bridges = await db().collection(BRIDGE_COLLECTION).find({ projectId: p._id }).sort({ index: 1 }).limit(500).toArray();
     res.json(bridges.map(bridgeView));
+  });
+
+  router.get("/bridges/:id", async (req, res) => {
+    if (!/^[a-f0-9]{24}$/.test(req.params.id)) return res.status(404).json({ error: "No such bridge." });
+    const bridge = await db().collection(BRIDGE_COLLECTION).findOne({ _id: new ObjectId(req.params.id) });
+    const project = bridge ? await db().collection(PROJECT_COLLECTION).findOne({ _id: bridge.projectId, userId: req.serviceUser }, { projection: { _id: 1 } }) : null;
+    if (!project) return res.status(404).json({ error: "No such bridge." });
+    res.json({ ...bridgeView(bridge), projectId: String(project._id) });
   });
 
   router.get("/interval", async (req, res) => {

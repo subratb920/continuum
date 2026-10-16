@@ -6,7 +6,9 @@
 //   GET    /brain/stream?after=&token=      live: "agent" and "event" messages (server-sent
 //                                           events; EventSource can't send headers, so this
 //                                           route also takes the sign-in token as ?token=)
-//   POST   /brain/agents {task, projectId?} a worker: on that project, or your brain picks it
+//   POST   /brain/agents {task, projectId? | goal?: {bridgeId, goalId} | repo?}
+//                                           a worker: on that project, interval goal or repository;
+//                                           with none of them, your brain picks the project
 //   POST   /brain/agents/:id/stop   DELETE /brain/agents/:id
 //   POST   /brain/agents/:id/reply {eventId, answer}
 //                                           a permission (approve | always | deny) or a question
@@ -139,10 +141,14 @@ export function createBrainRouter(opts = {}) {
 
   router.post("/agents", async (req, res) => {
     const task = typeof req.body?.task === "string" ? req.body.task.trim() : "";
-    if (!task) throw new AppError("Say what the worker should do.", 400, "VALIDATION_ERROR");
-    const projectId = req.body?.projectId;
-    if (projectId) return res.status(201).json(toAgent(await brain(req, "POST", "/agents", { projectId, task, ...(req.body.model ? { model: req.body.model } : {}) })));
-    // No project given: your brain picks it (and asks you when it isn't clear)
+    if (!task && !req.body?.goal) throw new AppError("Say what the worker should do.", 400, "VALIDATION_ERROR");
+    const { projectId, repo, goal, model } = req.body ?? {};
+    // Started directly: on a project, an interval goal (its project, from Continuum) or a repository (a retry)
+    if (projectId || goal || repo) {
+      const where = goal ? { goal: { bridgeId: goal.bridgeId, goalId: goal.goalId } } : projectId ? { projectId } : { repo };
+      return res.status(201).json(toAgent(await brain(req, "POST", "/agents", { ...where, task, ...(model ? { model } : {}) })));
+    }
+    // Nothing given: your brain picks the project (and asks you when it isn't clear)
     const text = `Start a worker agent for this task. Pick the right project with your tools; if it isn't clear which one, ask me first.\n\nTask: ${task}`;
     res.status(202).json(toAgent(await brain(req, "POST", "/brain/messages", { text })));
   });

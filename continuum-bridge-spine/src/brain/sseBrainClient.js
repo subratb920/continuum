@@ -5,7 +5,8 @@
  *   GET  /brain/stream?after=<eventId>&token=<jwt>
  *        SSE: "agent" (Agent) and "event" (AgentEvent) messages, from a change
  *        stream on brain_agents / brain_events; after= catches up first
- *   POST /brain/agents              {task, repo?}       the core starts a worker
+ *   POST /brain/agents              {task, repo?, goal?: {bridgeId, goalId}}
+ *        a worker: on that repository, or that interval goal's project; else the core picks
  *   POST /brain/agents/:id/stop
  *   POST /brain/agents/:id/reply    {eventId, answer}   a permission or question
  *   POST /brain/core/messages       {text}
@@ -54,7 +55,8 @@ export function createSseBrainClient(base = import.meta.env.VITE_BRAIN_API_URL) 
       };
     },
 
-    spawn: (task, { repo } = {}) => call("POST", "/brain/agents", { task, repo }),
+    // A goal is sent as its ids: brain-api takes its text (and the project) from Continuum
+    spawn: (task, { repo, goal } = {}) => call("POST", "/brain/agents", { task, repo, ...(goal ? { goal: { bridgeId: goal.bridgeId, goalId: goal.goalId } } : {}) }),
     stop: (agentId) => call("POST", `/brain/agents/${agentId}/stop`),
     reply: (agentId, eventId, answer) => call("POST", `/brain/agents/${agentId}/reply`, { eventId, answer }),
     say: (text) => call("POST", "/brain/core/messages", { text }),

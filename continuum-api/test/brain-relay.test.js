@@ -79,6 +79,11 @@ test("brain relay: your brain and workers; a worker on a project, or your brain 
   assert.equal((await s.call("POST", "/agents", { task: "Add a footer", projectId: "p".repeat(24) })).status, 201);
   assert.equal((await s.call("POST", "/agents", { task: "Add a footer" })).status, 202);
   assert.match(b.calls.at(-1), /POST \/brain\/messages .*Pick the right project.*Task: Add a footer/);
+  // An interval goal or a repository (a retry) starts the worker directly, not through the brain
+  await s.call("POST", "/agents", { task: "", goal: { bridgeId: "b".repeat(24), goalId: "g1", text: "ignored" } });
+  assert.match(b.calls.at(-1), /POST \/agents {"goal":{"bridgeId":"b{24}","goalId":"g1"},"task":""}/);
+  await s.call("POST", "/agents", { task: "Again", repo: "octo/shop" });
+  assert.match(b.calls.at(-1), /POST \/agents {"repo":"octo\/shop","task":"Again"}/);
   const refused = await s.call("POST", "/agents", { task: "x", projectId: "nope" });
   assert.deepEqual([refused.status, (await refused.json()).error], [404, "No such project."]);
   assert.equal((await s.call("POST", "/agents", { task: " " })).status, 400);
