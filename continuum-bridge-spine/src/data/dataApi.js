@@ -3,7 +3,7 @@
  * VITE_DATA_API_URL (default: the Continuum API + /data), so the engine can
  * move to a server of its own without touching the screens.
  */
-import { whileVisible } from "../utils/whileVisible";
+import { sharedFeed } from "../utils/sharedFeed";
 
 const TOKEN_KEY = "continuum_token";
 
@@ -117,11 +117,17 @@ export const dataApi = {
   /**
    * Live run events. A fetch stream rather than EventSource, so the sign-in
    * stays in a header. Reconnects after a gap; returns a function that stops it.
-   * Open only while the tab is visible (whileVisible): back in view, it
-   * reconnects and onState(true) lets the screen catch up.
+   * One feed for every Continuum tab in this browser (one tab holds it;
+   * utils/sharedFeed). Its events only say what to reload, so a tab that joins
+   * reloads once (onState(true)) instead of being sent past events.
    */
   subscribe(onEvent, onState) {
-    return whileVisible(() => dataApi.follow(onEvent, onState));
+    return sharedFeed(
+      "continuum-data-feed",
+      (emit) => dataApi.follow((event) => emit({ event }), (up) => emit({ up })),
+      (m) => ("up" in m ? onState?.(m.up) : onEvent(m.event)),
+      { keep: 0, onJoin: () => onState?.(true) },
+    );
   },
 
   /** The feed itself, until the returned function stops it. */

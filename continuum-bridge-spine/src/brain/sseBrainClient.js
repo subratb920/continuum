@@ -1,4 +1,4 @@
-import { whileVisible } from "../utils/whileVisible";
+import { sharedFeed } from "../utils/sharedFeed";
 
 /**
  * The brain as brain-api will serve it (not built yet; see continuum-brain/apps/brain-api).
@@ -34,19 +34,19 @@ export function createSseBrainClient(base = import.meta.env.VITE_BRAIN_API_URL) 
 
     subscribe(onMessage, { after } = {}) {
       let last = after ?? null;
-      // Open only while the tab is visible; back in view, it resumes after the last event seen
-      return whileVisible(() => {
+      // One feed for every Continuum tab in this browser (one tab holds it; utils/sharedFeed)
+      return sharedFeed("continuum-brain-feed", (emit) => {
       let source = null;
       let retry = null;
       let closed = false;
       const open = () => {
         const q = new URLSearchParams({ token: token() ?? "", ...(last ? { after: last } : {}) });
         source = new EventSource(`${base}/brain/stream?${q}`);
-        source.addEventListener("agent", (e) => onMessage({ type: "agent", agent: JSON.parse(e.data) }));
+        source.addEventListener("agent", (e) => emit({ type: "agent", agent: JSON.parse(e.data) }));
         source.addEventListener("event", (e) => {
           const event = JSON.parse(e.data);
           last = event._id; // reconnects resume after the last one seen
-          onMessage({ type: "event", event });
+          emit({ type: "event", event });
         });
         source.onerror = () => {
           source.close();
@@ -59,7 +59,7 @@ export function createSseBrainClient(base = import.meta.env.VITE_BRAIN_API_URL) 
         clearTimeout(retry);
         source?.close();
       };
-      });
+      }, onMessage);
     },
 
     // A goal is sent as its ids: brain-api takes its text (and the project) from Continuum
