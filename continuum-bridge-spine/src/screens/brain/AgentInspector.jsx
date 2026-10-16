@@ -166,11 +166,15 @@ function AskCard({ event, showWho = false }) {
 function Chat() {
   const { core, coreIds, events, say, replay } = useBrain();
   const [text, setText] = useState("");
-  const end = useRef(null);
+  const log = useRef(null);
   // The whole conversation, across the brain's restarts
   const messages = events.filter((e) => coreIds.has(e.agentId) && (e.kind === "user" || e.kind === "text"));
 
-  useEffect(() => end.current?.scrollIntoView({ block: "end" }), [messages.length]);
+  // To the newest message: only the log scrolls (scrollIntoView would also
+  // scroll the screen's own frames, leaving the screen blank)
+  useEffect(() => {
+    if (log.current) log.current.scrollTop = log.current.scrollHeight;
+  }, [messages.length]);
 
   function submit(e) {
     e.preventDefault();
@@ -181,7 +185,7 @@ function Chat() {
 
   return (
     <div className="inspector-body chat">
-      <ol className="chat-log">
+      <ol className="chat-log" ref={log}>
         {messages.map((m) => (
           <li key={m._id} className={`chat-msg ${m.kind === "user" ? "from-you" : "from-core"}`}>
             <span className="chat-bubble">{m.text}</span>
@@ -189,7 +193,6 @@ function Chat() {
           </li>
         ))}
         {!messages.length && <li className="brain-empty">Talk to your brain: it plans and hands work to workers.</li>}
-        <li ref={end} aria-hidden="true" />
       </ol>
       <form className="chat-input" onSubmit={submit}>
         <input value={text} onChange={(e) => setText(e.target.value)} placeholder={!replay.live ? "Replaying — go live to send" : BRAIN_IS_MOCK && !core ? "Waking the brain…" : "Message the core…"} disabled={!replay.live || (BRAIN_IS_MOCK && !core)} aria-label="Message the core" />

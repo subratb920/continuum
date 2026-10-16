@@ -17,21 +17,23 @@
     border-bottom: 1px solid var(--border);
   }
 
-  /* ---------- Screen tabs: evenly spaced ---------- */
+  /* ---------- Screen tabs: equal columns, divided, the page's 16px gutter on both sides ---------- */
   .phone-tabs {
-    display: flex;
-    padding: 0 calc(8px + env(safe-area-inset-right)) 0 calc(8px + env(safe-area-inset-left));
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    padding: 0 calc(16px + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left));
   }
   .phone-tab {
-    flex: 1;
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    min-height: 40px;
-    padding: 0 8px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 10px;
     border: none;
-    border-bottom: 2px solid transparent;
     background: none;
     color: var(--text-muted);
     font: inherit;
@@ -39,9 +41,40 @@
     font-weight: 600;
     cursor: pointer;
   }
+  .phone-tab-label {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  /* The boundary between two tabs: a short line, centred on the row */
+  .phone-tab + .phone-tab::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 12px;
+    bottom: 12px;
+    width: 1px;
+    background: var(--border);
+  }
+  /* The current tab: underlined, inset by the same margin on both sides */
+  .phone-tab::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 0;
+    height: 2px;
+    border-radius: 2px 2px 0 0;
+    background: transparent;
+  }
   .phone-tab[aria-current="page"] {
     color: var(--text);
-    border-bottom-color: var(--brand);
+  }
+  .phone-tab[aria-current="page"]::after {
+    background: var(--brand);
+  }
+  .phone-tab:hover {
+    color: var(--text);
   }
   .phone-tab:focus-visible {
     outline: 2px solid var(--focus);
@@ -62,6 +95,8 @@
   /* ---------- Parts bar: a strip of left · middle · right that slides with the parts ---------- */
   .parts-bar {
     overflow: hidden;
+    /* The same gutter as the tabs above: the labels line up with them */
+    padding: 0 calc(16px + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left));
     border-top: 1px solid var(--border-subtle);
   }
   .parts-strip {
