@@ -8,6 +8,7 @@ import { ENV } from "./config/env.js";
 import { connectToDB, closeDB } from "./config/db.js";
 import { bootstrapSystem } from "./bootstrap/bootstrap.js";
 import { withSystemContext } from "./logging/childLogger.js";
+import { dataEngine } from "./data/engine.js";
 
 let server;
 
@@ -23,6 +24,12 @@ async function startServer() {
 
     // 3️⃣ Bootstrap database structure & invariants
     await bootstrapSystem(db);
+
+    // Data engine (continuum-data), when switched on: its own database and
+    // worker. A problem there leaves /data answering "not ready", not the API down.
+    if (dataEngine) {
+      await dataEngine.start().catch((err) => log.error({ err }, "Data engine did not start"));
+    }
 
     // 4️⃣ Start HTTP server
     server = app.listen(ENV.PORT, () => {
@@ -53,6 +60,8 @@ async function shutdown(signal) {
       await new Promise((resolve) => server.close(resolve));
       log.info("HTTP server closed");
     }
+
+    if (dataEngine) await dataEngine.stop();
 
     await closeDB();
     log.info("Database connection closed");

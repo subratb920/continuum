@@ -19,6 +19,7 @@ import meRoutes from "./routes/me.routes.js";
 import { createWorkspacesRouter } from "./workspaces/routes.js";
 import { createServiceRouter } from "./service/routes.js";
 import { createBrainRouter, streamToken } from "./brain/routes.js";
+import { dataEngine } from "./data/engine.js";
 
 
 const app = express();
@@ -46,6 +47,7 @@ app.use("/me", requireAuth, meRoutes); // the user's own preferences (theme), sh
 app.use("/workspaces", requireAuth, createWorkspacesRouter()); // development servers per project (continuum-workspaces)
 app.use("/service", createServiceRouter()); // read-only data for continuum-brain (its service token only)
 app.use("/brain", streamToken, requireAuth, createBrainRouter()); // the Agents screen, relayed to continuum-brain
+if (dataEngine) app.use("/data", dataEngine.router({ auth: requireAuth })); // datasets: sources, versions, pipelines (continuum-data)
 
 // ❗ MUST BE LAST
 app.use(errorMiddleware);
