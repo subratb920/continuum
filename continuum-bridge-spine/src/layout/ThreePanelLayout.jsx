@@ -4,10 +4,12 @@ import { usePanels } from "./PanelsContext";
 import { CreatePane, DeployPane } from "./ViewPanes";
 
 /**
- * The console: projects · Interval Setup · Bridge Spine. Under 900px one pane
- * at a time fills the main area, chosen from the header's ☰ menu: Interval
- * Setup (the default), Projects, Bridges, Create or Deploy. Choosing a project
- * or a bridge goes back to Interval Setup.
+ * The console: three panes, filled by the current screen (screens/registry.jsx).
+ * By default projects · (the screen's centre) · Bridge Spine; a screen can put
+ * its own pane on either side (leftPane / rightPane). Under 900px one pane at a
+ * time fills the main area, chosen from the header's ☰ menu: the centre (the
+ * default), the left or right pane, Create or Deploy. Choosing a project or a
+ * bridge goes back to the centre.
  */
 export default function ThreePanelLayout({
   projects,
@@ -22,13 +24,16 @@ export default function ThreePanelLayout({
   onEditProject,
   onDeleteProject,
   leftPane = null, // another left pane instead of the projects (e.g. the Dashboard's navigation)
+  rightPane = null, // another right pane instead of the Bridge Spine (e.g. the Agents screen's inspector)
+  leftLabel = "Projects",
+  rightLabel = "Bridge Spine",
   children,
 }) {
   const { panel, close } = usePanels();
 
   return (
     <div className={`app${panel ? ` app-view-${panel}` : ""}`}>
-      <aside className="left" aria-label={leftPane ? "Navigation" : "Projects"} id="console-projects">
+      <aside className="left" aria-label={leftLabel} id="console-projects">
         {leftPane ?? (
         <ProjectList
           projects={projects}
@@ -51,7 +56,8 @@ export default function ThreePanelLayout({
         {panel === "create" ? <CreatePane selectedProject={selectedProject} /> : panel === "deploy" ? <DeployPane selectedProject={selectedProject} /> : children}
       </main>
 
-      <aside className="right" aria-label="Bridge Spine" id="console-bridges">
+      <aside className="right" aria-label={rightLabel} id="console-bridges">
+        {rightPane ?? (
         <BridgeSpine
           selectedProject={selectedProject}
           activeBridge={activeBridge}
@@ -61,6 +67,7 @@ export default function ThreePanelLayout({
             close();
           }}
         />
+        )}
       </aside>
 
     </div>

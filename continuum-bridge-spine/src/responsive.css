@@ -133,16 +133,16 @@ body .shell-header {
   body .app > .right {
     display: none;
   }
-  body .app.app-view-projects > .left,
-  body .app.app-view-bridges > .right {
+  body .app.app-view-left > .left,
+  body .app.app-view-right > .right {
     display: block;
     width: auto;
     border: none;
     padding: 16px calc(16px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
     background: var(--page);
   }
-  body .app.app-view-projects > .center,
-  body .app.app-view-bridges > .center {
+  body .app.app-view-left > .center,
+  body .app.app-view-right > .center {
     display: none;
   }
   body .center {

@@ -96,6 +96,20 @@
   /* Effects */
   --shadow-rgb: 15 23 42;
   --scrim: rgba(15, 23, 42, 0.38);
+
+  /* Agents (Agents screen): one hue per state; -rgb for glows */
+  --agent-core: #7c3aed;
+  --agent-core-rgb: 124 58 237;
+  --agent-working: #4f46e5;
+  --agent-working-rgb: 79 70 229;
+  --agent-waiting: #d97706;
+  --agent-waiting-rgb: 217 119 6;
+  --agent-failed: #dc2626;
+  --agent-failed-rgb: 220 38 38;
+  --agent-idle: #16a34a;
+  --agent-idle-rgb: 22 163 74;
+  --agent-off: #94a3b8;
+  --agent-off-rgb: 148 163 184;
 }
 
 /* Dark: ChatGPT's dark palette. Also the default (no theme chosen yet) */
@@ -176,6 +190,20 @@
 
   --shadow-rgb: 0 0 0;
   --scrim: rgba(0, 0, 0, 0.62);
+
+  /* Agents (Agents screen): one hue per state; -rgb for glows */
+  --agent-core: #a78bfa;
+  --agent-core-rgb: 167 139 250;
+  --agent-working: #818cf8;
+  --agent-working-rgb: 129 140 248;
+  --agent-waiting: #f59e0b;
+  --agent-waiting-rgb: 245 158 11;
+  --agent-failed: #ef4444;
+  --agent-failed-rgb: 239 68 68;
+  --agent-idle: #19c37d;
+  --agent-idle-rgb: 25 195 125;
+  --agent-off: #6b6b6b;
+  --agent-off-rgb: 107 107 107;
 }
 
 /* Gray: a professional neutral grey with a muted slate-blue accent */
@@ -255,6 +283,20 @@
 
   --shadow-rgb: 31 35 40;
   --scrim: rgba(31, 35, 40, 0.42);
+
+  /* Agents (Agents screen): one hue per state; -rgb for glows */
+  --agent-core: #6d5a9e;
+  --agent-core-rgb: 109 90 158;
+  --agent-working: #3d5a80;
+  --agent-working-rgb: 61 90 128;
+  --agent-waiting: #b7791f;
+  --agent-waiting-rgb: 183 121 31;
+  --agent-failed: #c0392b;
+  --agent-failed-rgb: 192 57 43;
+  --agent-idle: #2e8b57;
+  --agent-idle-rgb: 46 139 87;
+  --agent-off: #8a94a3;
+  --agent-off-rgb: 138 148 163;
 }
 
 /* Screens that are dark in every theme: sign-in (auth) and the GitHub import (GitHub's own palette) */

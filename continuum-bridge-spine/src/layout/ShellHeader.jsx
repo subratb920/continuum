@@ -8,6 +8,7 @@ import { createItems, deployItems } from "./menuItems";
 import MenuItem from "./MenuItem";
 import { ContactCard, ProfileCard, SettingsCard, SupportCard } from "../components/ProfileCards";
 import { BUILD } from "../utils/support";
+import { SCREENS, screenForPath } from "../screens/registry";
 
 /** A screen without hover (phones, tablets): menus open on a tap instead. */
 const noHover = () => typeof window !== "undefined" && window.matchMedia?.("(hover: none)").matches;
@@ -93,23 +94,37 @@ export default function ShellHeader({ selectedProject = null }) {
   const actions = useShellActions(selectedProject, () => setOpenMenu(null));
   const deployable = actions.deployable;
 
-  // Small screens: the ☰ menu's views (the console's panes, shown in the main area)
+  // The console screen showing (Interval Setup, Agents, Dashboard…; screens/registry.jsx),
+  // or null on another page; the ☰ menu then offers the Interval screen's panes
+  const screen = screenForPath(pathname);
+  const consoleScreen = screen ?? SCREENS[0];
+
+  // Small screens: the ☰ menu's views (the screen's panes, shown in the main area),
+  // then the other screens and pages
   const VIEWS = [
-    ["setup", "Interval Setup", "⏱"],
-    ["projects", "Projects", "📂"],
-    ["bridges", "Bridges", "🌉"],
+    ["center", consoleScreen.center.label, consoleScreen.center.icon],
+    ["left", consoleScreen.left.label, consoleScreen.left.icon],
+    ["right", consoleScreen.right.label, consoleScreen.right.icon],
+    ...SCREENS.filter((s) => s.switcher && s !== consoleScreen).map((s) => [`screen:${s.id}`, s.label, s.icon]),
     ["workspaces", "Workspaces", "💻"],
     ["create", "Create/Import", "＋"],
     ...(DEPLOY_AVAILABLE ? [["deploy", "Deploy", "🚀"]] : []),
   ];
-  const onConsole = panels.enabled && pathname === "/console";
-  const currentView = pathname === "/workspaces" ? "workspaces" : onConsole ? (panels.panel ?? "setup") : null;
+  const onConsole = panels.enabled && !!screen;
+  const currentView = pathname === "/workspaces" ? "workspaces" : onConsole ? (panels.panel ?? "center") : null;
+  function showScreen(s) {
+    setOpenMenu(null);
+    panels.close(); // a new screen opens on its centre
+    navigate(s.path);
+  }
   function showView(view) {
     setOpenMenu(null);
     // Workspaces is a page of its own (not a console pane)
     if (view === "workspaces") return navigate("/workspaces");
-    if (onConsole) panels.open(view === "setup" ? null : view);
-    else navigate("/console", { state: { view: view === "setup" ? null : view } });
+    if (view.startsWith("screen:")) return showScreen(SCREENS.find((s) => `screen:${s.id}` === view));
+    const panel = view === "center" ? null : view;
+    if (onConsole) panels.open(panel);
+    else navigate(consoleScreen.path, { state: { view: panel } });
   }
 
   function handleSignOut() {
@@ -188,17 +203,12 @@ export default function ShellHeader({ selectedProject = null }) {
           its left edge, Create/Import and Deploy on its right edge */}
       <nav className="shell-nav">
         <div className="shell-nav-inner">
-          <button
-            type="button"
-            className="shell-nav-btn"
-            aria-current={pathname === "/console" ? "page" : undefined}
-            onClick={() => {
-              setOpenMenu(null);
-              navigate("/console");
-            }}
-          >
-            Interval Setup
-          </button>
+          {/* The screen switcher: Interval Setup, Agents… (screens/registry.jsx) */}
+          <div className="shell-switcher" role="group" aria-label="Screens">
+            {SCREENS.filter((s) => s.switcher).map((s) => (
+              <ScreenButton key={s.id} screen={s} current={screen === s} onClick={() => showScreen(s)} />
+            ))}
+          </div>
 
           <div className="shell-nav-group">
             <button
@@ -380,5 +390,20 @@ export default function ShellHeader({ selectedProject = null }) {
         {card === "contact" && <ContactCard user={user} authProvider={authProvider} onClose={closeCard} />}
       </div>
     </header>
+  );
+}
+
+/** A switcher button, with the screen's badge (e.g. what waits on you in Agents). */
+function ScreenButton({ screen, current, onClick }) {
+  const badge = screen.useBadge?.() ?? 0;
+  return (
+    <button type="button" className="shell-nav-btn shell-switcher-btn" aria-current={current ? "page" : undefined} onClick={onClick}>
+      {screen.label}
+      {badge > 0 && (
+        <span className="switcher-badge" aria-label={`${badge} waiting`}>
+          {badge}
+        </span>
+      )}
+    </button>
   );
 }

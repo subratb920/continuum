@@ -260,3 +260,36 @@
 
 
 
+
+/* The screen switcher (Interval Setup | Agents …): one segmented control */
+.shell-switcher {
+  display: inline-flex;
+}
+.shell-switcher-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.shell-switcher .shell-switcher-btn:not(:first-child) {
+  margin-left: -1px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.shell-switcher .shell-switcher-btn:not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.shell-switcher .shell-switcher-btn[aria-current="page"] {
+  position: relative; /* its border shows over its neighbour's */
+}
+.switcher-badge {
+  min-width: 16px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--agent-waiting);
+  color: var(--on-accent);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}

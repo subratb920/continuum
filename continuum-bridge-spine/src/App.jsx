@@ -11,7 +11,9 @@ import PageShell from "./layout/PageShell";
 
 import ReEntry from "./screens/ReEntry";
 import CreateProject from "./screens/CreateProject";
-import Dashboard, { DashboardNav } from "./components/Dashboard";
+import Dashboard from "./components/Dashboard";
+import { screenForPath } from "./screens/registry";
+import { ScreenProviders } from "./screens/ScreenProviders";
 import { IMPORT_EVENT } from "./utils/importFromDevice";
 import Welcome from "./screens/Welcome";
 import HelpPage from "./pages/HelpPage";
@@ -48,7 +50,7 @@ import {
 
 // Last page on reopen (see App): only these pages are remembered
 const LAST_PATH_KEY = "continuum_last_path";
-const RESTORABLE_PATHS = ["/", "/console", "/dashboard", "/help"];
+const RESTORABLE_PATHS = ["/", "/console", "/brain", "/dashboard", "/help"];
 
 function readLastPath() {
   try {
@@ -462,7 +464,7 @@ export default function App() {
      The console lives at /console.
      ========================================================= */
 
-  if (pathname !== "/console" && pathname !== "/dashboard") {
+  if (!screenForPath(pathname)) {
     return (
       <PageShell scroll>
         <Welcome
@@ -532,10 +534,56 @@ export default function App() {
   const hasActiveProject = !!activeProject;
 
   /* =========================================================
+     🧭 SCREENS — the console's panes come from the current
+     screen (screens/registry.jsx: Interval Setup, Agents, Dashboard)
+     ========================================================= */
+
+  const screen = screenForPath(pathname);
+
+  const intervalCenter = (
+    <>
+      {/* Phones: Continuum creates on its server, the code lives in GitHub */}
+      <PhoneCard onCreate={() => navigate("/new")} onWorkspaces={() => navigate("/workspaces")} />
+      {projects.length === 0 ? (
+        <EmptyConsole onCreateProject={() => navigate("/new")} />
+      ) : isContextReady && hasActiveProject ? (
+        <ReEntry
+          key={activeBridge ? activeBridge._id : "idle"}
+          activeProject={activeProject}
+          selectedProject={selectedProject}
+          onIntervalStarted={(bridge) => {
+            setActiveBridge(bridge);
+            setBridgeRevision(r => r + 1);
+          }}
+        />
+      ) : (
+        <div className="empty-state">
+          <p>Activate a project to start an interval.</p>
+        </div>
+      )}
+    </>
+  );
+
+  // Dashboard (profile menu): the overview, in the console's middle pane
+  const dashboardCenter = (
+    <Dashboard
+      projects={projects}
+      activeProject={activeProject}
+      activeBridge={activeBridge}
+      bridgeRevision={bridgeRevision}
+      onSelectProject={setSelectedProject}
+      onOpenInterval={() => navigate("/console")}
+    />
+  );
+
+  const slots = screen.slots({ intervalCenter, dashboardCenter, navigate });
+
+  /* =========================================================
      🖥️ UI
      ========================================================= */
 
   return (
+    <ScreenProviders>
     <PageShell selectedProject={selectedProject} panels>
       <ThreePanelLayout
         projects={projects}
@@ -549,37 +597,12 @@ export default function App() {
         onActivateProject={(project) => (setProjectForAction(project), setShowActivateProject(true))}
         onEditProject={(project) => (setProjectForAction(project), setShowEditProject(true))}
         onDeleteProject={(project) => (setProjectForAction(project), setShowDeleteProject(true))}
-        leftPane={pathname === "/dashboard" ? <DashboardNav onIntervalSetup={() => navigate("/console")} /> : null}
+        leftPane={slots.left ?? null}
+        rightPane={slots.right ?? null}
+        leftLabel={screen.left.label}
+        rightLabel={screen.right.label}
       >
-        {/* Phones: Continuum creates on its server, the code lives in GitHub */}
-        {pathname !== "/dashboard" && <PhoneCard onCreate={() => navigate("/new")} onWorkspaces={() => navigate("/workspaces")} />}
-        {pathname === "/dashboard" ? (
-          // Dashboard (profile menu): the overview, in the console's middle pane
-          <Dashboard
-            projects={projects}
-            activeProject={activeProject}
-            activeBridge={activeBridge}
-            bridgeRevision={bridgeRevision}
-            onSelectProject={setSelectedProject}
-            onOpenInterval={() => navigate("/console")}
-          />
-        ) : projects.length === 0 ? (
-          <EmptyConsole onCreateProject={() => navigate("/new")} />
-        ) : isContextReady && hasActiveProject ? (
-          <ReEntry
-            key={activeBridge ? activeBridge._id : "idle"}
-            activeProject={activeProject}
-            selectedProject={selectedProject}
-            onIntervalStarted={(bridge) => {
-              setActiveBridge(bridge);
-              setBridgeRevision(r => r + 1);
-            }}
-          />
-        ) : (
-          <div className="empty-state">
-            <p>Activate a project to start an interval.</p>
-          </div>
-        )}
+        {slots.center}
       </ThreePanelLayout>
 
       {/* ============================
@@ -667,5 +690,6 @@ export default function App() {
         />
       )}
     </PageShell>
+    </ScreenProviders>
   );
 }
