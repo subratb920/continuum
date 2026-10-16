@@ -1,5 +1,6 @@
 import { ObjectId } from "mongodb";
 import { conflict } from "./errors.js";
+import { VERSION_OPS } from "./recipes.js";
 
 /**
  * Runs (spec 2.7, 5.1): a run takes one version (or a source) through steps
@@ -41,13 +42,41 @@ export function buildSteps({ runId, datasetId, versionId, source, plan, uploadId
   return steps.map((s) => ({ ...s, state: "pending", metrics: {}, progress: null, result: null, error: null, startedAt: null, endedAt: null }));
 }
 
-export async function createRun(db, { runId = new ObjectId(), userId, datasetId, inputVersionId = null, kind, steps, cleanup = [] }, now = new Date()) {
+/**
+ * A pipeline run over one version: each step that writes a version gets its
+ * id now and reads the step before it; quality checks look at the version
+ * made so far. A profile of the final version always comes last.
+ */
+export function pipelineSteps({ datasetId, input, steps, ObjectIdCtor }) {
+  let current = { id: input._id, path: input.path };
+  const out = [];
+  for (const s of steps) {
+    if (VERSION_OPS.has(s.op)) {
+      const id = new ObjectIdCtor();
+      const output = versionPath(datasetId, id);
+      out.push({ op: s.op, params: { ...s.params, input: current.path, output }, inputVersionId: current.id, outputVersionId: id });
+      current = { id, path: output };
+    } else {
+      out.push({ op: s.op, params: { ...s.params, input: current.path }, inputVersionId: current.id, reports: current.id });
+    }
+  }
+  if (current.id !== input._id) out.push({ op: "profile", params: { input: current.path, sampleRows: 100_000 }, profiles: current.id });
+  return out.map((s) => ({ ...s, state: "pending", metrics: {}, progress: null, result: null, error: null, startedAt: null, endedAt: null }));
+}
+
+/** An export run: one step that packs a version as a zip. */
+export function exportSteps({ version, format }) {
+  return [{ op: "export", params: { input: version.path, output: `exports/${version._id}`, format }, exports: version._id, format, state: "pending", metrics: {}, progress: null, result: null, error: null, startedAt: null, endedAt: null }];
+}
+
+export async function createRun(db, { runId = new ObjectId(), userId, datasetId, inputVersionId = null, kind, steps, cleanup = [], recipeName = null }, now = new Date()) {
   const doc = {
     _id: runId,
     userId,
     datasetId,
     inputVersionId,
     kind,
+    recipeName,
     state: "queued",
     steps,
     currentStep: 0,
@@ -87,6 +116,7 @@ export function runView(r) {
     id: String(r._id),
     datasetId: String(r.datasetId),
     kind: r.kind,
+    recipeName: r.recipeName ?? null,
     state: r.state,
     currentStep: r.currentStep,
     cancelRequested: r.cancelRequested,
@@ -100,6 +130,8 @@ export function runView(r) {
       startedAt: s.startedAt,
       endedAt: s.endedAt,
       outputVersionId: s.outputVersionId ? String(s.outputVersionId) : null,
+      inputVersionId: s.inputVersionId ? String(s.inputVersionId) : null,
+      result: s.result ?? null,
     })),
     createdAt: r.createdAt,
     startedAt: r.startedAt,

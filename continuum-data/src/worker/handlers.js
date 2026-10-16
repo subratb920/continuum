@@ -10,9 +10,18 @@ export const STEP_LABEL = {
   fetch: "Download",
   ingest: "Read and tidy up",
   profile: "Measure",
+  dedupe: "Remove copies",
+  filter: "Filter rows",
+  fix_types: "Fix column kinds",
+  fill_missing: "Fill empty cells",
+  outliers: "Handle unusual numbers",
+  split: "Split for training and testing",
+  validate: "Check quality",
+  export: "Pack for download",
 };
 
 const TIMEOUT_SEC = { fetch: 4 * 3600, ingest: 2 * 3600, profile: 3600 };
+const DEFAULT_TIMEOUT_SEC = 2 * 3600;
 const MAX_LOG_EVENTS = 400;
 const PROGRESS_EVERY_MS = 2_000;
 
@@ -27,7 +36,9 @@ export function dataHandlers({ db, storage, runner, log }) {
     const dataset = await datasets.findOne({ _id: run.datasetId });
     if (dataset) {
       const dsState = state === "succeeded" || dataset.headVersionId ? "ready" : state;
-      await datasets.updateOne({ _id: run.datasetId }, { $set: { state: dsState, lastRunId: run._id, updatedAt: now } });
+      // An export run doesn't change what the dataset shows as its last build
+      const set = run.kind === "export" ? { state: dataset.state === "building" ? dsState : dataset.state, updatedAt: now } : { state: dsState, lastRunId: run._id, updatedAt: now };
+      await datasets.updateOne({ _id: run.datasetId }, { $set: set });
     }
     if (state === "succeeded") for (const rel of run.cleanup ?? []) await storage.remove(run.userId, rel).catch(() => {});
     const words = { succeeded: "Finished.", failed: error?.message ?? "Stopped with a problem.", cancelled: "Cancelled." };
@@ -35,45 +46,63 @@ export function dataHandlers({ db, storage, runner, log }) {
     return run;
   }
 
-  /** The step's result into the database: a new version, or a version's profile. */
-  async function applyResult(run, step, result) {
+  /** A new version from a step's result (once: a rerun after a crash finds it there). */
+  async function addVersion(run, step, result, madeBy) {
+    const id = step.outputVersionId;
+    if (await versions.findOne({ _id: id }, { projection: { _id: 1 } })) return false;
     const now = new Date();
+    const path = step.params.output;
+    const manifest = (await storage.readJson(run.userId, `${path}/manifest.json`)) ?? {};
+    const contentHash = createHash("sha256").update((manifest.files ?? []).map((f) => `${f.path}:${f.sha256}`).join("\n")).digest("hex");
+    const ds = await datasets.findOneAndUpdate({ _id: run.datasetId }, { $inc: { versionCount: 1 } }, { returnDocument: "after" });
+    await versions.insertOne({
+      _id: id,
+      userId: run.userId,
+      datasetId: run.datasetId,
+      number: ds.versionCount,
+      parentVersionId: step.inputVersionId ?? run.inputVersionId ?? null,
+      madeBy: { runId: run._id, ...madeBy },
+      contentHash,
+      path,
+      rows: result.rows,
+      bytes: result.bytes ?? null,
+      modality: result.modality,
+      task: result.task,
+      schema: result.schema ?? [],
+      splits: result.splits ?? null,
+      labels: result.labels ?? null,
+      changes: result.changes ?? null,
+      profileSummary: null,
+      quality: null,
+      exports: {},
+      licences: manifest.licences ?? [],
+      frozen: false,
+      createdAt: now,
+    });
+    await datasets.updateOne(
+      { _id: run.datasetId },
+      { $set: { headVersionId: id, modality: ds.modality ?? result.modality, task: ds.task ?? result.task, rows: result.rows, updatedAt: now } },
+    );
+    return ds;
+  }
+
+  /** The step's result into the database: a new version, a profile, a quality check or an export. */
+  async function applyResult(run, step, result) {
     if (step.op === "ingest") {
-      const id = step.outputVersionId;
-      if (await versions.findOne({ _id: id }, { projection: { _id: 1 } })) return; // written before a crash
-      const path = step.params.output;
-      const manifest = (await storage.readJson(run.userId, `${path}/manifest.json`)) ?? {};
-      const contentHash = createHash("sha256").update((manifest.files ?? []).map((f) => `${f.path}:${f.sha256}`).join("\n")).digest("hex");
-      const ds = await datasets.findOneAndUpdate({ _id: run.datasetId }, { $inc: { versionCount: 1 } }, { returnDocument: "after" });
-      await versions.insertOne({
-        _id: id,
-        userId: run.userId,
-        datasetId: run.datasetId,
-        number: ds.versionCount,
-        parentVersionId: run.inputVersionId,
-        madeBy: { runId: run._id, op: "ingest", sourceIds: [ds.sourceIds?.[0] ?? null].filter(Boolean) },
-        contentHash,
-        path,
-        rows: result.rows,
-        bytes: result.bytes ?? null,
-        modality: result.modality,
-        task: result.task,
-        schema: result.schema ?? [],
-        splits: result.splits ?? null,
-        labels: result.labels ?? null,
-        profileSummary: null,
-        quality: null,
-        licences: manifest.licences ?? [],
-        frozen: false,
-        createdAt: now,
-      });
-      await datasets.updateOne(
-        { _id: run.datasetId },
-        { $set: { headVersionId: id, modality: ds.modality ?? result.modality, task: ds.task ?? result.task, rows: result.rows, updatedAt: now } },
-      );
-      if (ds.sourceIds?.length) await db.collection("sources").updateMany({ _id: { $in: ds.sourceIds } }, { $inc: { uses: 1 } });
+      const ds = await addVersion(run, step, result, { op: "ingest", sourceIds: [] });
+      if (ds) {
+        await versions.updateOne({ _id: step.outputVersionId }, { $set: { "madeBy.sourceIds": ds.sourceIds ?? [] } });
+        if (ds.sourceIds?.length) await db.collection("sources").updateMany({ _id: { $in: ds.sourceIds } }, { $inc: { uses: 1 } });
+      }
+    } else if (step.outputVersionId) {
+      const { input: _i, output: _o, ...settings } = step.params;
+      await addVersion(run, step, result, { op: step.op, params: settings });
     } else if (step.op === "profile") {
       await versions.updateOne({ _id: step.profiles }, { $set: { profileSummary: result } });
+    } else if (step.op === "validate") {
+      await versions.updateOne({ _id: step.reports }, { $set: { quality: { score: result.score, verdict: result.verdict, passed: result.passed, total: result.total, gates: result.gates } } });
+    } else if (step.op === "export") {
+      await versions.updateOne({ _id: step.exports }, { $set: { [`exports.${step.format}`]: { path: result.path, bytes: result.bytes, splits: result.splits ?? null, at: new Date() } } });
     }
   }
 
@@ -148,7 +177,7 @@ export function dataHandlers({ db, storage, runner, log }) {
           op: step.op,
           params: step.params,
           network: step.op === "fetch",
-          timeoutSec: TIMEOUT_SEC[step.op] ?? 7200,
+          timeoutSec: TIMEOUT_SEC[step.op] ?? DEFAULT_TIMEOUT_SEC,
         },
         onLine,
         AbortSignal.any([signal, cancel.signal]),
@@ -208,5 +237,8 @@ function summarise(op, r) {
   if (op === "fetch") return { files: r.files?.length ?? 0, bytes: r.bytes ?? 0 };
   if (op === "ingest") return { rows: r.rows, modality: r.modality, task: r.task, labels: r.labels?.length ?? 0, splits: r.splits };
   if (op === "profile") return { rows: r.rows, findings: r.findings?.length ?? 0, duplicates: r.duplicates?.exact ?? 0 };
+  if (op === "validate") return { score: r.score, verdict: r.verdict, passed: r.passed, total: r.total };
+  if (op === "export") return { bytes: r.bytes, format: r.format };
+  if (r.changes) return { rows: r.rows, removed: r.changes.removed ?? 0, changed: r.changes.changed ?? 0, splits: r.splits ?? null, notes: (r.changes.notes ?? []).slice(0, 6) };
   return {};
 }

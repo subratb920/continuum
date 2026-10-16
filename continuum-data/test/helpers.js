@@ -38,6 +38,20 @@ export function fakeRunner(store, behaviour = {}) {
         await writeFile(path.join(root, p.output, "manifest.json"), JSON.stringify({ files: [{ path: "data/part-00000.parquet", sha256: "abc", bytes: 1 }], licences: [{ spdx: p.licence, rows: 3 }] }));
         onLine({ kind: "log", message: "Read 3 rows." });
         onLine({ kind: "result", rows: 3, bytes: 10, modality: "text", task: "classify", schema: [{ name: "text", type: "string", role: "input" }], labels: ["neg", "pos"], splits: { train: 3 } });
+      } else if (["dedupe", "filter", "fix_types", "fill_missing", "outliers", "split"].includes(spec.op)) {
+        const removed = spec.op === "dedupe" ? 1 : 0;
+        await mkdir(path.join(root, p.output, "data"), { recursive: true });
+        await writeFile(path.join(root, p.output, "manifest.json"), JSON.stringify({ files: [{ path: "data/part-00000.parquet", sha256: spec.op, bytes: 1 }], licences: [] }));
+        await writeFile(path.join(root, p.output, "changes.json"), JSON.stringify({ op: spec.op, before: 3, after: 3 - removed, removed, changed: 0, notes: [], sample: [] }));
+        onLine({ kind: "result", rows: 3 - removed, bytes: 10, modality: "text", task: "classify", schema: [], labels: ["neg", "pos"], splits: spec.op === "split" ? { train: 2, test: 1 } : { train: 3 }, changes: { before: 3, after: 3 - removed, removed, changed: 0, notes: [] } });
+      } else if (spec.op === "validate") {
+        const q = { score: 90, verdict: "Ready to train", passed: 9, total: 10, gates: [] };
+        await writeFile(path.join(root, p.input, "quality.json"), JSON.stringify(q));
+        onLine({ kind: "result", ...q });
+      } else if (spec.op === "export") {
+        await mkdir(path.join(root, p.output), { recursive: true });
+        await writeFile(path.join(root, p.output, `${p.format}.zip`), "PKzip");
+        onLine({ kind: "result", path: `${p.output}/${p.format}.zip`, format: p.format, bytes: 5, splits: { train: 3 } });
       } else if (spec.op === "profile") {
         const profile = { rows: 3, sampled: 3, findings: [], duplicates: { exact: 0 } };
         await writeFile(path.join(root, p.input, "profile.json"), JSON.stringify(profile));

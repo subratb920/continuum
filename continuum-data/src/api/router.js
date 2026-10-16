@@ -3,7 +3,10 @@ import { ObjectId } from "mongodb";
 import { DataError, badRequest, conflict, notFound } from "../errors.js";
 import { oid, hex } from "../ids.js";
 import { enqueue } from "../store/queue.js";
-import { buildSteps, createRun, eventView, FINAL, runView, updateRun, addEvent } from "../runs.js";
+import { buildSteps, createRun, eventView, exportSteps, FINAL, pipelineSteps, runView, updateRun, addEvent } from "../runs.js";
+import { EXPORT_FORMATS, normaliseSteps, STEP_CATALOG, suggestSteps, TEMPLATES } from "../recipes.js";
+import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
 import { saveSources, searchSources, sourceView } from "../catalogue/index.js";
 import { licenceInfo } from "../catalogue/licences.js";
 import { readRows } from "./rows.js";
@@ -21,6 +24,12 @@ import { readRows } from "./rows.js";
  *   GET    /datasets/:id   PATCH   DELETE
  *   GET    /datasets/:id/versions
  *   GET    /versions/:id   /versions/:id/rows?offset=&limit=   /versions/:id/profile
+ *   GET    /recipes/catalog   GET /recipes/templates   GET /recipes   POST /recipes   PUT /recipes/:id   DELETE /recipes/:id
+ *   GET    /datasets/:id/suggested-recipe
+ *   GET    /versions/:id/changes   /versions/:id/quality
+ *   POST   /versions/:id/publish
+ *   POST   /versions/:id/exports { format }   GET /versions/:id/exports/:format/download
+ *   POST   /runs                         { datasetId, inputVersionId, steps | recipeId }  a clean-up pipeline
  *   GET    /runs?datasetId=   GET /runs/:id   POST /runs/:id/cancel   POST /runs/:id/retry
  *   GET    /runs/:id/events?afterSeq=
  *   GET    /events                      live run events (server-sent events)
@@ -79,7 +88,10 @@ export function versionView(v) {
     quality: v.quality,
     licences: v.licences,
     frozen: v.frozen,
-    madeBy: { op: v.madeBy?.op ?? null, runId: hex(v.madeBy?.runId) },
+    parentVersionId: hex(v.parentVersionId),
+    changes: v.changes ?? null,
+    exports: Object.fromEntries(Object.entries(v.exports ?? {}).map(([f, e]) => [f, { bytes: e.bytes, at: e.at }])),
+    madeBy: { op: v.madeBy?.op ?? null, runId: hex(v.madeBy?.runId), params: v.madeBy?.params ?? null },
     createdAt: v.createdAt,
   };
 }
@@ -321,9 +333,10 @@ export function createDataRouter({ engine, auth }) {
     const v = await mine("versions", req.params.id, req.userId, "That version");
     const offset = Math.max(0, Math.floor(Number(req.query.offset) || 0));
     const limit = Math.min(200, Math.max(1, Math.floor(Number(req.query.limit) || 50)));
+    const split = req.query.split ? String(req.query.split).slice(0, 40) : null;
     const manifest = await storage.readJson(req.userId, `${v.path}/manifest.json`);
     if (!manifest) throw notFound("This version's files");
-    res.json(await readRows(storage.resolve(req.userId, v.path), manifest, offset, limit));
+    res.json(await readRows(storage.resolve(req.userId, v.path), manifest, offset, limit, { split }));
   }));
 
   router.get("/versions/:id/profile", wrap(async (req, res) => {
@@ -333,7 +346,124 @@ export function createDataRouter({ engine, auth }) {
     res.json({ profile });
   }));
 
+  // ---------- Recipes ----------
+
+  router.get("/recipes/catalog", (req, res) => res.json({ steps: STEP_CATALOG, exportFormats: EXPORT_FORMATS }));
+  router.get("/recipes/templates", (req, res) => res.json({ templates: TEMPLATES }));
+
+  const recipeView = (r) => ({ id: String(r._id), name: r.name, description: r.description ?? "", modality: r.modality ?? null, steps: r.steps, origin: r.origin, updatedAt: r.updatedAt });
+
+  router.get("/recipes", wrap(async (req, res) => {
+    const list = await col("recipes").find({ userId: req.userId }).sort({ updatedAt: -1 }).limit(100).toArray();
+    res.json({ recipes: list.map(recipeView) });
+  }));
+
+  router.post("/recipes", express.json(), wrap(async (req, res) => {
+    const now = new Date();
+    const modality = ["text", "tabular"].includes(req.body?.modality) ? req.body.modality : null;
+    const doc = { userId: req.userId, name: cleanName(req.body?.name, "recipe name"), description: String(req.body?.description ?? "").slice(0, 300), modality, steps: normaliseSteps(req.body?.steps, modality), origin: "user", createdAt: now, updatedAt: now };
+    const { insertedId } = await col("recipes").insertOne(doc);
+    res.status(201).json({ recipe: recipeView({ ...doc, _id: insertedId }) });
+  }));
+
+  router.put("/recipes/:id", express.json(), wrap(async (req, res) => {
+    const r = await mine("recipes", req.params.id, req.userId, "That recipe");
+    const set = { name: cleanName(req.body?.name ?? r.name, "recipe name"), steps: normaliseSteps(req.body?.steps ?? r.steps, r.modality), updatedAt: new Date() };
+    await col("recipes").updateOne({ _id: r._id }, { $set: set });
+    res.json({ recipe: recipeView({ ...r, ...set }) });
+  }));
+
+  router.delete("/recipes/:id", wrap(async (req, res) => {
+    const r = await mine("recipes", req.params.id, req.userId, "That recipe");
+    await col("recipes").deleteOne({ _id: r._id });
+    res.status(204).end();
+  }));
+
+  router.get("/datasets/:id/suggested-recipe", wrap(async (req, res) => {
+    const d = await mine("datasets", req.params.id, req.userId, "That dataset");
+    const v = d.headVersionId ? await col("versions").findOne({ _id: d.headVersionId }) : null;
+    if (!v) throw conflict("This dataset has no version yet.", "NO_VERSION");
+    const profile = await storage.readJson(req.userId, `${v.path}/profile.json`);
+    res.json({ steps: suggestSteps(profile, v.modality, v.splits), basedOn: String(v._id) });
+  }));
+
+  // ---------- Quality, changes, publish, exports ----------
+
+  router.get("/versions/:id/changes", wrap(async (req, res) => {
+    const v = await mine("versions", req.params.id, req.userId, "That version");
+    res.json({ changes: (await storage.readJson(req.userId, `${v.path}/changes.json`)) ?? null });
+  }));
+
+  router.get("/versions/:id/quality", wrap(async (req, res) => {
+    const v = await mine("versions", req.params.id, req.userId, "That version");
+    res.json({ quality: (await storage.readJson(req.userId, `${v.path}/quality.json`)) ?? null });
+  }));
+
+  router.post("/versions/:id/publish", wrap(async (req, res) => {
+    const v = await mine("versions", req.params.id, req.userId, "That version");
+    const now = new Date();
+    await col("versions").updateOne({ _id: v._id }, { $set: { frozen: true, publishedAt: now } });
+    await col("datasets").updateOne({ _id: v.datasetId }, { $set: { publishedVersionId: v._id, updatedAt: now } });
+    await col("audit_events").insertOne({ userId: req.userId, at: now, action: "version.publish", target: v._id, details: { number: v.number } });
+    res.json({ version: versionView({ ...v, frozen: true }) });
+  }));
+
+  async function startRun(userId, dataset, input, kind, steps, recipeName = null) {
+    const { runsActive } = await usage(userId);
+    if (runsActive >= cfg.limits.runsAtOnce) throw new DataError(429, "TOO_MANY_RUNS", `You can run ${cfg.limits.runsAtOnce} things at once. Wait for one to finish.`);
+    const now = new Date();
+    const run = await createRun(db(), { userId, datasetId: dataset._id, inputVersionId: input._id, kind, steps, recipeName }, now);
+    await col("datasets").updateOne({ _id: dataset._id }, { $set: { state: kind === "pipeline" ? "building" : dataset.state, lastRunId: kind === "pipeline" ? run._id : dataset.lastRunId, updatedAt: now } });
+    await addEvent(db(), run, { kind: "state", message: "Waiting to start.", data: { run: "queued" } });
+    await enqueue(db(), { type: "run.advance", userId, runId: run._id, maxAttempts: 8 }, now);
+    return run;
+  }
+
+  router.post("/versions/:id/exports", express.json(), wrap(async (req, res) => {
+    const v = await mine("versions", req.params.id, req.userId, "That version");
+    const format = String(req.body?.format ?? "parquet");
+    if (!EXPORT_FORMATS.includes(format)) throw badRequest(`Choose one of ${EXPORT_FORMATS.join(", ")}.`, "BAD_FORMAT");
+    const dataset = await col("datasets").findOne({ _id: v.datasetId });
+    const run = await startRun(req.userId, dataset, v, "export", exportSteps({ version: v, format }));
+    res.status(202).json({ run: runView(run) });
+  }));
+
+  router.get("/versions/:id/exports/:format/download", wrap(async (req, res) => {
+    const v = await mine("versions", req.params.id, req.userId, "That version");
+    const e = v.exports?.[req.params.format];
+    if (!e || !EXPORT_FORMATS.includes(req.params.format)) throw notFound("That download");
+    const full = storage.resolve(req.userId, e.path);
+    const info = await stat(full).catch(() => null);
+    if (!info) throw notFound("That download");
+    const dataset = await col("datasets").findOne({ _id: v.datasetId }, { projection: { name: 1 } });
+    const base = `${(dataset?.name ?? "dataset").replace(/[^\w.-]+/g, "-").replace(/^-+|-+$/g, "") || "dataset"}-v${v.number}-${req.params.format}.zip`;
+    res.writeHead(200, { "Content-Type": "application/zip", "Content-Length": info.size, "Content-Disposition": `attachment; filename="${base}"`, "Cache-Control": "no-store" });
+    createReadStream(full).pipe(res);
+  }));
+
   // ---------- Runs ----------
+
+  router.post("/runs", express.json(), wrap(async (req, res) => {
+    const dataset = await mine("datasets", req.body?.datasetId, req.userId, "That dataset");
+    const input = req.body?.inputVersionId ? await mine("versions", req.body.inputVersionId, req.userId, "That version") : dataset.headVersionId ? await col("versions").findOne({ _id: dataset.headVersionId }) : null;
+    if (!input || String(input.datasetId) !== String(dataset._id)) throw conflict("This dataset has no version to work on yet.", "NO_VERSION");
+    let raw = req.body?.steps;
+    let recipeName = null;
+    if (req.body?.recipeId) {
+      const recipe = await mine("recipes", req.body.recipeId, req.userId, "That recipe");
+      raw = recipe.steps;
+      recipeName = recipe.name;
+    } else if (req.body?.templateId) {
+      const t = TEMPLATES.find((x) => x.id === req.body.templateId);
+      if (!t) throw notFound("That template");
+      raw = t.steps;
+      recipeName = t.name;
+    }
+    const steps = normaliseSteps(raw, input.modality);
+    const run = await startRun(req.userId, dataset, input, "pipeline", pipelineSteps({ datasetId: dataset._id, input, steps, ObjectIdCtor: ObjectId }), recipeName);
+    res.status(201).json({ run: runView(run) });
+  }));
+
 
   router.get("/runs", wrap(async (req, res) => {
     const filter = { userId: req.userId };

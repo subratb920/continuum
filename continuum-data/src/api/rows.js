@@ -36,8 +36,28 @@ export function plain(value) {
   return value;
 }
 
-export async function readRows(dir, manifest, offset, limit) {
+/** Rows of one split only: reads the _split column first, then just the matching rows. */
+async function readSplitRows(parts, split, offset, limit) {
+  const rows = [];
+  let seen = 0;
+  for (const p of parts) {
+    const file = await asyncBufferFromFile(p.full);
+    const col = await parquetReadObjects({ file, columns: ["_split"] });
+    const hits = [];
+    col.forEach((r, i) => r._split === split && hits.push(i));
+    // The page's rows from this file, read as one span and picked out
+    const wanted = hits.slice(Math.max(0, offset - seen), Math.max(0, offset - seen) + (limit - rows.length));
+    seen += hits.length;
+    if (!wanted.length) continue;
+    const span = await parquetReadObjects({ file, rowStart: wanted[0], rowEnd: wanted[wanted.length - 1] + 1 });
+    for (const i of wanted) rows.push(plain(span[i - wanted[0]]));
+  }
+  return { total: seen, offset, rows };
+}
+
+export async function readRows(dir, manifest, offset, limit, { split = null } = {}) {
   const parts = await partsOf(dir, manifest);
+  if (split) return readSplitRows(parts, split, offset, limit);
   const total = parts.reduce((n, p) => n + p.rows, 0);
   const rows = [];
   let start = offset;
