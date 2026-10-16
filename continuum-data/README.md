@@ -32,6 +32,16 @@ DATA_RUNNER_URL=http://localhost:45191
 DATA_RUNNER_TOKEN=…   # the proxy's PROXY_TOKEN
 ```
 
+## In the cloud (Kubernetes)
+
+continuum-api's cloud image (`continuum-api/Dockerfile.cloud`, built from the repository root) carries the engine, and `continuum.deploy.json` at the repository root gives Continuum Deploy three apps: `data-runner` (this runner image, only built), `continuum-api` (with `clusterAccess: ["pods"]`) and the UI. With `DATA_RUNTIME=kubernetes` (`continuum-api/.env.production`) the engine sets up what it needs in its own namespace, on first start:
+
+- **`data-store`**: a disk (PersistentVolumeClaim, `DATA_STORE_DISK_GB`, 50 GB) with every user's folder, and a small pod of the runner image serving it to continuum-api (`cdata/store_server.py`, token in the Secret `data-store`). continuum-api's own pods can't mount the disk, so it reads and writes through the store (`src/storage/remote.js`).
+- **A pod per step** (`src/runtime/kubeRunner.js`): the runner image as uid 1000, read-only root, no privileges, no ServiceAccount token, only its user's folder as `/store`, on the store's machine (the disk is attached there). Its output is followed from the pod's log.
+- **Network rules**: steps get no network; downloads (`fetch`) get the internet only, never the cluster, the machine or Google's metadata server.
+
+Settings: `DATA_RUNNER_IMAGE` (`${data-runner.image}`), `DATA_RUNNER_CPU` / `DATA_RUNNER_MEMORY` per step, `DATA_MONGO_URI` from Continuum Deploy's database (`continuum_data`), `DATA_SECRET_KEY` on the deploy page. Without a replica set the Data screen's live updates read new events every second instead of using a change stream.
+
 ## Tests
 
 - Engine: `npm test` (needs Continuum's local MongoDB on port 45171, or `TEST_MONGO_URI`). Each test file uses a database of its own and drops it.

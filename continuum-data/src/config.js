@@ -14,6 +14,13 @@ export function dataConfigFromEnv(env = process.env) {
     storePath: env.DATA_STORE_PATH || "/store",
     runnerUrl: env.DATA_RUNNER_URL || "http://continuum-data-runner-proxy:45191",
     runnerToken: env.DATA_RUNNER_TOKEN || "",
+    // "docker" (the runner proxy, local) or "kubernetes" (in the cloud: steps
+    // as pods, the store as a pod on a disk, set up by the engine itself)
+    runtime: env.DATA_RUNTIME === "kubernetes" ? "kubernetes" : "docker",
+    runnerImage: env.DATA_RUNNER_IMAGE || "",
+    storeDiskGb: Number(env.DATA_STORE_DISK_GB || 50),
+    runnerCpu: env.DATA_RUNNER_CPU || "1",
+    runnerMemory: env.DATA_RUNNER_MEMORY || "4Gi",
     workerConcurrency: Number(env.DATA_WORKER_CONCURRENCY || 2),
     secretKey: env.DATA_SECRET_KEY || "",
     limits: {
@@ -28,6 +35,8 @@ export function dataConfigFromEnv(env = process.env) {
 export function configProblems(cfg) {
   const missing = [];
   if (!cfg.mongoUri) missing.push("DATA_MONGO_URI or MONGO_URI");
-  if (!cfg.runnerToken) missing.push("DATA_RUNNER_TOKEN");
+  if (cfg.runtime === "kubernetes") {
+    if (!cfg.runnerImage) missing.push("DATA_RUNNER_IMAGE");
+  } else if (!cfg.runnerToken) missing.push("DATA_RUNNER_TOKEN");
   return missing;
 }

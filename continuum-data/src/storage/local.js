@@ -1,5 +1,6 @@
 import { chown, mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
-import { createWriteStream } from "node:fs";
+import { createReadStream, createWriteStream } from "node:fs";
+import { asyncBufferFromFile } from "hyparquet";
 import { pipeline } from "node:stream/promises";
 import path from "node:path";
 import { badRequest } from "../errors.js";
@@ -35,6 +36,7 @@ export function localStorage(root) {
   }
 
   return {
+    kind: "local",
     resolve,
     /** The user's folder; runners write to it as uid 1000, so it is theirs when we run as root. */
     async ensureUser(userId) {
@@ -72,6 +74,15 @@ export function localStorage(root) {
       }
       return seen;
     },
+    /** { size } or null when there is nothing at that path. */
+    async stat(userId, rel) {
+      const info = await stat(resolve(userId, rel)).catch(() => null);
+      return info ? { size: info.size, dir: info.isDirectory() } : null;
+    },
+    /** A file's bytes as a stream. */
+    readStream: async (userId, rel) => createReadStream(resolve(userId, rel)),
+    /** A file hyparquet reads by byte ranges. */
+    fileBuffer: (userId, rel) => asyncBufferFromFile(resolve(userId, rel)),
     async list(userId, rel) {
       try {
         return await readdir(resolve(userId, rel), { recursive: true, withFileTypes: true });

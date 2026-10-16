@@ -1,0 +1,9 @@
+# Images built from the repository root (continuum-api/Dockerfile.cloud):
+# only what the build copies matters; never local packages or secrets
+**/node_modules
+.git
+**/.env.local
+**/.env
+**/OAUTH_CLIENT_SECRET_HASH
+continuum-data/runner-image/wheels
+docker/mongo

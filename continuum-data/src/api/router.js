@@ -5,8 +5,6 @@ import { oid, hex } from "../ids.js";
 import { enqueue } from "../store/queue.js";
 import { buildSteps, createRun, eventView, exportSteps, FINAL, pipelineSteps, runView, updateRun, addEvent } from "../runs.js";
 import { EXPORT_FORMATS, EXPORT_FORMATS_FOR, normaliseSteps, STEP_CATALOG, suggestSteps, TEMPLATES } from "../recipes.js";
-import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
 import { saveSources, searchSources, sourceView } from "../catalogue/index.js";
 import { licenceInfo } from "../catalogue/licences.js";
 import { readRows } from "./rows.js";
@@ -399,7 +397,8 @@ export function createDataRouter({ engine, auth }) {
     const split = req.query.split ? String(req.query.split).slice(0, 40) : null;
     const manifest = await storage.readJson(req.userId, `${v.path}/manifest.json`);
     if (!manifest) throw notFound("This version's files");
-    res.json(await readRows(storage.resolve(req.userId, v.path), manifest, offset, limit, { split }));
+    const version = { key: `${req.userId}/${v.path}`, open: (rel) => storage.fileBuffer(req.userId, `${v.path}/${rel}`) };
+    res.json(await readRows(version, manifest, offset, limit, { split }));
   }));
 
   // One image or sound file of a version (named by its content, so it never changes)
@@ -410,11 +409,12 @@ export function createDataRouter({ engine, auth }) {
     const rel = String(req.query.path ?? "");
     const m = MEDIA_PATH.exec(rel);
     if (!m) throw badRequest("That isn't a media file of this dataset.", "BAD_PATH");
-    const full = storage.resolve(req.userId, `datasets/${v.datasetId}/${rel}`);
-    const info = await stat(full).catch(() => null);
-    if (!info) throw notFound("That file");
+    const file = `datasets/${v.datasetId}/${rel}`;
+    const info = await storage.stat(req.userId, file);
+    if (!info || info.dir) throw notFound("That file");
+    const body = await storage.readStream(req.userId, file);
     res.writeHead(200, { "Content-Type": MEDIA_TYPE[m[1]], "Content-Length": info.size, "Cache-Control": "private, max-age=31536000, immutable" });
-    createReadStream(full).pipe(res);
+    body.pipe(res);
   }));
 
   router.get("/versions/:id/profile", wrap(async (req, res) => {
@@ -525,13 +525,13 @@ export function createDataRouter({ engine, auth }) {
     const v = await mine("versions", req.params.id, req.userId, "That version");
     const e = v.exports?.[req.params.format];
     if (!e || !EXPORT_FORMATS.includes(req.params.format)) throw notFound("That download");
-    const full = storage.resolve(req.userId, e.path);
-    const info = await stat(full).catch(() => null);
-    if (!info) throw notFound("That download");
+    const info = await storage.stat(req.userId, e.path);
+    if (!info || info.dir) throw notFound("That download");
+    const body = await storage.readStream(req.userId, e.path);
     const dataset = await col("datasets").findOne({ _id: v.datasetId }, { projection: { name: 1 } });
     const base = `${(dataset?.name ?? "dataset").replace(/[^\w.-]+/g, "-").replace(/^-+|-+$/g, "") || "dataset"}-v${v.number}-${req.params.format}.zip`;
     res.writeHead(200, { "Content-Type": "application/zip", "Content-Length": info.size, "Content-Disposition": `attachment; filename="${base}"`, "Cache-Control": "no-store" });
-    createReadStream(full).pipe(res);
+    body.pipe(res);
   }));
 
   // ---------- Runs ----------
