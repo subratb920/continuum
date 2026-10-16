@@ -1,0 +1,4 @@
+{
+  "comment": "Installed Python packages allowed although their licence is not MIT, Apache-2.0, BSD, ISC, PSF or MPL-2.0 (certifi). Each entry: {\"package\": \"name\", \"reason\": \"why it is acceptable\"}.",
+  "exceptions": []
+}

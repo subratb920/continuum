@@ -1,0 +1,461 @@
+[
+ {
+  "connector": "huggingface",
+  "ref": "stanfordnlp/imdb",
+  "title": "IMDB movie reviews",
+  "description": "Movie reviews labelled positive or negative. A classic first sentiment model.",
+  "modalities": [
+   "text"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "other",
+  "size": {
+   "rows": 50000
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "cornell-movie-review-data/rotten_tomatoes",
+  "title": "Rotten Tomatoes reviews",
+  "description": "Short movie review sentences, positive or negative. Small and quick to train on.",
+  "modalities": [
+   "text"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "unknown",
+  "size": {
+   "rows": 10662
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "stanfordnlp/sst2",
+  "title": "SST-2 sentiment",
+  "description": "Movie review phrases labelled positive or negative.",
+  "modalities": [
+   "text"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "unknown",
+  "size": {
+   "rows": 70042
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "fancyzhx/yelp_polarity",
+  "title": "Yelp reviews (positive or negative)",
+  "description": "Restaurant and business reviews, positive or negative.",
+  "modalities": [
+   "text"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "unknown",
+  "size": {
+   "rows": 598000
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "fancyzhx/ag_news",
+  "title": "AG News topics",
+  "description": "News headlines and descriptions sorted into four topics: world, sports, business, science.",
+  "modalities": [
+   "text"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "unknown",
+  "size": {
+   "rows": 127600
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "fancyzhx/dbpedia_14",
+  "title": "DBpedia topics",
+  "description": "Wikipedia article summaries sorted into 14 kinds, such as company, artist or animal.",
+  "modalities": [
+   "text"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "cc-by-sa-3.0",
+  "size": {
+   "rows": 630000
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "dair-ai/emotion",
+  "title": "Emotions in tweets",
+  "description": "English tweets labelled with one of six emotions: sadness, joy, love, anger, fear, surprise.",
+  "modalities": [
+   "text"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "other",
+  "size": {
+   "rows": 436809
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "google-research-datasets/go_emotions",
+  "title": "GoEmotions",
+  "description": "Reddit comments labelled with 27 emotions or neutral.",
+  "modalities": [
+   "text"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "apache-2.0",
+  "size": {
+   "rows": 58009
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "ucirvine/sms_spam",
+  "title": "SMS spam",
+  "description": "Text messages labelled spam or not spam. Tiny, and a great first project.",
+  "modalities": [
+   "text"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "unknown",
+  "size": {
+   "rows": 5574
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "cardiffnlp/tweet_eval",
+  "title": "TweetEval",
+  "description": "Tweets for several tasks: sentiment, emoji, hate speech, irony and more.",
+  "modalities": [
+   "text"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "unknown",
+  "size": {
+   "rows": 160000
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "stanfordnlp/snli",
+  "title": "SNLI sentence pairs",
+  "description": "Pairs of sentences: does the second follow from the first, contradict it, or neither?",
+  "modalities": [
+   "text"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "cc-by-sa-4.0",
+  "size": {
+   "rows": 570152
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "rajpurkar/squad",
+  "title": "SQuAD questions",
+  "description": "Questions about Wikipedia paragraphs, with the answer in the text.",
+  "modalities": [
+   "text"
+  ],
+  "tasks": [
+   "chat"
+  ],
+  "licence": "cc-by-sa-4.0",
+  "size": {
+   "rows": 98169
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "databricks/databricks-dolly-15k",
+  "title": "Dolly 15k instructions",
+  "description": "Instructions and answers written by people, for teaching a model to follow instructions.",
+  "modalities": [
+   "text"
+  ],
+  "tasks": [
+   "chat"
+  ],
+  "licence": "cc-by-sa-3.0",
+  "size": {
+   "rows": 15011
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "yahma/alpaca-cleaned",
+  "title": "Alpaca (cleaned)",
+  "description": "Instruction and answer pairs, cleaned of common mistakes. Good for a first instruction-tuned model.",
+  "modalities": [
+   "text"
+  ],
+  "tasks": [
+   "chat"
+  ],
+  "licence": "cc-by-4.0",
+  "size": {
+   "rows": 51760
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "tatsu-lab/alpaca",
+  "title": "Alpaca",
+  "description": "The original Alpaca instruction set. Not for commercial use.",
+  "modalities": [
+   "text"
+  ],
+  "tasks": [
+   "chat"
+  ],
+  "licence": "cc-by-nc-4.0",
+  "size": {
+   "rows": 52002
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "HuggingFaceH4/no_robots",
+  "title": "No Robots",
+  "description": "Instructions and answers written by skilled people. Not for commercial use.",
+  "modalities": [
+   "text"
+  ],
+  "tasks": [
+   "chat"
+  ],
+  "licence": "cc-by-nc-4.0",
+  "size": {
+   "rows": 10000
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "openai/gsm8k",
+  "title": "GSM8K maths word problems",
+  "description": "School maths word problems with step-by-step answers.",
+  "modalities": [
+   "text"
+  ],
+  "tasks": [
+   "chat"
+  ],
+  "licence": "mit",
+  "size": {
+   "rows": 8792
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "Salesforce/wikitext",
+  "title": "WikiText",
+  "description": "Good Wikipedia articles as plain text, for training a model to write.",
+  "modalities": [
+   "text"
+  ],
+  "tasks": [
+   "generate"
+  ],
+  "licence": "cc-by-sa-3.0",
+  "size": {
+   "rows": 1801350
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "scikit-learn/iris",
+  "title": "Iris flowers",
+  "description": "Measurements of 150 iris flowers in three species. The smallest classic dataset there is.",
+  "modalities": [
+   "tabular"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "cc0-1.0",
+  "size": {
+   "rows": 150
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "scikit-learn/adult-census-income",
+  "title": "Adult census income",
+  "description": "People's age, work and education: does their income pass 50,000 dollars a year?",
+  "modalities": [
+   "tabular"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "cc0-1.0",
+  "size": {
+   "rows": 32561
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "scikit-learn/breast-cancer-wisconsin",
+  "title": "Breast cancer (Wisconsin)",
+  "description": "Cell measurements labelled harmless or harmful.",
+  "modalities": [
+   "tabular"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "cc-by-sa-4.0",
+  "size": {
+   "rows": 569
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "ylecun/mnist",
+  "title": "MNIST handwritten digits",
+  "description": "Small pictures of handwritten digits 0 to 9.",
+  "modalities": [
+   "image"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "mit",
+  "size": {
+   "rows": 70000
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "zalando-datasets/fashion_mnist",
+  "title": "Fashion-MNIST",
+  "description": "Small pictures of clothes in ten kinds: shirts, shoes, bags and more.",
+  "modalities": [
+   "image"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "mit",
+  "size": {
+   "rows": 70000
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "uoft-cs/cifar10",
+  "title": "CIFAR-10",
+  "description": "Small colour photos in ten kinds: planes, cars, birds, cats and more.",
+  "modalities": [
+   "image"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "unknown",
+  "size": {
+   "rows": 60000
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "ethz/food101",
+  "title": "Food-101",
+  "description": "Photos of 101 kinds of food.",
+  "modalities": [
+   "image"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "unknown",
+  "size": {
+   "rows": 101000
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "google/speech_commands",
+  "title": "Speech Commands",
+  "description": "One-second recordings of spoken words like yes, no, up and down.",
+  "modalities": [
+   "audio"
+  ],
+  "tasks": [
+   "classify"
+  ],
+  "licence": "cc-by-4.0",
+  "size": {
+   "rows": 105829
+  },
+  "tags": []
+ },
+ {
+  "connector": "huggingface",
+  "ref": "openslr/librispeech_asr",
+  "title": "LibriSpeech",
+  "description": "Audiobook recordings with their text, for speech recognition.",
+  "modalities": [
+   "audio"
+  ],
+  "tasks": [
+   "transcribe"
+  ],
+  "licence": "cc-by-4.0",
+  "size": {
+   "rows": 292367
+  },
+  "tags": []
+ }
+]

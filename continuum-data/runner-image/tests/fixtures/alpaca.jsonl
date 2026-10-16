@@ -1,0 +1,3 @@
+{"instruction": "Translate the sentence to French.", "input": "Good morning, my friend.", "output": "Bonjour, mon ami."}
+{"instruction": "Name three primary colours.", "input": "", "output": "Red, blue and yellow."}
+{"instruction": "Summarise the text.", "input": "The cat sat on the mat all day and refused to move.", "output": "A cat stayed on a mat all day."}

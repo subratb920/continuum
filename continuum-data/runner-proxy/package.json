@@ -1,0 +1,12 @@
+{
+  "name": "continuum-data-runner-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The only part of continuum-data that holds Docker's socket: starts continuum-data-runner containers, and nothing else.",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  }
+}

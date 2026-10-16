@@ -1,0 +1,386 @@
+import express from "express";
+import { ObjectId } from "mongodb";
+import { DataError, badRequest, conflict, notFound } from "../errors.js";
+import { oid, hex } from "../ids.js";
+import { enqueue } from "../store/queue.js";
+import { buildSteps, createRun, eventView, FINAL, runView, updateRun, addEvent } from "../runs.js";
+import { saveSources, searchSources, sourceView } from "../catalogue/index.js";
+import { licenceInfo } from "../catalogue/licences.js";
+import { readRows } from "./rows.js";
+
+/**
+ * The /data routes (spec 6). Every route needs Continuum sign-in (the host's
+ * `auth`, which sets req.user.id) and only ever sees that user's things.
+ *
+ *   GET    /me                         limits and usage
+ *   GET    /sources?q=&modality=&task=&live=1
+ *   GET    /sources/:id                 one source (with its subsets and splits)
+ *   POST   /uploads                     { name } → { uploadId }
+ *   POST   /uploads/:id/files?path=     one file, as the request body
+ *   GET    /datasets   POST /datasets   { name, goal, sourceId | uploadId, config, split, options }
+ *   GET    /datasets/:id   PATCH   DELETE
+ *   GET    /datasets/:id/versions
+ *   GET    /versions/:id   /versions/:id/rows?offset=&limit=   /versions/:id/profile
+ *   GET    /runs?datasetId=   GET /runs/:id   POST /runs/:id/cancel   POST /runs/:id/retry
+ *   GET    /runs/:id/events?afterSeq=
+ *   GET    /events                      live run events (server-sent events)
+ */
+const MAX_UPLOAD_FILES = 5000;
+const NAME_MAX = 80;
+
+const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+function cleanName(value, what = "name") {
+  const s = String(value ?? "").trim().replace(/\s+/g, " ");
+  if (!s) throw badRequest(`Give it a ${what}.`, "NAME_REQUIRED");
+  if (s.length > NAME_MAX) throw badRequest(`Keep the ${what} under ${NAME_MAX} characters.`, "NAME_TOO_LONG");
+  return s;
+}
+
+/** A relative path inside an upload: plain segments only. */
+function cleanUploadPath(value) {
+  const parts = String(value ?? "").replace(/\\/g, "/").split("/").filter(Boolean);
+  if (!parts.length || parts.some((p) => p === "." || p === ".." || p.length > 200 || /[\0]/.test(p))) throw badRequest("That file path isn't allowed.", "BAD_PATH");
+  return parts.join("/");
+}
+
+export function datasetView(d, { source = null, run = null } = {}) {
+  return {
+    id: String(d._id),
+    name: d.name,
+    goal: d.goal ?? "",
+    modality: d.modality ?? null,
+    task: d.task ?? null,
+    state: d.state,
+    rows: d.rows ?? null,
+    versionCount: d.versionCount ?? 0,
+    headVersionId: hex(d.headVersionId),
+    publishedVersionId: hex(d.publishedVersionId),
+    source: source ? { id: String(source._id), title: source.title, connector: source.connector, ref: source.connector === "upload" ? null : source.ref, licence: licenceInfo(source.licence) } : null,
+    lastRun: run ? runView(run) : null,
+    createdAt: d.createdAt,
+    updatedAt: d.updatedAt,
+  };
+}
+
+export function versionView(v) {
+  return {
+    id: String(v._id),
+    datasetId: String(v.datasetId),
+    number: v.number,
+    rows: v.rows,
+    bytes: v.bytes,
+    modality: v.modality,
+    task: v.task,
+    schema: v.schema,
+    splits: v.splits,
+    labels: v.labels,
+    profileSummary: v.profileSummary,
+    quality: v.quality,
+    licences: v.licences,
+    frozen: v.frozen,
+    madeBy: { op: v.madeBy?.op ?? null, runId: hex(v.madeBy?.runId) },
+    createdAt: v.createdAt,
+  };
+}
+
+export function createDataRouter({ engine, auth }) {
+  const router = express.Router();
+  const { cfg, storage, connectors } = engine;
+  const db = () => engine.db;
+  const col = (name) => engine.db.collection(name);
+
+  router.use((req, res, next) => (engine.ready ? next() : res.status(503).json({ error: "Data isn't ready yet. Try again in a moment.", code: "DATA_STARTING" })));
+  router.use(auth);
+  router.use((req, res, next) => {
+    req.userId = oid(req.user?.id, "user");
+    next();
+  });
+
+  // Every lookup is by id and owner, so another user's id is simply "not found"
+  async function mine(name, id, userId, what) {
+    const doc = await col(name).findOne({ _id: oid(id, what.replace(/^That /, "").toLowerCase()), userId });
+    if (!doc) throw notFound(what);
+    return doc;
+  }
+
+  async function usage(userId) {
+    const [bytes, active] = await Promise.all([storage.usage(userId), col("runs").countDocuments({ userId, state: { $nin: FINAL } })]);
+    return { bytes, runsActive: active };
+  }
+
+  // ---------- Me ----------
+
+  router.get("/me", wrap(async (req, res) => {
+    const u = await usage(req.userId);
+    res.json({ limits: cfg.limits, usage: u });
+  }));
+
+  // ---------- Sources ----------
+
+  router.get("/sources", wrap(async (req, res) => {
+    const q = String(req.query.q ?? "").slice(0, 200);
+    const modality = req.query.modality ? String(req.query.modality) : null;
+    const task = req.query.task ? String(req.query.task) : null;
+    let liveError = null;
+    if (q && req.query.live === "1") {
+      try {
+        await saveSources(db(), await connectors.huggingface.search({ q, modality, limit: 20 }), "search");
+      } catch (e) {
+        liveError = e instanceof DataError ? e.message : "The online search didn't answer.";
+      }
+    }
+    res.json({ sources: await searchSources(db(), req.userId, { q, modality, task }), liveError });
+  }));
+
+  router.get("/sources/:id", wrap(async (req, res) => {
+    const s = await col("sources").findOne({ _id: oid(req.params.id, "source"), $or: [{ ownerUserId: null }, { ownerUserId: req.userId }] });
+    if (!s) throw notFound("That source");
+    const view = sourceView(s);
+    if (s.connector === "huggingface") {
+      const d = await connectors.huggingface.describe(s.ref);
+      view.configs = d.configs.map((c) => ({ name: c.name, labelNames: c.labelNames ?? null, columns: c.columns ?? null, splits: c.splits.map(({ name, rows, bytes }) => ({ name, rows: rows ?? null, bytes })) }));
+      view.convertible = d.convertible;
+      view.gated = d.gated;
+      if (d.description && !view.description) view.description = d.description;
+    }
+    res.json({ source: view });
+  }));
+
+  // ---------- Uploads ----------
+
+  router.post("/uploads", express.json(), wrap(async (req, res) => {
+    const name = cleanName(req.body?.name, "name");
+    const now = new Date();
+    const uploadId = new ObjectId();
+    const { insertedId } = await col("sources").insertOne({
+      connector: "upload",
+      ref: String(uploadId),
+      title: name,
+      description: "Your own files.",
+      modalities: [],
+      tasks: [],
+      licence: "unknown",
+      size: { bytes: 0, files: 0 },
+      tags: [],
+      popularity: 0,
+      uses: 0,
+      addedBy: "user",
+      ownerUserId: req.userId,
+      upload: { state: "open", files: 0, bytes: 0 },
+      createdAt: now,
+      checkedAt: now,
+    });
+    res.status(201).json({ uploadId: String(uploadId), sourceId: String(insertedId) });
+  }));
+
+  router.post("/uploads/:id/files", wrap(async (req, res) => {
+    const uploadId = String(oid(req.params.id, "upload"));
+    const src = await col("sources").findOne({ connector: "upload", ref: uploadId, ownerUserId: req.userId });
+    if (!src) throw notFound("That upload");
+    if (src.upload?.state !== "open") throw conflict("That upload is already in use.", "UPLOAD_CLOSED");
+    if ((src.upload?.files ?? 0) >= MAX_UPLOAD_FILES) throw badRequest(`At most ${MAX_UPLOAD_FILES} files at once.`, "TOO_MANY_FILES");
+    const rel = cleanUploadPath(req.query.path);
+    const { bytes: used } = await usage(req.userId);
+    const room = Math.min(cfg.limits.uploadBytes, cfg.limits.diskBytes - used);
+    const declared = Number(req.headers["content-length"] ?? 0);
+    if (room <= 0 || declared > room) throw new DataError(413, "TOO_BIG", "There isn't enough space left for that file.");
+    await storage.ensureUser(req.userId);
+    const written = await storage.writeStream(req.userId, `uploads/${uploadId}/${rel}`, req, room);
+    await col("sources").updateOne({ _id: src._id }, { $inc: { "upload.files": 1, "upload.bytes": written, "size.files": 1, "size.bytes": written } });
+    res.status(201).json({ path: rel, bytes: written });
+  }));
+
+  // ---------- Datasets ----------
+
+  router.get("/datasets", wrap(async (req, res) => {
+    const list = await col("datasets").find({ userId: req.userId }).sort({ updatedAt: -1 }).limit(200).toArray();
+    const runIds = list.map((d) => d.lastRunId).filter(Boolean);
+    const runs = new Map((await col("runs").find({ _id: { $in: runIds } }).toArray()).map((r) => [String(r._id), r]));
+    const sourceIds = list.map((d) => d.sourceIds?.[0]).filter(Boolean);
+    const sources = new Map((await col("sources").find({ _id: { $in: sourceIds } }).toArray()).map((s) => [String(s._id), s]));
+    res.json({ datasets: list.map((d) => datasetView(d, { run: runs.get(String(d.lastRunId)), source: sources.get(String(d.sourceIds?.[0])) })) });
+  }));
+
+  router.post("/datasets", express.json(), wrap(async (req, res) => {
+    const b = req.body ?? {};
+    const userId = req.userId;
+    const name = cleanName(b.name, "dataset name");
+    const goal = String(b.goal ?? "").trim().slice(0, 500);
+    const { bytes: used, runsActive } = await usage(userId);
+    if (runsActive >= cfg.limits.runsAtOnce) throw new DataError(429, "TOO_MANY_RUNS", `You can build ${cfg.limits.runsAtOnce} datasets at once. Wait for one to finish.`);
+    const room = cfg.limits.diskBytes - used;
+    if (room <= 0) throw new DataError(413, "NO_SPACE", "Your data space is full. Remove a dataset to make room.");
+
+    let source;
+    let uploadId = null;
+    let plan = null;
+    if (b.uploadId) {
+      uploadId = String(oid(b.uploadId, "upload"));
+      source = await col("sources").findOne({ connector: "upload", ref: uploadId, ownerUserId: userId });
+      if (!source) throw notFound("That upload");
+      if (source.upload?.state !== "open") throw conflict("Those files have already been made into a dataset. Upload them again to make another.", "UPLOAD_USED");
+      if (!source.upload?.files) throw badRequest("That upload has no files yet.", "UPLOAD_EMPTY");
+    } else {
+      source = await col("sources").findOne({ _id: oid(b.sourceId, "source"), $or: [{ ownerUserId: null }, { ownerUserId: userId }] });
+      if (!source) throw notFound("That source");
+      if (source.connector !== "huggingface") throw badRequest("Datasets from this kind of source arrive in a later update.", "CONNECTOR_NOT_READY");
+      plan = await connectors.huggingface.fetchPlan(source.ref, { config: b.config, split: b.split });
+      if (plan.bytes > room) throw new DataError(413, "NO_SPACE", "This dataset is bigger than the space you have left.");
+    }
+
+    const options = b.options ?? {};
+    const now = new Date();
+    const datasetId = new ObjectId();
+    const runId = new ObjectId();
+    const versionId = new ObjectId();
+    try {
+      await col("datasets").insertOne({
+        _id: datasetId,
+        userId,
+        name,
+        goal,
+        modality: options.modality ?? null,
+        task: options.task ?? null,
+        projectId: b.projectId ? oid(b.projectId, "project") : null,
+        state: "building",
+        rows: null,
+        versionCount: 0,
+        headVersionId: null,
+        publishedVersionId: null,
+        sourceIds: [source._id],
+        lastRunId: runId,
+        createdAt: now,
+        updatedAt: now,
+      });
+    } catch (e) {
+      if (e?.code === 11000) throw conflict(`You already have a dataset called "${name}".`, "NAME_TAKEN");
+      throw e;
+    }
+    if (uploadId) await col("sources").updateOne({ _id: source._id }, { $set: { "upload.state": "used" } });
+
+    const steps = buildSteps({ runId, datasetId, versionId, source, plan, uploadId, options, maxBytes: room });
+    const run = await createRun(db(), { runId, userId, datasetId, kind: "build", steps, cleanup: [uploadId ? `uploads/${uploadId}` : `raw/${runId}`] }, now);
+    await addEvent(db(), run, { kind: "state", message: "Waiting to start.", data: { run: "queued" } });
+    await enqueue(db(), { type: "run.advance", userId, runId, maxAttempts: 8 }, now);
+    await col("audit_events").insertOne({ userId, at: now, action: "dataset.create", target: datasetId, details: { sourceId: source._id, plan: plan ? { config: plan.config, splits: plan.splits, bytes: plan.bytes } : null } });
+
+    const dataset = await col("datasets").findOne({ _id: datasetId });
+    res.status(201).json({ dataset: datasetView(dataset, { source, run }) });
+  }));
+
+  router.get("/datasets/:id", wrap(async (req, res) => {
+    const d = await mine("datasets", req.params.id, req.userId, "That dataset");
+    const [run, source] = await Promise.all([d.lastRunId ? col("runs").findOne({ _id: d.lastRunId }) : null, col("sources").findOne({ _id: d.sourceIds?.[0] })]);
+    res.json({ dataset: datasetView(d, { run, source }) });
+  }));
+
+  router.patch("/datasets/:id", express.json(), wrap(async (req, res) => {
+    const d = await mine("datasets", req.params.id, req.userId, "That dataset");
+    const set = { updatedAt: new Date() };
+    if (req.body?.name !== undefined) set.name = cleanName(req.body.name, "dataset name");
+    if (req.body?.goal !== undefined) set.goal = String(req.body.goal).trim().slice(0, 500);
+    try {
+      await col("datasets").updateOne({ _id: d._id }, { $set: set });
+    } catch (e) {
+      if (e?.code === 11000) throw conflict(`You already have a dataset called "${set.name}".`, "NAME_TAKEN");
+      throw e;
+    }
+    res.json({ dataset: datasetView(await col("datasets").findOne({ _id: d._id })) });
+  }));
+
+  router.delete("/datasets/:id", wrap(async (req, res) => {
+    const d = await mine("datasets", req.params.id, req.userId, "That dataset");
+    if (await col("runs").countDocuments({ datasetId: d._id, state: { $nin: FINAL } })) throw conflict("This dataset is still being built. Cancel the build first.", "RUN_ACTIVE");
+    if (d.projectId && d.publishedVersionId) throw conflict("A project uses this dataset's published version.", "IN_USE");
+    await storage.remove(req.userId, `datasets/${d._id}`);
+    await Promise.all([
+      col("versions").deleteMany({ datasetId: d._id }),
+      col("runs").deleteMany({ datasetId: d._id }),
+      col("run_events").deleteMany({ datasetId: d._id }),
+      col("review_items").deleteMany({ datasetId: d._id }),
+    ]);
+    await col("datasets").deleteOne({ _id: d._id });
+    await col("audit_events").insertOne({ userId: req.userId, at: new Date(), action: "dataset.delete", target: d._id, details: { name: d.name } });
+    res.status(204).end();
+  }));
+
+  router.get("/datasets/:id/versions", wrap(async (req, res) => {
+    const d = await mine("datasets", req.params.id, req.userId, "That dataset");
+    const list = await col("versions").find({ datasetId: d._id, userId: req.userId }).sort({ number: -1 }).toArray();
+    res.json({ versions: list.map(versionView) });
+  }));
+
+  // ---------- Versions ----------
+
+  router.get("/versions/:id", wrap(async (req, res) => {
+    res.json({ version: versionView(await mine("versions", req.params.id, req.userId, "That version")) });
+  }));
+
+  router.get("/versions/:id/rows", wrap(async (req, res) => {
+    const v = await mine("versions", req.params.id, req.userId, "That version");
+    const offset = Math.max(0, Math.floor(Number(req.query.offset) || 0));
+    const limit = Math.min(200, Math.max(1, Math.floor(Number(req.query.limit) || 50)));
+    const manifest = await storage.readJson(req.userId, `${v.path}/manifest.json`);
+    if (!manifest) throw notFound("This version's files");
+    res.json(await readRows(storage.resolve(req.userId, v.path), manifest, offset, limit));
+  }));
+
+  router.get("/versions/:id/profile", wrap(async (req, res) => {
+    const v = await mine("versions", req.params.id, req.userId, "That version");
+    const profile = await storage.readJson(req.userId, `${v.path}/profile.json`);
+    if (!profile) throw notFound("This version's profile");
+    res.json({ profile });
+  }));
+
+  // ---------- Runs ----------
+
+  router.get("/runs", wrap(async (req, res) => {
+    const filter = { userId: req.userId };
+    if (req.query.datasetId) filter.datasetId = oid(req.query.datasetId, "dataset");
+    const list = await col("runs").find(filter).sort({ createdAt: -1 }).limit(50).toArray();
+    res.json({ runs: list.map(runView) });
+  }));
+
+  router.get("/runs/:id", wrap(async (req, res) => {
+    res.json({ run: runView(await mine("runs", req.params.id, req.userId, "That run")) });
+  }));
+
+  router.post("/runs/:id/cancel", wrap(async (req, res) => {
+    const run = await mine("runs", req.params.id, req.userId, "That run");
+    if (FINAL.includes(run.state)) throw conflict("This run has already ended.", "RUN_ENDED");
+    await col("runs").updateOne({ _id: run._id }, { $set: { cancelRequested: true } });
+    res.json({ run: runView({ ...run, cancelRequested: true }) });
+  }));
+
+  router.post("/runs/:id/retry", wrap(async (req, res) => {
+    let run = await mine("runs", req.params.id, req.userId, "That run");
+    if (run.state !== "failed") throw conflict("Only a run that stopped with a problem can be tried again.", "NOT_FAILED");
+    const i = run.currentStep;
+    run = await updateRun(db(), run, { state: "queued", error: null, endedAt: null, cancelRequested: false, [`steps.${i}.state`]: "pending", [`steps.${i}.error`]: null });
+    await col("datasets").updateOne({ _id: run.datasetId }, { $set: { state: "building", lastRunId: run._id, updatedAt: new Date() } });
+    await addEvent(db(), run, { kind: "state", message: "Trying again from the step that stopped.", data: { run: "queued" } });
+    await enqueue(db(), { type: "run.advance", userId: req.userId, runId: run._id, maxAttempts: 8 });
+    res.json({ run: runView(run) });
+  }));
+
+  router.get("/runs/:id/events", wrap(async (req, res) => {
+    const run = await mine("runs", req.params.id, req.userId, "That run");
+    const afterSeq = Math.max(0, Number(req.query.afterSeq) || 0);
+    const list = await col("run_events").find({ runId: run._id, seq: { $gt: afterSeq } }).sort({ seq: 1 }).limit(500).toArray();
+    res.json({ events: list.map(eventView) });
+  }));
+
+  router.get("/events", (req, res) => engine.live.handler(req, res));
+
+  // Errors in the shape continuum-api uses ({ error, code })
+  // eslint-disable-next-line no-unused-vars
+  router.use((err, req, res, next) => {
+    if (err instanceof DataError) return res.status(err.status).json({ error: err.message, code: err.code });
+    if (err?.code === "TOO_BIG") return res.status(413).json({ error: err.message, code: "TOO_BIG" });
+    engine.log.error({ err }, "data route failed");
+    if (!res.headersSent) res.status(500).json({ error: "Something went wrong on our side.", code: "INTERNAL_ERROR" });
+  });
+
+  return router;
+}

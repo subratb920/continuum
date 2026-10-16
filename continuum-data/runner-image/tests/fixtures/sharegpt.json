@@ -1,0 +1,32 @@
+[
+ {
+  "id": "s1",
+  "conversations": [
+   {
+    "from": "human",
+    "value": "Tell me a joke."
+   },
+   {
+    "from": "gpt",
+    "value": "Why did the chicken cross the road? To get to the other side."
+   }
+  ]
+ },
+ {
+  "id": "s2",
+  "conversations": [
+   {
+    "from": "system",
+    "value": "Be brief."
+   },
+   {
+    "from": "human",
+    "value": "Capital of France?"
+   },
+   {
+    "from": "gpt",
+    "value": "Paris."
+   }
+  ]
+ }
+]

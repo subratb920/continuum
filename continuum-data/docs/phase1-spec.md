@@ -8,7 +8,7 @@ Related: [Continuum README](../../README.md) · [continuum-deploy spec](../../..
 |---|---|
 | Let anyone, including a school student, go from "I want a model that does X" to a clean, versioned dataset that is ready to train on, from inside Continuum's UI. | Text (including LLM instruction and chat data), tabular, image and audio datasets. Sources: uploads, Hugging Face, Kaggle, OpenML, UCI, any URL. The full pipeline (discover, acquire, ingest, profile, clean, improve, transform, split, validate, publish) with AI help. Runs in Docker on the Continuum host. The user's own cloud follows in a later phase. |
 
-Status: Draft 0.1, for the owner's review. Nothing is confirmed yet. Based on the owner's decisions of 2026-10-16: local Docker first and cloud later; all four data types; an engine inside Continuum, not a separate deployment unit, but able to be split out later; AI help from the first phase.
+Status: Version 1.0 for D1, accepted by the owner on 2026-10-16 with every proposal in Section 12. D1 is built as written here; where the build changed a detail, the section says so (marked "D1 build"). Based on the owner's decisions of 2026-10-16: local Docker first and cloud later; all four data types; an engine inside Continuum, not a separate deployment unit, but able to be split out later; AI help from the first phase.
 
 ## Contents and review status
 
@@ -25,7 +25,7 @@ Status: Draft 0.1, for the owner's review. Nothing is confirmed yet. Based on th
 | 9 | Safety, licences and limits | Draft 0.1 |
 | 10 | UI screens | Draft 0.1 |
 | 11 | Build phases and acceptance criteria | Draft 0.1 |
-| 12 | Questions for the owner | Open |
+| 12 | Questions for the owner | Answered (2026-10-16) |
 
 ## 1. Overall architecture
 
@@ -95,19 +95,21 @@ The UI uses `VITE_DATA_API_URL` (default: `VITE_API_URL` + `/data`). Moving to a
 |---|---|---|
 | `DATA_ENABLED` | unset | Mounts `/data` and starts the worker. When unset, the UI hides the Data screen (as with Deploy's `VITE_DEPLOY_LOGIN_URL`). |
 | `DATA_DB_NAME` | continuum_data | Database name. |
-| `DATA_STORE_VOLUME` | continuum_data_store | Docker volume for dataset files. |
-| `DATA_STORE_PATH` | /store | Where continuum-api sees the volume (for previews). |
-| `DATA_RUNNER_IMAGE` | continuum-data-runner:dev | Runner image. |
-| `DATA_RUNNER_NETWORK` | none | Docker network for steps that need no network. Fetch steps use `docker_default`. |
-| `DATA_SECRET_KEY` | — (required when enabled) | Key used to seal tokens and model keys. |
+| `DATA_MONGO_URI` | `MONGO_URI` | MongoDB server; the database is `DATA_DB_NAME` on it. |
+| `DATA_STORE_PATH` | /store | Where continuum-api sees the dataset files. D1 build: a folder on the host, `~/.continuum/data-store`, mounted into continuum-api and bound into runners (instead of a named volume, so continuum-api can also run outside Docker). |
+| `DATA_RUNNER_URL` | http://continuum-data-runner-proxy:45191 | The runner proxy (Q1). |
+| `DATA_RUNNER_TOKEN` | — (required when enabled) | Shared with the runner proxy (`PROXY_TOKEN`). |
 | `DATA_WORKER_CONCURRENCY` | 2 | Steps running at once on this host. |
+| `DATA_DISK_GB`, `DATA_UPLOAD_GB`, `DATA_RUNS_AT_ONCE` | 20, 5, 2 | Limits (Section 9.4). |
+| `DATA_MODULE` | ../continuum-data/src/index.js | Where continuum-api loads the engine from (Compose mounts it at /continuum-data). |
+| `DATA_SECRET_KEY` | — | D4: key used to seal tokens and model keys. |
 | `OLLAMA_URL`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENCODE_API_KEY`, `COMPAT_URL` | as brain | Model providers (Section 8). |
 
 ### 1.7 Prerequisites from the owner
 
 - Approve this spec, section by section.
-- continuum-api's container gets the Docker socket (as continuum-workspaces already has) or a small runner proxy. See question Q1.
-- Decide the age question for the safety filter (Q3).
+- Build the runner image once: `docker build -t continuum-data-runner:dev continuum-data/runner-image`.
+- Switch it on with `DATA_ENABLED=true` in `docker/.env` (Compose) or continuum-api's `.env.local`.
 
 ### 1.8 Decisions confirmed by the owner
 
@@ -115,6 +117,7 @@ The UI uses `VITE_DATA_API_URL` (default: `VITE_API_URL` + `/data`). Moving to a
 - Text, tabular, image and audio data, all in scope (2026-10-16).
 - An engine inside Continuum that can be split out later (2026-10-16).
 - AI help built in from the first phase (2026-10-16).
+- Q1 to Q6 in Section 12: every proposal accepted (2026-10-16).
 
 ## 2. Data model
 
@@ -255,7 +258,7 @@ Indexes: `{connector, ref}` unique; text index on title, description and tags; `
 ### 2.13 Retention
 
 - Unpublished versions with no child and no project link: removed after 30 days by the `gc` job, after the user is warned in the UI.
-- Raw downloads: removed 7 days after the last version that used them.
+- Raw downloads and uploads: D1 build removes them as soon as the build that used them succeeds; after a failed build they stay, so "Try again" needs no new download.
 - run_events: 30 days.
 
 ## 3. Canonical dataset formats
@@ -438,9 +441,11 @@ The queue is a JS copy of Deploy's `packages/store/src/queue/` (claim with one `
 
 ### 5.3 The runner container
 
-- Image `continuum-data-runner`, started per step with: `cdata <op> --input <versionPath> --output <newVersionPath> --params /job/params.json`.
-- Mounts: the owning user's `/store/<userId>/` (read-write) and the params file (read-only). Nothing else.
-- Network: none, except for `fetch` and AI ops, which join `docker_default` to reach the internet, Ollama and nothing internal (an egress rule blocks continuum-mongo and continuum-api).
+- The exact contract (command, parameters, output lines, all-or-nothing output) is in [runner-contract.md](runner-contract.md).
+- Image `continuum-data-runner`, started per step as `cdata <op>` with its parameters in `CDATA_PARAMS`, through continuum-data-runner-proxy (Q1), which can start nothing else.
+- Mounts: the owning user's folder as `/store` (read-write). Nothing else.
+- Network: none, except for `fetch` (and later AI ops), which join `continuum_data_egress`, a network of its own: the internet is reachable, Continuum's containers are not (they are on `docker_default`).
+- Each try of a step has its own container name (`cdata-<runId>-<step>-<fencing token>`); starting a step first removes any earlier try of it, so only one ever writes its output.
 - Limits: 2 CPUs, 4 GB memory, 2 hours by default; set per op. Non-root user, read-only root filesystem, no privileges.
 - Progress protocol: the runner prints JSON lines on stdout: `{"kind":"progress","done":120,"total":1000}`, `{"kind":"log","message":"…"}`, `{"kind":"metric","name":"removed","value":42}`, `{"kind":"result","rows":958,…}`. The worker reads them through the Docker logs stream.
 - Exit code 0 means success; any other code fails the step with the last `log` line as the error.
@@ -452,7 +457,7 @@ The queue is a JS copy of Deploy's `packages/store/src/queue/` (claim with one `
 
 ## 6. API endpoints
 
-All under `/data`, all requiring Continuum sign-in, all scoped to `req.user.id`. Errors are `{ error: { code, message } }`.
+All under `/data`, all requiring Continuum sign-in, all scoped to `req.user.id`. Errors are `{ error, code }`, the shape continuum-api already uses (D1 build). Another user's id answers 404, never 403.
 
 | Method and path | Does |
 |---|---|
@@ -462,7 +467,8 @@ All under `/data`, all requiring Continuum sign-in, all scoped to `req.user.id`.
 | `GET /data/sources?q=&modality=&task=` | Search the catalogue (and, when `live=1`, the connectors). |
 | `GET /data/sources/:id` | One source, with its files and licence. |
 | `POST /data/sources` | Add a source by URL or connector ref. |
-| `POST /data/uploads` | Upload files (streamed to disk, up to the quota; never through `express.json`). |
+| `POST /data/uploads` | Start an upload: `{ name }` → `{ uploadId, sourceId }`. |
+| `POST /data/uploads/:id/files?path=` | One file, as the raw request body (streamed to disk, up to the limits). An upload is made into one dataset only. |
 | `GET /data/datasets`, `POST /data/datasets` | List or create datasets. |
 | `GET/PATCH/DELETE /data/datasets/:id` | One dataset. Delete refuses while a project refers to a published version. |
 | `GET /data/datasets/:id/versions` | Its versions. |
@@ -525,7 +531,7 @@ Later: data.gov and other open data portals, Wikipedia and Wikimedia dumps, Comm
 
 ### 7.4 Seed list
 
-About 60 well-known, permissively licensed sets chosen for learners, for example: IMDB reviews, AG News, SST-2, Dolly 15k, Alpaca-cleaned, OpenAssistant, Iris, Titanic, Adult income, California housing, MNIST, Fashion-MNIST, CIFAR-10, Oxford-IIIT Pets, Food-101, Speech Commands, ESC-50, LibriSpeech (clean subset). Stored in `src/catalogue/seed.json`, with licences checked by hand.
+D1 build: 27 well-known sets, each checked on Hugging Face (2026-10-16), for example: IMDB reviews, AG News, SST-2, Dolly 15k, Alpaca-cleaned, OpenAssistant, Iris, Titanic, Adult income, California housing, MNIST, Fashion-MNIST, CIFAR-10, Oxford-IIIT Pets, Food-101, Speech Commands, ESC-50, LibriSpeech (clean subset). Stored in `src/catalogue/seed.json`, with licences checked by hand.
 
 ## 8. AI assistance
 
@@ -647,9 +653,9 @@ The criteria for D2 to D6 are written when each phase starts.
 
 | # | Question | Proposal |
 |---|---|---|
-| Q1 | continuum-api needs to start runner containers. Give its container the Docker socket, or add a small proxy that can only start continuum-data-runner containers? | The small proxy, because the socket gives full control of the host. |
-| Q2 | Should datasets be linked to Continuum projects (for example a Data tab in a project) from D1, or stay separate until the training engine exists? | Optional link from D1 (`projectId`), with no project UI until training. |
-| Q3 | Continuum accounts have no age. How should "under 18" be known for the locked safety filter? | An optional "This account is for a student" setting, which an admin or the user turns on, plus the safety filter on by default for everyone. |
-| Q4 | Audio decoding: ship an LGPL-only ffmpeg build in the runner (allowed by exception), or decode only WAV, FLAC and OGG without ffmpeg? | LGPL ffmpeg by exception, recorded in the licence exceptions file, so MP3 and M4A work. |
-| Q5 | Disk and AI limits in Section 9.4: are these defaults right for the host? | As written, to be changed after D1. |
-| Q6 | GPU: should the runner use a GPU when the host has one (for faster AI labelling and safety models)? | Not in D1 to D3; optional from D4. |
+| Q1 | continuum-api needs to start runner containers. Give its container the Docker socket, or add a small proxy that can only start continuum-data-runner containers? | The small proxy, because the socket gives full control of the host. **Accepted.** |
+| Q2 | Should datasets be linked to Continuum projects (for example a Data tab in a project) from D1, or stay separate until the training engine exists? | Optional link from D1 (`projectId`), with no project UI until training. **Accepted.** |
+| Q3 | Continuum accounts have no age. How should "under 18" be known for the locked safety filter? | An optional "This account is for a student" setting, which an admin or the user turns on, plus the safety filter on by default for everyone. **Accepted** (built with the safety filter, D2). |
+| Q4 | Audio decoding: ship an LGPL-only ffmpeg build in the runner (allowed by exception), or decode only WAV, FLAC and OGG without ffmpeg? | LGPL ffmpeg by exception, recorded in the licence exceptions file, so MP3 and M4A work. **Accepted** (D3). |
+| Q5 | Disk and AI limits in Section 9.4: are these defaults right for the host? | As written, to be changed after D1. **Accepted.** |
+| Q6 | GPU: should the runner use a GPU when the host has one (for faster AI labelling and safety models)? | Not in D1 to D3; optional from D4. **Accepted.** |

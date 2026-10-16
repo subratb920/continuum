@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cdata"
+version = "0.1.0"
+description = "continuum-data runner: fetch, ingest and profile datasets (cdata <op>)"
+requires-python = ">=3.12,<3.13"
+# Exact pins live in requirements.txt (installed first with pip install -r).
+dependencies = ["polars", "pyarrow", "fastexcel", "pypdf"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+cdata = "cdata.cli:entry"
+
+[tool.setuptools]
+packages = ["cdata", "cdata.ops"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
