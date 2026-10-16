@@ -121,6 +121,7 @@ def write_version(
     sample: Optional[list] = None,
     roles: Optional[dict] = None,
     notes: Optional[list] = None,
+    task: Optional[str] = None,
 ) -> dict:
     """Writes ``df`` as the new version at ``params.output`` and reports the result line."""
     out_rel = get_param(params, "output", str, required=True)
@@ -149,9 +150,9 @@ def write_version(
             "parent": v.manifest.get("version"),
             "madeBy": op,
             "modality": v.modality,
-            "task": v.task,
+            "task": task or v.task,
             "schema": schema_out,
-            "labels": labels_of(df, label, v.task),
+            "labels": labels_of(df, label, task or v.task),
             "splits": splits,
             "rows": df.height,
             "files": files,
@@ -181,7 +182,7 @@ def write_version(
         protocol.metric("removed", removed)
     if changed:
         protocol.metric("changed", changed)
-    result = dict(rows=df.height, bytes=data_bytes, modality=v.modality, task=v.task, schema=schema_out,
+    result = dict(rows=df.height, bytes=data_bytes, modality=v.modality, task=task or v.task, schema=schema_out,
                   labels=manifest["labels"], splits=splits, changes={"before": v.df.height, "after": df.height, "removed": removed, "changed": changed, "notes": notes or []})
     protocol.result(**result)
     return result

@@ -16,33 +16,50 @@ from ._version import read_version
 FORMATS = ("parquet", "csv", "jsonl", "hf")
 
 
-def _card(v, splits: dict, fmt: str) -> str:
+def _card(v, splits: dict, fmt: str, info: dict) -> str:
+    """The dataset card (README.md): what it is, where it came from, how it was made, how good it is."""
     m = v.manifest
-    configs = ""
+    head = ""
     if fmt == "hf":
         files = "\n".join(f"      - split: {s}\n        path: data/{s}.parquet" for s in splits)
-        configs = f"configs:\n  - config_name: default\n    data_files:\n{files}\n"
-    licences = ", ".join(f"{l['spdx']} ({l['rows']} rows)" for l in m.get("licences", []))
-    lines = [
-        "---",
-        configs.rstrip("\n") if configs else "",
-        "---" if configs else "",
-    ]
-    head = "\n".join(l for l in lines if l) + "\n" if configs else ""
-    body = [
-        "# Dataset",
-        "",
-        "Made with Continuum Data.",
-        "",
-        f"- Kind: {m.get('modality')} · task: {m.get('task')}",
-        f"- Rows: {m.get('rows')}" + (" (" + ", ".join(f"{k} {n}" for k, n in splits.items()) + ")" if splits else ""),
-        f"- Labels: {', '.join(m.get('labels') or []) or '—'}",
-        f"- Licences: {licences or 'unknown'}",
-        "",
-        "Every row's source and licence are in the `_source` and `_licence` columns when they are included.",
-        "",
-    ]
-    return head + "\n".join(body)
+        licences = sorted({l["spdx"] for l in m.get("licences", []) if l.get("spdx") and l["spdx"] not in ("unknown", "other")})
+        lic = f"license: {licences[0]}\n" if len(licences) == 1 else ""
+        head = f"---\n{lic}configs:\n  - config_name: default\n    data_files:\n{files}\n---\n\n"
+    name = info.get("name") or "Dataset"
+    out = [f"# {name}", ""]
+    if info.get("goal"):
+        out += [f"Goal: {info['goal']}", ""]
+    out += ["Made with Continuum Data.", "", "## What's in it", ""]
+    kinds = {"text": "Text", "tabular": "Table", "image": "Images", "audio": "Audio"}
+    tasks = {"classify": "sorting into labels", "regress": "predicting a number", "chat": "answering and chatting",
+             "generate": "writing text", "detect": "finding objects", "transcribe": "speech to text"}
+    out.append(f"- Kind: {kinds.get(m.get('modality'), m.get('modality'))}, for {tasks.get(m.get('task'), m.get('task'))}")
+    out.append(f"- Rows: {m.get('rows')}" + (" (" + ", ".join(f"{k}: {n}" for k, n in splits.items()) + ")" if splits else ""))
+    if m.get("labels"):
+        out.append(f"- Labels: {', '.join(map(str, m['labels'][:50]))}")
+    cols = [c["name"] for c in m.get("schema", []) if not c["name"].startswith("_")]
+    out.append(f"- Columns: {', '.join(cols)}")
+    out += ["", "## Where it came from", ""]
+    for src in info.get("sources") or []:
+        lic = src.get("licence") or {}
+        ref = f" ({src['ref']})" if src.get("ref") else ""
+        out.append(f"- {src.get('title', 'Source')}{ref}: {lic.get('name', 'unknown licence')}. {lic.get('plain', '')}".rstrip())
+    if not info.get("sources"):
+        out.append("- " + ", ".join(f"{l['spdx']} ({l['rows']} rows)" for l in m.get("licences", [])) or "- Unknown")
+    if info.get("history"):
+        out += ["", "## How it was made", ""]
+        for i, h in enumerate(info["history"], 1):
+            notes = "; ".join(n.rstrip(".") for n in h.get("notes") or [])
+            out.append(f"{i}. {h.get('label') or h.get('op')} (version {h.get('number')})" + (f": {notes}." if notes else ""))
+    q = info.get("quality")
+    if q:
+        out += ["", "## Quality", "", f"Score {q.get('score')} of 100: {q.get('verdict')}.", ""]
+        for g in q.get("gates", []):
+            out.append(f"- {'✓' if g.get('passed') else '✗'} {g.get('title')}: {g.get('reason')}")
+    out += ["", "## Use it with care", "",
+            "Check the licences above before you share a model trained on this data. "
+            "Rows were checked with simple rules; they can still hold mistakes or unfair patterns from where they came from.", ""]
+    return head + "\n".join(out)
 
 
 def run(params: dict) -> None:
@@ -79,7 +96,7 @@ def run(params: dict) -> None:
                 g.write_ndjson(buf)
                 name = f"{s}.jsonl"
             z.writestr(name, buf.getvalue())
-        z.writestr("README.md", _card(v, splits, fmt))
+        z.writestr("README.md", _card(v, splits, fmt, get_param(params, "card", dict, {})))
         z.writestr("manifest.json", json.dumps({**v.manifest, "export": {"format": fmt, "splits": splits, "columns": keep}}, indent=2, default=str))
     os.replace(tmp, target)
     size = target.stat().st_size

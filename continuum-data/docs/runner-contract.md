@@ -4,7 +4,7 @@ How the worker runs a pipeline step in a continuum-data-runner container, and wh
 
 Related: [Phase 1 spec](phase1-spec.md) (Sections 3, 4 and 5.3)
 
-Status: D1 and D2a, written with the builds (2026-10-16).
+Status: D1, D2a and D2b, written with the builds (2026-10-16).
 
 ## 1. Starting a step
 
@@ -134,6 +134,11 @@ The `result` line is `ingest`'s (`rows`, `bytes`, `modality`, `task`, `schema`, 
 | `outliers` | `action` `clip` / `drop`, `factor` 1.5, `columns` | Interquartile-range fences per number column. |
 | `split` | `mode` `stratified` (with a label) / `random` / `group` / `keep`, `ratios` [0.8, 0.1, 0.1], `groupColumn`, `seed` 42, `leakageCheck` true | Fills `_split` with train / validation / test (largest-remainder counts, so they add up). Leakage check: rows in one exact or near-copy group that sit on more than one side all move to train. The same seed gives the same split. |
 
+| `redact_pii` | `action` `replace` / `drop` / `flag`, `kinds` (all: `email`, `phone`, `card`, `iban`, `aadhaar`, `ssn`, `pan`, `ip`) | Checks every text column (and chat message contents) except the label. `replace` puts in `[EMAIL]`, `[PHONE]`, `[CARD]`, `[IBAN]`, `[ID]` or `[IP]` and flags the row `pii_redacted`. Card numbers must pass the Luhn check; phone numbers need 8 to 15 digits. Names aren't found yet (D4, with a model). |
+| `safety` | `action` `drop` / `flag`, `extraWords` [] | A whole-word check against a short built-in list of clearly adult or abusive words, plus `extraWords`. `flag` adds `unsafe`. The `changes.json` sample gives only row ids and the reason, never the text. A model-based check comes in D4. |
+| `balance` | `method` `under` / `over` / `both`, `targetRatio` 1.0, `seed` 42 | Needs a label (error `NO_LABEL`). Only `train` rows change when the data is split; validation and test keep the real mix. Added copies get new `_id`s (`<id>-o<n>`) and the flag `oversampled`. |
+| `to_chat` | `mode` `columns` (`promptColumn`, `answerColumn`) / `classify` (`textColumn` "text", `instruction`), `systemPrompt`, `dropOtherColumns` true | Writes `messages` (an optional system turn, then user, then assistant) and sets the task to `chat`. |
+
 ### validate
 
 Params: `input`, `minRows` (1,000 for text, 100 otherwise), `minRowsPerLabel` 100, `maxMissingShare` 0.2. Writes `<input>/quality.json` and the same object as the result:
@@ -147,9 +152,9 @@ Gates: `enough_rows`, `enough_per_label`, `balanced`, `labelled`, `few_missing`,
 
 ### export
 
-Params: `input`, `output` (`exports/<versionId>`), `format` `parquet` / `csv` / `jsonl` / `hf`, `includeMeta` false. Writes `<output>/<format>.zip`, through a temporary file and a rename. The zip holds:
+Params: `input`, `output` (`exports/<versionId>`), `format` `parquet` / `csv` / `jsonl` / `hf`, `includeMeta` false, `card` (from the engine: `name`, `goal`, `sources` [{ title, ref, licence }], `history` [{ number, op, label, notes }], `quality`). Writes `<output>/<format>.zip`, through a temporary file and a rename. The zip holds:
 - one file per split (or `data.*` without splits)
-- `README.md`
+- `README.md`: the dataset card, made from `card` (what's in it, where it came from and under which licences, how each version was made, the quality checks, and a note on using it with care)
 - `manifest.json`
 
 With `hf`, the zip holds `data/<split>.parquet` and a README whose `configs:` front matter lets `datasets.load_dataset` read it. The `_` columns are left out unless `includeMeta`. Result: `{ path, format, bytes, splits }`.

@@ -647,7 +647,22 @@ Under the profile menu's Settings: model choice, provider keys, Hugging Face and
 8. No import from `continuum-api/src` exists in `continuum-data/src` (a test checks this).
 9. `node --test` passes for the module; the runner image builds; its licence check passes; `npm run check:colors` passes.
 
-The criteria for D2 to D6 are written when each phase starts.
+### 11.3 D2 acceptance criteria (D2a and D2b, built 2026-10-16)
+
+1. Every clean-up step writes a new version with `changes.json`; a pipeline makes one version per step, each made from the one before, and a crash mid-step still gives exactly one version per step.
+2. IMDB (train, 25,000 rows): removing copies takes out the 96 exact copies and finds near copies; the split is 80/10/10 with the same label mix on each side and no copy on both sides; the quality score is 100.
+3. SMS spam with the "Clean text for a classifier" template: phone numbers and emails are replaced with markers before copies are removed; 12-digit phone numbers are not mistaken for Aadhaar numbers (Verhoeff check); "xxx" (kisses) is not counted as unsafe.
+4. The Hugging Face download loads with `pyarrow` per split and carries a README with what's in it, its sources and licences, how each version was made, and the quality checks.
+5. Settings are checked against the step catalogue: an unknown step or setting, or shares that don't add up to 1, are refused with a plain message.
+6. Another user can't run, see, export or download anything of yours (tested on every new route).
+7. The privacy and safety steps are in every suggestion and text template (spec 9.1).
+
+D2 build notes:
+- The dataset card is written into every download's README by `export`, from details the engine passes in, rather than by a separate `card` step.
+- Near copies are found with MinHash in polars, without `datasketch`.
+- The safety step is a word list until the AI checks of D4.
+
+The criteria for D2c to D6 are written when each phase starts.
 
 ## 12. Questions for the owner
 

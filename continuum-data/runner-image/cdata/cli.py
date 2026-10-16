@@ -13,7 +13,7 @@ import warnings
 from . import protocol
 from .protocol import CdataError, ParamError
 
-OPS = ("fetch", "ingest", "profile", "dedupe", "filter", "fix_types", "fill_missing", "outliers", "split", "validate", "export", "licences")
+OPS = ("fetch", "ingest", "profile", "dedupe", "filter", "fix_types", "fill_missing", "outliers", "split", "redact_pii", "safety", "balance", "to_chat", "validate", "export", "licences")
 
 USAGE = "usage: cdata <op>   (ops: " + ", ".join(OPS) + "; parameters as JSON in CDATA_PARAMS)"
 
@@ -48,6 +48,14 @@ def run(op: str, params: dict) -> None:
         from .ops import clean
 
         fn = getattr(clean, f"run_{op}")
+    elif op in ("redact_pii", "safety"):
+        from .ops import privacy
+
+        fn = privacy.run_redact if op == "redact_pii" else privacy.run_safety
+    elif op in ("balance", "to_chat"):
+        from .ops import shape
+
+        fn = shape.run_balance if op == "balance" else shape.run_to_chat
     elif op == "split":
         from .ops.split import run as fn
     elif op == "validate":
