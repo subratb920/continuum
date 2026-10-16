@@ -39,7 +39,8 @@ export default function DataPipeline({ dataset, version }) {
   }
 
   if (!version || !catalog) return null;
-  const available = Object.entries(catalog).filter(([, s]) => s.modalities.includes(modality));
+  const hasLabels = Boolean(version.labels?.length);
+  const available = Object.entries(catalog).filter(([, s]) => s.modalities.includes(modality) && (!s.needsLabel || hasLabels));
 
   if (!draft.open) {
     return (
@@ -260,6 +261,29 @@ function Setting({ name, spec, value, columns, onChange }) {
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
+        </div>
+      );
+    case "enum-list":
+      return (
+        <div className="data-set">
+          <span>{spec.label}</span>
+          <div className="data-chips">
+            {spec.choices.map((c) => {
+              const on = (value ?? []).includes(c);
+              return (
+                <button key={c} type="button" className={`data-chip${on ? " is-on" : ""}`} aria-pressed={on} onClick={() => onChange(on ? value.filter((x) => x !== c) : [...(value ?? []), c])}>
+                  {spec.labels?.[c] ?? c}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    case "words":
+      return (
+        <div className="data-set">
+          {label}
+          <input id={id} type="text" value={Array.isArray(value) ? value.join(", ") : value ?? ""} placeholder="word, another word" maxLength={2000} onChange={(e) => onChange(e.target.value)} />
         </div>
       );
     case "columns":
