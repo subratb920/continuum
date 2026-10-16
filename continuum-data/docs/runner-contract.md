@@ -4,7 +4,7 @@ How the worker runs a pipeline step in a continuum-data-runner container, and wh
 
 Related: [Phase 1 spec](phase1-spec.md) (Sections 3, 4 and 5.3)
 
-Status: D1, written with the D1 build (2026-10-16).
+Status: D1 and D2a, written with the builds (2026-10-16).
 
 ## 1. Starting a step
 
@@ -112,6 +112,47 @@ Params: `{ "input": "datasets/<datasetId>/<versionId>", "sampleRows": 100000 }`
 - `text` is present for text datasets (for chat data, over all message contents joined), otherwise null. `tokensApprox` is words × 1.3 over all rows (from the sample, scaled).
 - Numeric columns get `min`, `max`, `mean`, `p25`, `p50`, `p75` and a 10-bin `histogram`; string columns get `top` (at most 10 values, each cut to 200 characters); text lengths get a 10-bin histogram up to p99.
 - Findings (each optional), in plain words a beginner understands: `exact_duplicates` (warning, suggest `dedupe`), `missing_values` (warning when a column is more than 5% empty, suggest `fill_missing`), `imbalanced_labels` (warning when balance < 0.5, suggest `balance`), `few_rows` (warning under 1,000 rows, or under 100 for any label), `empty_text` (warning, suggest `filter`), `very_long_text` (info when p95 over 8,000 characters), `single_value_column` (info), `no_label` (info for text and tabular data without a label), `has_splits` (info).
+
+## 3a. Clean-up ops (D2)
+
+Every op below reads the version at `input` and, except `validate` and `export`, writes a new version at `output` (all-or-nothing, as in Section 2). A new version has the same manifest shape as `ingest`'s, plus `parent` and `madeBy`. It also has `changes.json`:
+
+```json
+{ "op": "dedupe", "before": 25000, "after": 24904, "removed": 96, "changed": 0,
+  "notes": ["96 exact copies", "Kept the first row of each group."],
+  "sample": [{ "_id": "…", "reason": "exact copy", "row": { "text": "… (cut to 300 characters)", "label": "neg" } }] }
+```
+
+The `result` line is `ingest`'s (`rows`, `bytes`, `modality`, `task`, `schema`, `labels`, `splits`) plus `changes` (the file above without `sample`). An op that would remove every row stops with error `NO_ROWS_LEFT` and writes nothing.
+
+| Op | Params (defaults) | What it does |
+|---|---|---|
+| `dedupe` | `mode` (`near` for text, else `exact`), `threshold` 0.8, `keep` `first` / `longest` / `shortest` | Exact copies: a hash of the non-`_` columns. Near copies (text): MinHash over word 5-grams (64 hashes, 16 bands of 4, polars only); a pair counts when its estimated similarity reaches `threshold`. Texts under 5 words use the whole text as one shingle. |
+| `filter` | `dropEmpty` true, `minChars`, `maxChars`, `minWords`, `maxSymbolShare`, `maxRepeatedLineShare`, `dropMissingLabel` true, `dropFlags` [], `keepWhere` | Removes rows matching any rule; `keepWhere` is a polars SQL expression (an expression only, never code; error `BAD_CONDITION` when it can't be read). |
+| `fix_types` | `stripSpaces` true, `columns` | Text columns whose every value is a number become numbers (integers when whole); yes/no/true/false become booleans. The label is left as it is. |
+| `fill_missing` | `strategy` `auto` / `median` / `mean` / `mode` / `constant` / `drop`, `value`, `columns`, `dropMissingLabel` true | `auto`: median for numbers, most common value otherwise. |
+| `outliers` | `action` `clip` / `drop`, `factor` 1.5, `columns` | Interquartile-range fences per number column. |
+| `split` | `mode` `stratified` (with a label) / `random` / `group` / `keep`, `ratios` [0.8, 0.1, 0.1], `groupColumn`, `seed` 42, `leakageCheck` true | Fills `_split` with train / validation / test (largest-remainder counts, so they add up). Leakage check: rows in one exact or near-copy group that sit on more than one side all move to train. The same seed gives the same split. |
+
+### validate
+
+Params: `input`, `minRows` (1,000 for text, 100 otherwise), `minRowsPerLabel` 100, `maxMissingShare` 0.2. Writes `<input>/quality.json` and the same object as the result:
+
+```json
+{ "score": 82, "verdict": "Nearly there", "passed": 8, "total": 10,
+  "gates": [{ "id": "has_test_split", "title": "Rows kept aside for testing", "passed": true, "reason": "5,000 rows kept aside to check the model.", "weight": 10, "fix": "split" }] }
+```
+
+Gates: `enough_rows`, `enough_per_label`, `balanced`, `labelled`, `few_missing`, `no_copies`, `has_test_split`, `no_leakage` (with a split), `licences_known`, `no_empty_text` (text). The score is the share of the gates' weights that passed. A score of 85 or more is "Ready to train"; 60 or more is "Nearly there".
+
+### export
+
+Params: `input`, `output` (`exports/<versionId>`), `format` `parquet` / `csv` / `jsonl` / `hf`, `includeMeta` false. Writes `<output>/<format>.zip`, through a temporary file and a rename. The zip holds:
+- one file per split (or `data.*` without splits)
+- `README.md`
+- `manifest.json`
+
+With `hf`, the zip holds `data/<split>.parquet` and a README whose `configs:` front matter lets `datasets.load_dataset` read it. The `_` columns are left out unless `includeMeta`. Result: `{ path, format, bytes, splits }`.
 
 ## 4. Tests
 

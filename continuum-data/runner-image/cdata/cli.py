@@ -13,9 +13,9 @@ import warnings
 from . import protocol
 from .protocol import CdataError, ParamError
 
-OPS = ("fetch", "ingest", "profile", "licences")
+OPS = ("fetch", "ingest", "profile", "dedupe", "filter", "fix_types", "fill_missing", "outliers", "split", "validate", "export", "licences")
 
-USAGE = "usage: cdata <op>   (ops: fetch, ingest, profile, licences; parameters as JSON in CDATA_PARAMS)"
+USAGE = "usage: cdata <op>   (ops: " + ", ".join(OPS) + "; parameters as JSON in CDATA_PARAMS)"
 
 
 def _load_params() -> dict:
@@ -42,6 +42,18 @@ def run(op: str, params: dict) -> None:
         from .ops.ingest import run as fn
     elif op == "profile":
         from .ops.profile import run as fn
+    elif op == "dedupe":
+        from .ops.dedupe import run as fn
+    elif op in ("filter", "fix_types", "fill_missing", "outliers"):
+        from .ops import clean
+
+        fn = getattr(clean, f"run_{op}")
+    elif op == "split":
+        from .ops.split import run as fn
+    elif op == "validate":
+        from .ops.validate import run as fn
+    elif op == "export":
+        from .ops.export import run as fn
     elif op == "licences":
         from .licences import run as fn
     else:
