@@ -81,6 +81,13 @@ export const dataApi = {
   publish: (versionId) => request("POST", `/versions/${versionId}/publish`).then((r) => r.version),
   startExport: (versionId, format) => request("POST", `/versions/${versionId}/exports`, { format }).then((r) => r.run),
 
+  /** One image or sound file, as a local address for <img> or <audio> (revoke it when done). */
+  async mediaUrl(versionId, path) {
+    const res = await fetch(`${BASE}/versions/${versionId}/media${q({ path })}`, { headers: authHeader() });
+    if (!res.ok) throw new Error("That file couldn't be loaded.");
+    return URL.createObjectURL(await res.blob());
+  },
+
   /** Downloads an export (the sign-in goes in a header, so it is fetched, then saved). */
   async download(versionId, format) {
     const res = await fetch(`${BASE}/versions/${versionId}/exports/${format}/download`, { headers: authHeader() });

@@ -21,6 +21,9 @@ export const STEP_LABEL = {
   safety: "Remove unsafe text",
   balance: "Balance labels",
   to_chat: "Make chat examples",
+  resize: "Resize pictures",
+  resample: "Resample sound",
+  augment: "Make more examples",
   validate: "Check quality",
   export: "Pack for download",
 };

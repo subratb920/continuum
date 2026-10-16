@@ -4,7 +4,7 @@ import { DataError, badRequest, conflict, notFound } from "../errors.js";
 import { oid, hex } from "../ids.js";
 import { enqueue } from "../store/queue.js";
 import { buildSteps, createRun, eventView, exportSteps, FINAL, pipelineSteps, runView, updateRun, addEvent } from "../runs.js";
-import { EXPORT_FORMATS, normaliseSteps, STEP_CATALOG, suggestSteps, TEMPLATES } from "../recipes.js";
+import { EXPORT_FORMATS, EXPORT_FORMATS_FOR, normaliseSteps, STEP_CATALOG, suggestSteps, TEMPLATES } from "../recipes.js";
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { saveSources, searchSources, sourceView } from "../catalogue/index.js";
@@ -402,6 +402,21 @@ export function createDataRouter({ engine, auth }) {
     res.json(await readRows(storage.resolve(req.userId, v.path), manifest, offset, limit, { split }));
   }));
 
+  // One image or sound file of a version (named by its content, so it never changes)
+  const MEDIA_PATH = /^media\/[0-9a-f]{2}\/[0-9a-f]{64}\.(jpg|jpeg|png|webp|bmp|gif|tif|tiff|wav|flac|mp3|ogg|oga|opus|m4a|img)$/;
+  const MEDIA_TYPE = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", bmp: "image/bmp", gif: "image/gif", tif: "image/tiff", tiff: "image/tiff", img: "application/octet-stream", wav: "audio/wav", flac: "audio/flac", mp3: "audio/mpeg", ogg: "audio/ogg", oga: "audio/ogg", opus: "audio/ogg", m4a: "audio/mp4" };
+  router.get("/versions/:id/media", wrap(async (req, res) => {
+    const v = await mine("versions", req.params.id, req.userId, "That version");
+    const rel = String(req.query.path ?? "");
+    const m = MEDIA_PATH.exec(rel);
+    if (!m) throw badRequest("That isn't a media file of this dataset.", "BAD_PATH");
+    const full = storage.resolve(req.userId, `datasets/${v.datasetId}/${rel}`);
+    const info = await stat(full).catch(() => null);
+    if (!info) throw notFound("That file");
+    res.writeHead(200, { "Content-Type": MEDIA_TYPE[m[1]], "Content-Length": info.size, "Cache-Control": "private, max-age=31536000, immutable" });
+    createReadStream(full).pipe(res);
+  }));
+
   router.get("/versions/:id/profile", wrap(async (req, res) => {
     const v = await mine("versions", req.params.id, req.userId, "That version");
     const profile = await storage.readJson(req.userId, `${v.path}/profile.json`);
@@ -411,7 +426,7 @@ export function createDataRouter({ engine, auth }) {
 
   // ---------- Recipes ----------
 
-  router.get("/recipes/catalog", (req, res) => res.json({ steps: STEP_CATALOG, exportFormats: EXPORT_FORMATS }));
+  router.get("/recipes/catalog", (req, res) => res.json({ steps: STEP_CATALOG, exportFormats: EXPORT_FORMATS, exportFormatsFor: EXPORT_FORMATS_FOR }));
   router.get("/recipes/templates", (req, res) => res.json({ templates: TEMPLATES }));
 
   const recipeView = (r) => ({ id: String(r._id), name: r.name, description: r.description ?? "", modality: r.modality ?? null, steps: r.steps, origin: r.origin, updatedAt: r.updatedAt });
@@ -499,7 +514,8 @@ export function createDataRouter({ engine, auth }) {
   router.post("/versions/:id/exports", express.json(), wrap(async (req, res) => {
     const v = await mine("versions", req.params.id, req.userId, "That version");
     const format = String(req.body?.format ?? "parquet");
-    if (!EXPORT_FORMATS.includes(format)) throw badRequest(`Choose one of ${EXPORT_FORMATS.join(", ")}.`, "BAD_FORMAT");
+    const allowed = EXPORT_FORMATS_FOR[v.modality] ?? EXPORT_FORMATS;
+    if (!allowed.includes(format)) throw badRequest(`Choose one of ${allowed.join(", ")}.`, "BAD_FORMAT");
     const dataset = await col("datasets").findOne({ _id: v.datasetId });
     const run = await startRun(req.userId, dataset, v, "export", exportSteps({ version: v, format, card: await cardInfo(dataset, v) }));
     res.status(202).json({ run: runView(run) });
@@ -533,7 +549,9 @@ export function createDataRouter({ engine, auth }) {
     } else if (req.body?.templateId) {
       const t = TEMPLATES.find((x) => x.id === req.body.templateId);
       if (!t) throw notFound("That template");
-      raw = t.steps;
+      // A dataset that comes with a test split keeps it (the official one is what scores are compared on)
+      const hasTest = input.splits?.train && (input.splits.test || input.splits.validation);
+      raw = t.steps.map((st) => (st.op === "split" && hasTest ? { ...st, params: { ...st.params, mode: "keep" } } : st));
       recipeName = t.name;
     }
     const steps = normaliseSteps(raw, input.modality);

@@ -126,7 +126,9 @@ def run_redact(params: dict) -> None:
         df = df.with_columns([new[c].alias(c) for c in cols])
         df = add_flag(df, hit, "pii_redacted")
         changed = found
-        notes.append("Replaced with markers like [EMAIL]. Names are not found yet; that comes with AI help.")
+        if found:
+            notes.append("Replaced with markers like [EMAIL].")
+        notes.append("Names aren't looked for yet; that comes with AI help.")
         sample = sample_rows(df.filter(hit), "personal details replaced")
     elif action == "drop":
         df = df.filter(~hit)

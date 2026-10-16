@@ -74,8 +74,11 @@ def run(params: dict) -> None:
         protocol.log("Checking that no copy sits on both sides…")
         df = df.sort("__i")
         base = v.df
-        groups = _similar.exact_groups(base, v.content_columns).to_list()
-        text = base.select(text_of(v).alias("t"))["t"] if v.text_column else None
+        groups = _similar.exact_groups(base, [c for c in v.content_columns if v.roles.get(c) != "meta"]).to_list()
+        text = base.select(text_of(v).alias("t"))["t"] if v.text_column and v.modality == "text" else None
+        if v.modality == "image":
+            near = _similar.image_groups(v.path.parent, base["image"].to_list(), 0.97)
+            groups = [min(g, near[i], near[g]) for i, g in enumerate(groups)]
         if text is not None:
             near = _similar.near_groups(text, 0.8)
             groups = [min(g, near[i], near[g]) for i, g in enumerate(groups)]

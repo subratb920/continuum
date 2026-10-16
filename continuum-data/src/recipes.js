@@ -11,27 +11,31 @@ import { badRequest } from "./errors.js";
 export const STEP_CATALOG = {
   dedupe: {
     label: "Remove copies",
-    hint: "Takes out rows that are copies, or near copies, of another row.",
-    modalities: ["text", "tabular"],
+    hint: "Takes out rows that are copies, or near copies, of another row (for pictures: ones that look almost the same).",
+    modalities: ["text", "tabular", "image", "audio"],
     params: {
-      mode: { kind: "enum", choices: ["near", "exact"], default: "near", label: "What counts as a copy", labels: { near: "Exact and near copies", exact: "Exact copies only" } },
-      threshold: { kind: "number", min: 0.5, max: 1, step: 0.05, default: 0.8, label: "How alike a near copy is", showIf: { mode: "near" } },
+      mode: { kind: "enum", choices: ["near", "exact"], default: "near", label: "What counts as a copy", labels: { near: "Exact and near copies", exact: "Exact copies only" }, modalities: ["text", "tabular", "image"] },
+      threshold: { kind: "number", min: 0.5, max: 1, step: 0.01, default: null, placeholder: "80% for text, 97% for pictures", label: "How alike a near copy is (0.5 to 1)", showIf: { mode: "near" } },
       keep: { kind: "enum", choices: ["first", "longest", "shortest"], default: "first", label: "Which one to keep" },
     },
   },
   filter: {
     label: "Filter rows",
-    hint: "Takes out rows that are empty, too short, too long, mostly symbols, or don't match a condition.",
-    modalities: ["text", "tabular"],
+    hint: "Takes out rows that are empty, too short, too long, too small, or don't match a condition.",
+    modalities: ["text", "tabular", "image", "audio"],
     params: {
-      dropEmpty: { kind: "boolean", default: true, label: "Remove empty texts", modalities: ["text"] },
+      minWidth: { kind: "integer", min: 1, default: null, label: "Narrowest picture (pixels)", modalities: ["image"] },
+      minHeight: { kind: "integer", min: 1, default: null, label: "Shortest picture (pixels)", modalities: ["image"] },
+      minSeconds: { kind: "number", min: 0, step: 0.1, default: null, label: "Shortest clip (seconds)", modalities: ["audio"] },
+      maxSeconds: { kind: "number", min: 0.1, step: 1, default: null, label: "Longest clip (seconds)", modalities: ["audio"] },
+      dropEmpty: { kind: "boolean", default: true, label: "Remove empty texts", modalities: ["text", "audio"] },
       minChars: { kind: "integer", min: 0, default: null, label: "Shortest text (characters)", modalities: ["text"] },
       maxChars: { kind: "integer", min: 1, default: null, label: "Longest text (characters)", modalities: ["text"] },
       minWords: { kind: "integer", min: 0, default: null, label: "Fewest words", modalities: ["text"] },
       maxSymbolShare: { kind: "number", min: 0, max: 1, step: 0.05, default: null, label: "Most symbols allowed (share)", modalities: ["text"] },
       maxRepeatedLineShare: { kind: "number", min: 0, max: 1, step: 0.05, default: null, label: "Most repeated lines allowed (share)", modalities: ["text"] },
       dropMissingLabel: { kind: "boolean", default: true, label: "Remove rows without a label" },
-      keepWhere: { kind: "text", default: null, label: "Keep only rows where (e.g. age >= 18)", placeholder: "age >= 18 AND city <> ''" },
+      keepWhere: { kind: "text", default: null, label: "Keep only rows where (e.g. age >= 18)", placeholder: "age >= 18 AND city <> ''", modalities: ["tabular", "text"] },
     },
   },
   fix_types: {
@@ -67,7 +71,7 @@ export const STEP_CATALOG = {
   split: {
     label: "Split for training and testing",
     hint: "Keeps some rows aside to check the model, with no copy on both sides.",
-    modalities: ["text", "tabular"],
+    modalities: ["text", "tabular", "image", "audio"],
     params: {
       mode: { kind: "enum", choices: ["stratified", "random", "group", "keep"], default: "stratified", label: "How", labels: { stratified: "Same label mix on each side", random: "At random", group: "Keep groups together", keep: "Keep the existing split" } },
       ratios: { kind: "ratios", default: [0.8, 0.1, 0.1], label: "Train / validation / test", showIf: { mode: ["stratified", "random", "group"] } },
@@ -78,8 +82,8 @@ export const STEP_CATALOG = {
   },
   redact_pii: {
     label: "Hide personal details",
-    hint: "Finds emails, phone and card numbers, ID numbers and IP addresses, and replaces them with markers like [EMAIL].",
-    modalities: ["text", "tabular"],
+    hint: "Finds emails, phone and card numbers, ID numbers and IP addresses in text (and transcripts), and replaces them with markers like [EMAIL].",
+    modalities: ["text", "tabular", "audio"],
     params: {
       action: { kind: "enum", choices: ["replace", "drop", "flag"], default: "replace", label: "What to do", labels: { replace: "Replace with a marker", drop: "Remove those rows", flag: "Only mark those rows" } },
       kinds: { kind: "enum-list", choices: ["email", "phone", "card", "iban", "aadhaar", "ssn", "pan", "ip"], default: null, label: "Which details (all when none chosen)", labels: { email: "Emails", phone: "Phone numbers", card: "Card numbers", iban: "Bank accounts", aadhaar: "Aadhaar", ssn: "SSN", pan: "PAN", ip: "IP addresses" } },
@@ -97,7 +101,7 @@ export const STEP_CATALOG = {
   balance: {
     label: "Balance labels",
     hint: "Evens out how many rows each label has, so the model doesn't just learn the most common one. Only train rows change.",
-    modalities: ["text", "tabular"],
+    modalities: ["text", "tabular", "image", "audio"],
     needsLabel: true,
     params: {
       method: { kind: "enum", choices: ["under", "over", "both"], default: "under", label: "How", labels: { under: "Leave out some rows of big labels", over: "Copy rows of small labels", both: "A bit of both" } },
@@ -117,10 +121,46 @@ export const STEP_CATALOG = {
       systemPrompt: { kind: "text", default: null, label: "How the chatbot should behave (optional)", placeholder: "You are a friendly helper." },
     },
   },
+  resize: {
+    label: "Resize pictures",
+    hint: "Makes every picture the same size, which most image models need.",
+    modalities: ["image"],
+    params: {
+      size: { kind: "integer", min: 8, max: 2048, default: 224, label: "Size (pixels)" },
+      mode: { kind: "enum", choices: ["crop", "pad", "fit", "stretch"], default: "crop", label: "How", labels: { crop: "Fill the square, cutting the edges", pad: "Fit inside the square, with black bars", fit: "Longest side to this size, keep the shape", stretch: "Stretch to the square" } },
+      format: { kind: "enum", choices: ["jpeg", "png"], default: "jpeg", label: "Save as", labels: { jpeg: "JPEG (smaller)", png: "PNG (exact)" } },
+    },
+  },
+  resample: {
+    label: "Resample sound",
+    hint: "Gives every clip the same number of samples a second (16,000 suits speech) and one channel.",
+    modalities: ["audio"],
+    params: {
+      sampleRate: { kind: "enum-int", choices: [8000, 16000, 22050, 44100, 48000], default: 16000, label: "Samples a second" },
+      mono: { kind: "boolean", default: true, label: "Mix down to one channel" },
+      format: { kind: "enum", choices: ["flac", "wav"], default: "flac", label: "Save as", labels: { flac: "FLAC (smaller, exact)", wav: "WAV" } },
+    },
+  },
+  augment: {
+    label: "Make more examples",
+    hint: "Adds changed copies of training examples (flipped, turned, lighter or darker; for sound: louder, faster, a little noise), so the model learns to cope with change.",
+    modalities: ["image", "audio"],
+    params: {
+      copies: { kind: "integer", min: 1, max: 5, default: 1, label: "New copies per example" },
+      flip: { kind: "boolean", default: true, label: "Flip some left to right", modalities: ["image"] },
+      rotate: { kind: "number", min: 0, max: 45, step: 5, default: 10, label: "Turn up to (degrees)", modalities: ["image"] },
+      brightness: { kind: "number", min: 0, max: 0.8, step: 0.1, default: 0.2, label: "Lighter or darker by up to", modalities: ["image"] },
+      crop: { kind: "number", min: 0, max: 0.5, step: 0.05, default: 0.1, label: "Cut off up to (share)", modalities: ["image"] },
+      noise: { kind: "number", min: 0, max: 0.05, step: 0.001, default: 0.003, label: "Background noise", modalities: ["audio"] },
+      gain: { kind: "number", min: 0, max: 0.8, step: 0.1, default: 0.2, label: "Louder or quieter by up to", modalities: ["audio"] },
+      speed: { kind: "number", min: 0, max: 0.3, step: 0.05, default: 0.1, label: "Faster or slower by up to", modalities: ["audio"] },
+      seed: { kind: "integer", min: 0, default: 42, label: "Shuffle number" },
+    },
+  },
   validate: {
     label: "Check quality",
     hint: "Runs the quality checks and gives a score from 0 to 100.",
-    modalities: ["text", "tabular"],
+    modalities: ["text", "tabular", "image", "audio"],
     params: {
       minRows: { kind: "integer", min: 1, default: null, label: "Fewest rows wanted" },
       minRowsPerLabel: { kind: "integer", min: 1, default: 100, label: "Fewest rows per label" },
@@ -129,10 +169,38 @@ export const STEP_CATALOG = {
 };
 
 /** Ops that write a new version (the others report on one). */
-export const VERSION_OPS = new Set(["dedupe", "filter", "fix_types", "fill_missing", "outliers", "split", "redact_pii", "safety", "balance", "to_chat"]);
-export const EXPORT_FORMATS = ["parquet", "csv", "jsonl", "hf"];
+export const VERSION_OPS = new Set(["dedupe", "filter", "fix_types", "fill_missing", "outliers", "split", "redact_pii", "safety", "balance", "to_chat", "resize", "resample", "augment"]);
+export const EXPORT_FORMATS = ["parquet", "csv", "jsonl", "hf", "imagefolder", "audiofolder"];
+/** Which downloads suit which data (images and audio carry their files inside). */
+export const EXPORT_FORMATS_FOR = { text: ["hf", "parquet", "csv", "jsonl"], tabular: ["hf", "parquet", "csv", "jsonl"], image: ["hf", "imagefolder", "parquet"], audio: ["hf", "audiofolder", "parquet"] };
 
 export const TEMPLATES = [
+  {
+    id: "images",
+    name: "Clean pictures for a classifier",
+    description: "Remove copies and look-alikes, make every picture 224 × 224, then split with no look-alike on both sides.",
+    modalities: ["image"],
+    steps: [
+      { op: "dedupe", params: { mode: "near" } },
+      { op: "resize", params: { size: 224, mode: "crop" } },
+      { op: "split", params: { mode: "stratified" } },
+      { op: "validate", params: {} },
+    ],
+  },
+  {
+    id: "speech",
+    name: "Clean speech for transcription",
+    description: "16,000 samples a second in one channel, drop clips that are cut off or too long, hide personal details in transcripts, then split.",
+    modalities: ["audio"],
+    steps: [
+      { op: "dedupe", params: {} },
+      { op: "resample", params: { sampleRate: 16000, mono: true } },
+      { op: "filter", params: { minSeconds: 0.2, maxSeconds: 30 } },
+      { op: "redact_pii", params: {} },
+      { op: "split", params: { mode: "random" } },
+      { op: "validate", params: {} },
+    ],
+  },
   {
     id: "text-classifier",
     name: "Clean text for a classifier",
@@ -205,6 +273,11 @@ function checkParam(op, name, spec, value) {
     case "columns":
       if (!Array.isArray(value) || value.some((c) => typeof c !== "string")) throw bad("must be a list of column names");
       return value.length ? value.slice(0, 200) : null;
+    case "enum-int": {
+      const n = Number(value);
+      if (!spec.choices.includes(n)) throw bad(`must be one of ${spec.choices.join(", ")}`);
+      return n;
+    }
     case "enum-list":
       if (!Array.isArray(value) || value.some((c) => !spec.choices.includes(c))) throw bad(`must be some of ${spec.choices.join(", ")}`);
       return value.length ? [...new Set(value)] : null;
@@ -257,6 +330,23 @@ export function normaliseSteps(steps, modality) {
 export function suggestSteps(profile, modality, splits) {
   const ops = new Set((profile?.findings ?? []).map((f) => f.suggest).filter(Boolean));
   const steps = [];
+  const hasTest = splits?.train && (splits.test || splits.validation);
+  const splitStep = { op: "split", params: { mode: hasTest ? "keep" : profile?.labels?.counts?.length ? "stratified" : "random" } };
+  if (modality === "image") {
+    steps.push({ op: "dedupe", params: { mode: "near" } });
+    if (ops.has("filter")) steps.push({ op: "filter", params: { minWidth: 32, minHeight: 32 } });
+    if (ops.has("resize")) steps.push({ op: "resize", params: { size: 224, mode: "crop" } });
+    steps.push(splitStep, { op: "validate", params: {} });
+    return steps;
+  }
+  if (modality === "audio") {
+    steps.push({ op: "dedupe", params: {} });
+    if (ops.has("resample")) steps.push({ op: "resample", params: { sampleRate: 16000, mono: true } });
+    if (ops.has("filter")) steps.push({ op: "filter", params: { minSeconds: 0.2 } });
+    if (profile?.task === "transcribe") steps.push({ op: "redact_pii", params: {} });
+    steps.push(splitStep, { op: "validate", params: {} });
+    return steps;
+  }
   if (modality === "tabular") steps.push({ op: "fix_types", params: {} });
   if (ops.has("fill_missing") && modality === "tabular") steps.push({ op: "fill_missing", params: { strategy: "auto" } });
   // On by default (spec 9.1): personal details hidden, unsafe text removed.
@@ -265,8 +355,7 @@ export function suggestSteps(profile, modality, splits) {
   if (modality === "text") steps.push({ op: "safety", params: {} });
   if (ops.has("dedupe")) steps.push({ op: "dedupe", params: { mode: modality === "text" ? "near" : "exact" } });
   if (ops.has("filter") && modality === "text") steps.push({ op: "filter", params: { dropEmpty: true } });
-  const hasTest = splits && (splits.test || splits.validation);
-  steps.push({ op: "split", params: { mode: hasTest ? "keep" : profile?.labels?.counts?.length ? "stratified" : "random" } });
+  steps.push(splitStep);
   if (ops.has("balance") && profile?.labels?.counts?.length) steps.push({ op: "balance", params: { method: "under" } });
   steps.push({ op: "validate", params: {} });
   return steps;

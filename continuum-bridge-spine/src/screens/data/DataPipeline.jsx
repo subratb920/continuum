@@ -215,7 +215,7 @@ function Setting({ name, spec, value, columns, onChange }) {
             max={spec.max}
             step={spec.step ?? (spec.kind === "integer" ? 1 : 0.01)}
             value={value ?? ""}
-            placeholder="—"
+            placeholder={spec.placeholder ?? "—"}
             onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
           />
         </div>
@@ -259,6 +259,17 @@ function Setting({ name, spec, value, columns, onChange }) {
             <option value="">Choose…</option>
             {columns.map((c) => (
               <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+      );
+    case "enum-int":
+      return (
+        <div className="data-set">
+          {label}
+          <select id={id} value={value ?? ""} onChange={(e) => onChange(Number(e.target.value))}>
+            {spec.choices.map((c) => (
+              <option key={c} value={c}>{Number(c).toLocaleString()}</option>
             ))}
           </select>
         </div>

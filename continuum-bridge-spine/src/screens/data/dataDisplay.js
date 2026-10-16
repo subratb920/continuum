@@ -14,6 +14,9 @@ export const STEP_LABEL = {
   safety: "Remove unsafe text",
   balance: "Balance labels",
   to_chat: "Make chat examples",
+  resize: "Resize pictures",
+  resample: "Resample sound",
+  augment: "Make more examples",
   validate: "Check quality",
   export: "Pack for download",
 };
@@ -23,6 +26,8 @@ export const EXPORT_LABEL = {
   parquet: "Parquet files",
   csv: "CSV spreadsheets",
   jsonl: "JSON Lines",
+  imagefolder: "Folders of pictures (one per label)",
+  audiofolder: "Sound files with a metadata.csv",
 };
 
 export const STEP_HINT = {
@@ -42,6 +47,7 @@ export const TASK_LABEL = {
   regress: "Predict a number",
   detect: "Find objects",
   transcribe: "Speech to text",
+  collect: "A collection",
   chat: "Answer and chat",
   generate: "Write text",
 };
@@ -49,9 +55,9 @@ export const TASK_LABEL = {
 export const STATE_LABEL = { building: "Building", ready: "Ready", failed: "Stopped", cancelled: "Cancelled" };
 
 /** What D1 can turn into a dataset (images and audio follow in D3). */
-export const READY_MODALITIES = ["text", "tabular"];
+export const READY_MODALITIES = ["text", "tabular", "image", "audio"];
 
-export const UPLOAD_TYPES = ".csv,.tsv,.json,.jsonl,.ndjson,.parquet,.xlsx,.txt,.md,.html,.htm,.pdf";
+export const UPLOAD_TYPES = ".csv,.tsv,.json,.jsonl,.ndjson,.parquet,.xlsx,.txt,.md,.html,.htm,.pdf,.jpg,.jpeg,.png,.webp,.bmp,.gif,.wav,.flac,.mp3,.ogg,.m4a,.zip";
 
 const nf = new Intl.NumberFormat();
 export const count = (n) => (n === null || n === undefined ? "—" : nf.format(n));
@@ -89,6 +95,13 @@ export function timeAgo(date, now = Date.now()) {
 export const clock = (date) => new Date(date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
 /** A cell for the table: chat messages, lists and objects in a short readable form. */
+export function seconds(n) {
+  if (n === null || n === undefined) return "—";
+  if (n < 60) return `${Math.round(n * 10) / 10} s`;
+  const m = Math.floor(n / 60);
+  return `${m} min ${Math.round(n - m * 60)} s`;
+}
+
 export function cellText(value) {
   if (value === null || value === undefined) return "";
   if (Array.isArray(value)) {

@@ -196,6 +196,61 @@ def _findings(rows, modality, task, dup, columns, missing_cols, labels, text, sp
     return f
 
 
+def _media(modality: str, sample: pl.DataFrame, task: Optional[str] = None) -> tuple[dict, list]:
+    """Image sizes or audio lengths and rates, from the rows' own columns (no file is opened)."""
+    findings = []
+    n = sample.height
+
+    def stats(col):
+        s = sample[col].cast(pl.Float64).drop_nulls()
+        if not s.len():
+            return None
+        return {"min": _num(s.min()), "p50": _q(s, 0.5), "max": _num(s.max()), "mean": round(float(s.mean()), 2)}
+
+    if modality == "image":
+        w, h = sample["width"], sample["height"]
+        sizes = sample.group_by("width", "height").len().sort("len", descending=True)
+        small = int(((w < 32) | (h < 32)).sum())
+        info = {
+            "kind": "image",
+            "width": stats("width"),
+            "height": stats("height"),
+            "sizes": [{"width": int(a), "height": int(b), "count": int(c)} for a, b, c in sizes.head(10).iter_rows()],
+            "distinctSizes": sizes.height,
+            "small": small,
+            "histogram": _histogram(w.cast(pl.Float64), float(w.min()), float(max(w.max(), w.min() + 1)), True),
+        }
+        if sizes.height > 1:
+            findings.append({"id": "mixed_sizes", "severity": "info", "message": f"The images come in {fmt_int(sizes.height)} different sizes. Most models need one size, so add a Resize step.", "suggest": "resize"})
+        if small and small < n / 2:
+            findings.append({"id": "tiny_images", "severity": "warning", "message": f"{fmt_int(small)} pictures are smaller than 32 pixels on a side, much smaller than the rest. They give the model very little to learn from.", "suggest": "filter"})
+        elif small:
+            findings.append({"id": "small_images", "severity": "info", "message": f"The pictures are small ({int(w.median())} × {int(h.median())} pixels). That's fine for simple models; bigger models want them resized up, for example to 224."})
+    else:
+        rates = sample.group_by("sample_rate").len().sort("len", descending=True)
+        d = sample["duration"].cast(pl.Float64)
+        short, long_ = int((d < 0.2).sum()), int((d > 30).sum())
+        info = {
+            "kind": "audio",
+            "duration": stats("duration"),
+            "sampleRates": [{"rate": int(r), "count": int(c)} for r, c in rates.iter_rows()],
+            "channels": [{"channels": int(a), "count": int(c)} for a, c in sample.group_by("channels").len().iter_rows()],
+            "short": short,
+            "long": long_,
+            "totalHours": round(float(d.sum()) / 3600, 2),
+            "histogram": _histogram(d, 0.0, float(max(d.quantile(0.99) or 1, 0.1)), False),
+        }
+        if rates.height > 1:
+            findings.append({"id": "mixed_rates", "severity": "info", "message": f"The clips use {rates.height} different sample rates. Most models want one, so add a Resample step.", "suggest": "resample"})
+        elif task == "transcribe" and rates.height and int(rates["sample_rate"][0]) != 16000:
+            findings.append({"id": "mixed_rates", "severity": "info", "message": f"The clips use {fmt_int(int(rates['sample_rate'][0]))} samples a second. Speech models usually want 16,000, so add a Resample step.", "suggest": "resample"})
+        if short:
+            findings.append({"id": "very_short_audio", "severity": "warning", "message": f"{fmt_int(short)} clips are shorter than a fifth of a second, probably empty or cut off.", "suggest": "filter"})
+        if long_:
+            findings.append({"id": "long_audio", "severity": "info", "message": f"{fmt_int(long_)} clips are longer than 30 seconds. Many speech models take up to 30 seconds at a time."})
+    return info, findings
+
+
 def run(raw: dict) -> None:
     rel = get_param(raw, "input", str, required=True)
     sample_rows = get_param(raw, "sampleRows", int, default=100_000)
@@ -318,7 +373,8 @@ def run(raw: dict) -> None:
         columns.append(_column_stats(c, schema[c], roles.get(c, "input"), sample, missing[c]))
     missing_cols = sorted(((c, missing[c] / rows) for c in data_cols if rows and missing[c] / rows > MISSING_SHARE),
                           key=lambda x: -x[1])
-    single = [col["name"] for col in columns if col["distinct"] == 1 and col["missing"] < rows and rows > 1]
+    single = [col["name"] for col in columns if col["distinct"] == 1 and col["missing"] < rows and rows > 1 and roles.get(col["name"]) != "meta"]
+    media_info, media_findings = _media(modality, sample, task) if modality in ("image", "audio") and sampled else (None, [])
 
     profile = {
         "rows": rows,
@@ -330,8 +386,9 @@ def run(raw: dict) -> None:
         "labels": labels,
         "splits": split_counts or None,
         "text": text,
+        "media": media_info,
         "columns": columns,
-        "findings": _findings(rows, modality, task, dup, columns, missing_cols, labels, text, split_counts or None, single),
+        "findings": _findings(rows, modality, task, dup, columns, missing_cols, labels, text, split_counts or None, single) + media_findings,
     }
     protocol.write_json_atomic(version / "profile.json", profile)
     protocol.metric("rows", rows)

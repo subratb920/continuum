@@ -3,3 +3,9 @@ polars-runtime-32==1.44.2
 pyarrow==25.0.1
 fastexcel==0.21.0
 pypdf==6.19.0
+pillow==12.3.0
+numpy==2.5.3
+soundfile==0.14.0
+cffi==2.1.1
+pycparser==3.0
+typing-extensions==4.16.0

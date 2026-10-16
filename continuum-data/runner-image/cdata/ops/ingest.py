@@ -27,8 +27,8 @@ INSTRUCTION_PAIRS = (("instruction", "output"), ("prompt", "response"), ("prompt
 INPUT_NAMES = ("input", "context")
 ROLE_MAP = {"human": "user", "gpt": "assistant", "bot": "assistant", "model": "assistant", "chatgpt": "assistant",
             "ai": "assistant", "function": "tool", "observation": "tool"}
-MODALITIES = ("text", "tabular")
-TASKS = {"text": ("classify", "generate", "chat"), "tabular": ("classify", "regress")}
+MODALITIES = ("text", "tabular", "image", "audio")
+TASKS = {"text": ("classify", "generate", "chat"), "tabular": ("classify", "regress"), "image": ("classify", "collect"), "audio": ("classify", "transcribe", "collect")}
 MAX_LABELS = 10_000
 
 
@@ -463,6 +463,15 @@ def run(raw: dict) -> None:
         raise ParamError(f"The input folder {p.input} does not exist.", "NOT_FOUND")
     if protocol.is_inside(output, input_path) or protocol.is_inside(input_path, output):
         raise ParamError("'input' and 'output' must be separate folders.")
+
+    # Images and audio (D3): folders of files, or Parquet with the media inside
+    from . import media_ingest
+
+    layout = media_ingest.detect(input_path) if p.modality in (None, "image", "audio") else None
+    if layout == "folder":
+        return media_ingest.run_folder(p, input_path, output)
+    if layout == "parquet":
+        return media_ingest.run_parquet(p, input_path, output)
 
     found, skipped = readers.discover(input_path, store)
     structured = [f for f in found if f.kind in readers.STRUCTURED.values()]

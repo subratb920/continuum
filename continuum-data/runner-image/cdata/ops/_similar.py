@@ -89,3 +89,46 @@ def near_groups(text: pl.Series, threshold: float = 0.8, rows: Optional[pl.Serie
                 if ra != rb:
                     parent[max(ra, rb)] = min(ra, rb)
     return [_find(parent, i) for i in range(n)]
+
+
+def image_groups(ds_dir, paths: list, threshold: float = 0.97, labels: list | None = None) -> list[int]:
+    """Near-copy groups of images by difference hash: a pair counts when at most
+    (1 - threshold) × 64 bits differ. Bands of 8 bits find the likely pairs.
+    With labels, two look-alikes with different labels are not grouped (that is
+    a labelling question, not a copy). Measured on MNIST: at 0.97 almost every
+    pair found has the same label; at 0.8 most don't."""
+    from . import media
+
+    limit = int(round((1 - threshold) * 64))
+    cache: dict = {}
+    hashes = []
+    for p in paths:
+        if p not in cache:
+            try:
+                cache[p] = media.dhash(media.resolve(ds_dir, p)) if p else None
+            except Exception:  # noqa: BLE001
+                cache[p] = None
+        hashes.append(cache[p])
+    parent: dict = {}
+    buckets: dict = {}
+    for i, h in enumerate(hashes):
+        if h is None:
+            continue
+        for b in range(8):
+            buckets.setdefault((b, (h >> (b * 8)) & 0xFF), []).append(i)
+    seen = set()
+    for members in buckets.values():
+        if len(members) < 2:
+            continue
+        rep = members[0]
+        for other in members[1:200]:  # against the bucket's first only, so a crowded bucket stays quick
+            if (rep, other) in seen:
+                continue
+            seen.add((rep, other))
+            if labels is not None and labels[rep] != labels[other]:
+                continue
+            if bin(hashes[rep] ^ hashes[other]).count("1") <= limit:
+                a, b = _find(parent, rep), _find(parent, other)
+                if a != b:
+                    parent[max(a, b)] = min(a, b)
+    return [_find(parent, i) for i in range(len(paths))]

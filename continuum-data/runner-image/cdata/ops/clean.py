@@ -56,6 +56,18 @@ def run_filter(params: dict) -> None:
             lines = t.str.split("\n")
             share = 1 - lines.list.unique().list.len() / pl.max_horizontal(lines.list.len(), pl.lit(1))
             rules.append(("repeats the same lines", share > float(rep)))
+    if v.modality == "image":
+        for key, col, cmp in (("minWidth", "width", "<"), ("minHeight", "height", "<"), ("maxWidth", "width", ">"), ("maxHeight", "height", ">")):
+            lim = get_param(params, key, int, None)
+            if lim is not None:
+                rules.append((f"{col} {'under' if cmp == '<' else 'over'} {lim} pixels", (pl.col(col) < lim) if cmp == "<" else (pl.col(col) > lim)))
+    if v.modality == "audio":
+        lo = get_param(params, "minSeconds", (int, float), None)
+        hi = get_param(params, "maxSeconds", (int, float), None)
+        if lo is not None:
+            rules.append((f"shorter than {lo} seconds", pl.col("duration") < float(lo)))
+        if hi is not None:
+            rules.append((f"longer than {hi} seconds", pl.col("duration") > float(hi)))
     if get_param(params, "dropMissingLabel", bool, True) and v.label and v.label in df.columns:
         rules.append(("no label", pl.col(v.label).is_null()))
     for flag in get_param(params, "dropFlags", list, []):
