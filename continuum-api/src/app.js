@@ -17,6 +17,7 @@ import publishRoutes from "./create/publish.js";
 import cloneRoutes from "./create/clone.js";
 import meRoutes from "./routes/me.routes.js";
 import { createWorkspacesRouter } from "./workspaces/routes.js";
+import { createServiceRouter } from "./service/routes.js";
 
 
 const app = express();
@@ -42,6 +43,7 @@ app.use("/support", requireAuth, supportRoutes); // Contact us: callback request
 app.use("/create", requireAuth, createRoutes); // New Project wizard: catalogue and generated projects
 app.use("/me", requireAuth, meRoutes); // the user's own preferences (theme), shared with Continuum Deploy
 app.use("/workspaces", requireAuth, createWorkspacesRouter()); // development servers per project (continuum-workspaces)
+app.use("/service", createServiceRouter()); // read-only data for continuum-brain (its service token only)
 
 // ❗ MUST BE LAST
 app.use(errorMiddleware);
