@@ -498,3 +498,121 @@
   10%, 75% { opacity: 1; }
   100% { opacity: 0; transform: translateY(-10px); }
 }
+
+/* ---------- Agents on an interval goal (interval window, Bridge history) ---------- */
+
+.goal-agents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.goal-agents li {
+  padding: 0 !important; /* inside .goal-list li */
+}
+.goal-agent {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border: 1px solid rgb(var(--c-rgb, var(--agent-off-rgb)) / 0.45);
+  border-radius: 999px;
+  background: rgb(var(--c-rgb, var(--agent-off-rgb)) / 0.08);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 11px;
+  cursor: default;
+}
+button.goal-agent { cursor: pointer; }
+button.goal-agent:hover { background: rgb(var(--c-rgb, var(--agent-off-rgb)) / 0.18); }
+.goal-agent .agent-dot { width: 7px; height: 7px; }
+.goal-agent-branch {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+/* ---------- Goals and retries in the roster and inspector ---------- */
+
+.agent-row-goal,
+.inspector-goal {
+  color: var(--agent-core);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.agent-row-note { font-size: 11px; color: var(--text-muted); }
+.agent-row-retry { align-self: flex-start; margin-top: 4px; padding: 3px 10px; font-size: 11px; }
+.agent-spawn select {
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* ---------- Replay (under the stage) ---------- */
+
+.agent-stage.replaying { box-shadow: inset 0 0 0 2px rgb(var(--agent-waiting-rgb) / 0.35); }
+.agent-stage.replaying .agent-stage-title { color: var(--warning-text); }
+
+.replay-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.replay-play {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+.replay-play:hover { background: var(--hover); }
+.replay-track { position: relative; flex: 1; min-width: 80px; display: flex; align-items: center; }
+.replay-track input { width: 100%; margin: 0; accent-color: var(--agent-core); position: relative; }
+.replay-marks { position: absolute; inset: 0; margin: 0; padding: 0; list-style: none; pointer-events: none; }
+.replay-marks li {
+  position: absolute;
+  top: 50%;
+  width: 3px;
+  height: 12px;
+  margin: -6px 0 0 -1px;
+  border-radius: 2px;
+  background: var(--agent-working);
+  opacity: 0.55;
+}
+.replay-marks li.asking { background: var(--agent-waiting); opacity: 0.9; }
+.replay-marks li.failed { background: var(--agent-failed); opacity: 0.9; }
+.replay-time { min-width: 64px; font-variant-numeric: tabular-nums; color: var(--text-2); font-weight: 600; text-align: right; }
+.replay-bar.replaying .replay-time { color: var(--warning-text); }
+.replay-speed {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+}
+.replay-live { display: inline-flex; align-items: center; gap: 6px; }
+.replay-live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--agent-failed); }
+.replay-live:disabled .replay-live-dot { animation: agent-blink 1.6s ease-in-out infinite; }
+.replay-live:disabled { opacity: 1; color: var(--text-muted); }
+@media (max-width: 599px) {
+  .replay-speed { display: none; }
+}

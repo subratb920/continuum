@@ -73,6 +73,14 @@
   font-size: 14px;
 }
 
+/* A goal's text, with the agents on it below */
+.goal-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
 .goal-status {
   font-size: 11px;
   text-transform: capitalize;

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useBrain, lastEvent } from "../../brain/brainContext";
 import { STATE_LABEL } from "../../brain/brainTypes";
 import { agentGlyph, agentName, useNow } from "./agentDisplay";
+import ReplayBar from "./ReplayBar";
 import "./brain.css";
 
 /**
@@ -9,7 +10,8 @@ import "./brain.css";
  * Each node moves with its state: breathing when idle, an orbit while working,
  * an amber pulse when it waits on you, a shake when it fails. Work flows along
  * the links from the core; a tool call floats up from the node for a moment.
- * Finished workers rest on the shelf at the bottom. Click a node to inspect it.
+ * Finished workers (stopped, or failed and retried) rest on the shelf at the
+ * bottom. Click a node to inspect it. The replay bar below winds the stage back.
  */
 const TOOL_SHOWN_MS = 4500;
 
@@ -42,10 +44,12 @@ export default function AgentStage() {
   const RY = Math.max(90, Math.min(H / 2 - 90, 230));
   const RING = Math.min(RX, RY);
 
-  const { core, workers, events, pending, selectedId, select } = brain;
+  const { core, workers, events, pending, selectedId, select, replay } = brain;
+  const at = replay.live ? now : replay.at; // tool calls float relative to the time shown
   const asking = new Set(pending.map((e) => e.agentId));
-  const onRing = workers.filter((w) => w.state !== "stopped");
-  const shelf = workers.filter((w) => w.state === "stopped");
+  const settled = (w) => w.state === "stopped" || (w.state === "failed" && w.retriedBy);
+  const onRing = workers.filter((w) => !settled(w));
+  const shelf = workers.filter(settled);
 
   const pos = new Map();
   if (core) pos.set(core._id, [CX, CY]);
@@ -61,10 +65,10 @@ export default function AgentStage() {
   const node = (a) => {
     const [x, y] = pos.get(a._id);
     const isCore = a.kind === "core";
-    const small = a.state === "stopped";
+    const small = a.kind === "worker" && settled(a);
     const r = (isCore ? 44 : small ? 14 : 28) * (RING < 150 ? 0.8 : 1);
     const tool = lastEvent(events, a._id, ["tool"]);
-    const showTool = tool && now - new Date(tool.at) < TOOL_SHOWN_MS && a.state === "working";
+    const showTool = tool && at - new Date(tool.at) < TOOL_SHOWN_MS && at >= new Date(tool.at) && a.state === "working";
     const name = agentName(a, workers);
     return (
       <g
@@ -114,9 +118,9 @@ export default function AgentStage() {
   };
 
   return (
-    <div className="agent-stage">
+    <div className={`agent-stage${replay.live ? "" : " replaying"}`}>
       <div className="agent-stage-head">
-        <h2 className="agent-stage-title">Agent Stage</h2>
+        <h2 className="agent-stage-title">{replay.live ? "Agent Stage" : "Agent Stage · replay"}</h2>
         <ul className="agent-legend">
           {["working", "idle", "failed", "stopped"].map((s) => (
             <li key={s} className={`state-${s}`}>
@@ -156,6 +160,7 @@ export default function AgentStage() {
         )}
       </svg>
       </div>
+      <ReplayBar />
     </div>
   );
 }

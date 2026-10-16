@@ -1,4 +1,5 @@
 import "./BridgeHistoryModal.css";
+import GoalAgents from "../screens/brain/GoalAgents";
 import { formatClock, formatDateTime, formatDuration } from "../utils/time";
 import { extractTicketKey } from "../utils/ticket";
 
@@ -64,7 +65,11 @@ export default function BridgeHistoryModal({ bridge, onClose }) {
 
                 return (
                   <li key={g.id ?? `${index}-${text}`}>
-                    <span>{text}</span>
+                    <span className="goal-text">
+                      {text}
+                      {/* The agents that worked on it, as recorded when the interval was saved */}
+                      <GoalAgents agents={g.agents} />
+                    </span>
                     <span className={`goal-status ${status}`}>
                       {status}
                     </span>

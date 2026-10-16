@@ -18,6 +18,8 @@ export function normalizeBridge(raw) {
           id: String(g.id ?? `g${i + 1}`),
           text: typeof g.text === "string" ? g.text : "",
           status: g.status ?? "untouched",
+          // The agents that worked on it (recorded when the interval stops or is saved)
+          ...(Array.isArray(g.agents) && g.agents.length ? { agents: g.agents } : {}),
         }))
       : [],
 
