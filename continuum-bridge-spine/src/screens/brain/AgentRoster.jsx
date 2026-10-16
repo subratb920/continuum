@@ -88,7 +88,7 @@ export default function AgentRoster() {
           />
           <div className="agent-spawn-actions">
             <button type="button" className="brain-btn" onClick={() => setSpawning(false)}>Cancel</button>
-            <button type="submit" className="brain-btn primary" disabled={!task.trim()}>Start worker</button>
+            <button type="submit" className="brain-btn is-primary" disabled={!task.trim()}>Start worker</button>
           </div>
         </form>
       ) : (

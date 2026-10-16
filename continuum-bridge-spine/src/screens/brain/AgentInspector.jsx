@@ -56,12 +56,12 @@ function Activity() {
           <p className="inspector-task">{agent.task}</p>
           <dl className="inspector-facts">
             {agent.repo && (<><dt>Repo</dt><dd>{agent.repo}</dd></>)}
-            {agent.branch && (<><dt>Branch</dt><dd className="mono">{agent.branch}</dd></>)}
-            <dt>Model</dt><dd className="mono">{agent.model}</dd>
+            {agent.branch && (<><dt>Branch</dt><dd className="brain-mono">{agent.branch}</dd></>)}
+            <dt>Model</dt><dd className="brain-mono">{agent.model}</dd>
             {agent.error && (<><dt>Error</dt><dd className="inspector-error">{agent.error.message}</dd></>)}
           </dl>
           {agent.kind === "worker" && ACTIVE_STATES.includes(agent.state) && agent.state !== "stopping" && (
-            <button type="button" className="brain-btn danger" onClick={() => stop(agent._id)}>Stop worker</button>
+            <button type="button" className="brain-btn is-danger" onClick={() => stop(agent._id)}>Stop worker</button>
           )}
         </div>
       ) : (
@@ -116,11 +116,11 @@ function AskCard({ event, showWho = false }) {
         <time className="event-time">{clock(event.at)}</time>
       </div>
       <p className="ask-card-text">{event.text}</p>
-      {event.data?.diff && <p className="ask-card-meta mono">{event.data.target} · {event.data.diff}</p>}
+      {event.data?.diff && <p className="ask-card-meta brain-mono">{event.data.target} · {event.data.diff}</p>}
       {event.kind === "permission" ? (
         <div className="ask-card-actions">
           <button type="button" className="brain-btn" onClick={() => send("deny")}>Deny</button>
-          <button type="button" className="brain-btn primary" onClick={() => send("approve")}>Approve</button>
+          <button type="button" className="brain-btn is-primary" onClick={() => send("approve")}>Approve</button>
         </div>
       ) : (
         <>
@@ -133,7 +133,7 @@ function AskCard({ event, showWho = false }) {
           )}
           <form className="ask-card-answer" onSubmit={(e) => (e.preventDefault(), answer.trim() && send(answer.trim()))}>
             <input value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="Or answer in your words" aria-label="Your answer" />
-            <button type="submit" className="brain-btn primary" disabled={!answer.trim()}>Send</button>
+            <button type="submit" className="brain-btn is-primary" disabled={!answer.trim()}>Send</button>
           </form>
         </>
       )}
@@ -170,7 +170,7 @@ function Chat() {
       </ol>
       <form className="chat-input" onSubmit={submit}>
         <input value={text} onChange={(e) => setText(e.target.value)} placeholder={core ? "Message the core…" : "Waking the brain…"} disabled={!core} aria-label="Message the core" />
-        <button type="submit" className="brain-btn primary" disabled={!text.trim()}>Send</button>
+        <button type="submit" className="brain-btn is-primary" disabled={!text.trim()}>Send</button>
       </form>
     </div>
   );

@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useBrain, lastEvent } from "../../brain/brainContext";
 import { STATE_LABEL } from "../../brain/brainTypes";
 import { agentGlyph, agentName, useNow } from "./agentDisplay";
@@ -10,17 +11,36 @@ import "./brain.css";
  * the links from the core; a tool call floats up from the node for a moment.
  * Finished workers rest on the shelf at the bottom. Click a node to inspect it.
  */
-const W = 800;
-const H = 560;
-const CX = W / 2;
-const CY = H / 2 - 20;
-const RING = 200;
 const TOOL_SHOWN_MS = 4500;
+
+/** The stage's size in CSS pixels (the layout fits it: wide or tall). */
+function useBoxSize() {
+  const ref = useRef(null);
+  const [size, setSize] = useState({ w: 800, h: 560 });
+  useEffect(() => {
+    if (!ref.current) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (width && height) setSize({ w: Math.round(width), h: Math.round(height) });
+    });
+    ro.observe(ref.current);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, size];
+}
 
 export default function AgentStage() {
   const brain = useBrain();
   const now = useNow(500);
+  const [boxRef, { w: W, h: H }] = useBoxSize();
   if (!brain) return null;
+
+  // The ring fits the stage, leaving room for labels, tool calls and the shelf
+  const CX = W / 2;
+  const CY = H / 2 - 16;
+  const RX = Math.max(90, Math.min(W / 2 - 80, 260));
+  const RY = Math.max(90, Math.min(H / 2 - 90, 230));
+  const RING = Math.min(RX, RY);
 
   const { core, workers, events, pending, selectedId, select } = brain;
   const asking = new Set(pending.map((e) => e.agentId));
@@ -31,9 +51,10 @@ export default function AgentStage() {
   if (core) pos.set(core._id, [CX, CY]);
   onRing.forEach((w, i) => {
     const angle = -Math.PI / 2 + (i * 2 * Math.PI) / Math.max(onRing.length, 3);
-    pos.set(w._id, [CX + RING * Math.cos(angle), CY + RING * 0.82 * Math.sin(angle)]);
+    pos.set(w._id, [CX + RX * Math.cos(angle), CY + RY * Math.sin(angle)]);
   });
-  shelf.forEach((w, i) => pos.set(w._id, [CX - ((shelf.length - 1) * 56) / 2 + i * 56, H - 34]));
+  const gap = Math.min(56, (W - 48) / Math.max(shelf.length, 1));
+  shelf.forEach((w, i) => pos.set(w._id, [CX - ((shelf.length - 1) * gap) / 2 + i * gap, H - 34]));
 
   const counts = workers.reduce((c, w) => ((c[w.state] = (c[w.state] ?? 0) + 1), c), {});
 
@@ -41,7 +62,7 @@ export default function AgentStage() {
     const [x, y] = pos.get(a._id);
     const isCore = a.kind === "core";
     const small = a.state === "stopped";
-    const r = isCore ? 44 : small ? 14 : 28;
+    const r = (isCore ? 44 : small ? 14 : 28) * (RING < 150 ? 0.8 : 1);
     const tool = lastEvent(events, a._id, ["tool"]);
     const showTool = tool && now - new Date(tool.at) < TOOL_SHOWN_MS && a.state === "working";
     const name = agentName(a, workers);
@@ -60,6 +81,7 @@ export default function AgentStage() {
           <circle className="agent-halo" r={r + 14} />
           <circle className="agent-orbit" r={r + 7} />
           <circle className="agent-select" r={r + 4} />
+          <circle className="agent-core-bg" r={r} />
           <circle className="agent-core" r={r} />
           <text className="agent-glyph" dy="0.35em" fontSize={isCore ? 26 : small ? 9 : 15}>
             {agentGlyph(a, workers)}
@@ -79,7 +101,7 @@ export default function AgentStage() {
           </text>
         )}
         {showTool && (
-          <g transform={`translate(0 ${-r - 22})`}>
+          <g transform={`translate(${inside(x, toolWidth(tool.text), W)} ${-r - 22})`}>
             {/* keyed by the call: each new one floats up again */}
             <g key={tool._id} className="agent-tool">
               <rect x={-toolWidth(tool.text) / 2} y="-11" width={toolWidth(tool.text)} height="22" rx="11" />
@@ -107,10 +129,11 @@ export default function AgentStage() {
         </ul>
       </div>
 
-      <svg className="agent-stage-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" role="group" aria-label="Agents">
-        <ellipse className="stage-guide" cx={CX} cy={CY} rx={RING} ry={RING * 0.82} />
-        <ellipse className="stage-guide faint" cx={CX} cy={CY} rx={RING * 1.45} ry={RING * 1.2} />
-        {shelf.length > 0 && <line className="stage-shelf" x1={CX - 160} x2={CX + 160} y1={H - 12} y2={H - 12} />}
+      <div className="agent-stage-box" ref={boxRef}>
+      <svg className="agent-stage-svg" width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="group" aria-label="Agents">
+        <ellipse className="stage-guide" cx={CX} cy={CY} rx={RX} ry={RY} />
+        <ellipse className="stage-guide faint" cx={CX} cy={CY} rx={RX * 1.4} ry={RY * 1.4} />
+        {shelf.length > 0 && <line className="stage-shelf" x1={Math.max(16, CX - 160)} x2={Math.min(W - 16, CX + 160)} y1={H - 12} y2={H - 12} />}
 
         {core &&
           onRing.map((w) => {
@@ -132,9 +155,12 @@ export default function AgentStage() {
           </text>
         )}
       </svg>
+      </div>
     </div>
   );
 }
 
 const short = (t) => (t.length > 34 ? `${t.slice(0, 33)}…` : t);
 const toolWidth = (t) => short(t).length * 6.6 + 22;
+/** How far to shift a label centred on x so all of its width stays on the stage. */
+const inside = (x, width, stageW) => Math.min(Math.max(x, width / 2 + 8), stageW - width / 2 - 8) - x;

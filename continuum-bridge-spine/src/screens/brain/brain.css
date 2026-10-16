@@ -58,10 +58,10 @@
 }
 .brain-btn:hover:not(:disabled) { background: var(--hover); }
 .brain-btn:disabled { opacity: 0.5; cursor: default; }
-.brain-btn.primary { background: var(--brand); border-color: var(--brand); color: var(--on-accent); }
-.brain-btn.primary:hover:not(:disabled) { background: var(--brand-hover); }
-.brain-btn.danger { color: var(--danger-text); border-color: var(--danger-border); }
-.brain-btn.danger:hover { background: var(--danger-soft); }
+.brain-btn.is-primary { background: var(--brand); border-color: var(--brand); color: var(--on-accent); }
+.brain-btn.is-primary:hover:not(:disabled) { background: var(--brand-hover); }
+.brain-btn.is-danger { color: var(--danger-text); border-color: var(--danger-border); }
+.brain-btn.is-danger:hover { background: var(--danger-soft); }
 
 .brain-link {
   border: none;
@@ -80,7 +80,7 @@
   list-style: none;
 }
 
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+.brain-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
 
 .agent-dot {
   flex: none;
@@ -249,10 +249,14 @@
 .agent-legend li { display: flex; align-items: center; gap: 5px; }
 .agent-legend .agent-dot { width: 7px; height: 7px; animation: none; }
 
-.agent-stage-svg {
+.agent-stage-box {
+  position: relative;
   flex: 1;
-  width: 100%;
-  min-height: 280px;
+  min-height: 360px;
+}
+.agent-stage-svg {
+  position: absolute;
+  inset: 0;
   font-family: system-ui, sans-serif;
 }
 
@@ -288,6 +292,7 @@
   transform-origin: center;
   animation: agent-node-in 0.6s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
+.agent-core-bg { fill: var(--surface); } /* the links stay behind the node */
 .agent-core {
   fill: var(--surface);
   stroke: var(--c);
