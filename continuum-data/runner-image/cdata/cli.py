@@ -74,6 +74,8 @@ def main(argv: list[str] | None = None) -> int:
     protocol.install_stdout_guard()
     logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
     warnings.simplefilter("default")
+    # Python's own file-handle notes are not for the build log
+    warnings.filterwarnings("ignore", category=ResourceWarning)
     signal.signal(signal.SIGTERM, _on_sigterm)
 
     try:

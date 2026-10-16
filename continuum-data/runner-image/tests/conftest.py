@@ -35,7 +35,7 @@ class Run:
 
 
 def run_cdata(op: str, params: dict | None, store: Path, env: dict | None = None) -> Run:
-    full_env = {**os.environ, "CDATA_STORE": str(store), "PYTHONPATH": str(ROOT), "CDATA_FETCH_BACKOFF": "0.05"}
+    full_env = {**os.environ, "CDATA_STORE": str(store), "PYTHONPATH": str(ROOT), "CDATA_FETCH_BACKOFF": "0.05", "CDATA_TEST": "1"}
     if params is not None:
         full_env["CDATA_PARAMS"] = json.dumps(params)
     else:

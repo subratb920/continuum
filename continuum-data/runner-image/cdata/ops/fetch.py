@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import http.client
 import os
 import re
 import socket
+import zipfile
+import tarfile
+import shutil
 import time
 import urllib.error
 import urllib.parse
@@ -28,18 +32,36 @@ def _backoff(attempt: int) -> float:
     return base * (2 ** (attempt - 1))
 
 
+def _check_host(url: str, allow_private: bool) -> None:
+    """Refuses a host that resolves to a private, loopback or link-local address,
+    so a link can't reach Continuum's own services or the local network."""
+    if allow_private:
+        return
+    host = urllib.parse.urlsplit(url).hostname or ""
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except socket.gaierror as exc:
+        raise _Transient(f"can't find {host} ({exc})")
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0].split("%")[0])
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
+            raise CdataError("PRIVATE_ADDRESS", f"{host} points inside a private network, so it can't be downloaded from.")
+
+
 class _Redirects(urllib.request.HTTPRedirectHandler):
     """Follows redirects, refuses a downgrade to a scheme that is not allowed,
     and drops credentials when the redirect goes to another host."""
 
-    def __init__(self, allow_http: bool):
+    def __init__(self, allow_http: bool, allow_private: bool = False):
         super().__init__()
         self.allow_http = allow_http
+        self.allow_private = allow_private
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         scheme = urllib.parse.urlsplit(newurl).scheme.lower()
         if scheme not in (("https", "http") if self.allow_http else ("https",)):
             raise CdataError("BAD_REDIRECT", f"The server redirected to a URL that is not allowed: {newurl}")
+        _check_host(newurl, self.allow_private)
         new = super().redirect_request(req, fp, code, msg, headers, newurl)
         if new is not None and urllib.parse.urlsplit(newurl).hostname != urllib.parse.urlsplit(req.full_url).hostname:
             for name in list(new.headers):
@@ -119,7 +141,7 @@ def _parse_content_range(value: str | None):
     return int(m.group(1)), (None if m.group(3) == "*" else int(m.group(3)))
 
 
-def _download(opener, item: dict, dest: Path, headers: dict, budget: _Budget, progress: Progress) -> tuple[int, str]:
+def _download(opener, item: dict, dest: Path, headers: dict, budget: _Budget, progress: Progress, allow_private: bool = False) -> tuple[int, str]:
     dest.parent.mkdir(parents=True, exist_ok=True)
     hasher = hashlib.sha256()
     have = 0
@@ -129,6 +151,7 @@ def _download(opener, item: dict, dest: Path, headers: dict, budget: _Budget, pr
         while True:
             attempt += 1
             try:
+                _check_host(item["url"], allow_private)
                 req = urllib.request.Request(item["url"], headers={"User-Agent": USER_AGENT, **headers})
                 if have:
                     req.add_header("Range", f"bytes={have}-")
@@ -220,8 +243,84 @@ def _download(opener, item: dict, dest: Path, headers: dict, budget: _Budget, pr
     return have, digest
 
 
+ARCHIVES = (".zip", ".tar", ".tar.gz", ".tgz")
+MAX_MEMBERS = 100_000
+
+
+def _archive_kind(name: str):
+    low = name.lower()
+    for ext in ARCHIVES:
+        if low.endswith(ext):
+            return ext
+    return None
+
+
+def _extract(archive: Path, root: Path, limit: int) -> tuple[int, int]:
+    """Unpacks an archive next to itself (into a folder of its name) and removes it.
+    Refuses paths that leave the folder, links and devices, and stops past ``limit`` bytes."""
+    ext = _archive_kind(archive.name)
+    target = archive.with_name(archive.name[: -len(ext)] or "archive")
+    target.mkdir(parents=True, exist_ok=True)
+    total = count = 0
+
+    def place(name: str) -> Path:
+        name = name.replace("\\", "/")
+        if name.startswith("/") or any(p == ".." for p in name.split("/")) or ":" in name.split("/")[0]:
+            raise CdataError("UNSAFE_ARCHIVE", f"{archive.name} holds a file outside its folder ({name}); it was not unpacked.")
+        dest = target / name
+        if not protocol.is_inside(dest, target):
+            raise CdataError("UNSAFE_ARCHIVE", f"{archive.name} holds a file outside its folder ({name}); it was not unpacked.")
+        return dest
+
+    def account(size: int) -> None:
+        nonlocal total, count
+        total += size
+        count += 1
+        if total > limit:
+            raise CdataError("TOO_BIG", f"{archive.name} unpacks to more than {fmt_int(limit)} bytes, so it was stopped.")
+        if count > MAX_MEMBERS:
+            raise CdataError("TOO_MANY_FILES", f"{archive.name} holds more than {fmt_int(MAX_MEMBERS)} files.")
+
+    if ext == ".zip":
+        with zipfile.ZipFile(archive) as z:
+            for info in z.infolist():
+                if info.is_dir():
+                    continue
+                if (info.external_attr >> 16) & 0o170000 == 0o120000:
+                    continue  # a symbolic link: skipped
+                dest = place(info.filename)
+                account(info.file_size)
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                with z.open(info) as src, open(dest, "wb") as out:
+                    written = 0
+                    for chunk in iter(lambda: src.read(CHUNK), b""):
+                        written += len(chunk)
+                        if written > info.file_size:  # a size that lied
+                            raise CdataError("UNSAFE_ARCHIVE", f"{archive.name}: {info.filename} is bigger than it says.")
+                        out.write(chunk)
+    else:
+        mode = "r:gz" if ext in (".tar.gz", ".tgz") else "r:"
+        with tarfile.open(archive, mode) as t:
+            for m in t:
+                if not m.isfile():
+                    continue  # folders are made as needed; links and devices are skipped
+                dest = place(m.name)
+                account(m.size)
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                src = t.extractfile(m)
+                if src is None:
+                    continue
+                with src, open(dest, "wb") as out:
+                    shutil.copyfileobj(src, out, CHUNK)
+    archive.unlink()
+    return count, total
+
+
 def run(params: dict) -> None:
     output_rel, files, max_bytes, headers, allow_http = _validate(params)
+    extract = get_param(params, "extract", bool, default=False)
+    # Only the tests' local server: never set by the engine
+    allow_private = get_param(params, "allowPrivate", bool, default=False) and os.environ.get("CDATA_TEST") == "1"
     output = protocol.resolve(output_rel, "output")
     for f in files:  # check every target before touching the disk
         protocol.resolve_in(output, f["path"], "files[].path")
@@ -234,7 +333,7 @@ def run(params: dict) -> None:
     else:
         total = None
 
-    opener = urllib.request.build_opener(_Redirects(allow_http))
+    opener = urllib.request.build_opener(_Redirects(allow_http, allow_private))
     partial = protocol.begin_output(output)
     progress = Progress("bytes", total)
     progress.update(0, force=True)
@@ -243,9 +342,21 @@ def run(params: dict) -> None:
         for f in files:
             dest = protocol.resolve_in(partial, f["path"], "files[].path")
             protocol.log(f"Downloading {f['path']}.")
-            size, digest = _download(opener, f, dest, headers, budget, progress)
+            size, digest = _download(opener, f, dest, headers, budget, progress, allow_private)
             done.append({"path": f["path"], "bytes": size, "sha256": digest})
         progress.finish()
+        if extract:
+            limit = (max_bytes if max_bytes is not None else 20 * 1024**3)
+            for d in done:
+                path = protocol.resolve_in(partial, d["path"], "files[].path")
+                if _archive_kind(path.name):
+                    protocol.log(f"Unpacking {d['path']}.")
+                    try:
+                        n, size = _extract(path, partial, limit)
+                    except (zipfile.BadZipFile, tarfile.TarError, EOFError) as exc:
+                        raise CdataError("BAD_ARCHIVE", f"{d['path']} could not be unpacked: {exc}")
+                    d["unpacked"] = {"files": n, "bytes": size}
+                    protocol.log(f"Unpacked {fmt_int(n)} file(s) from {d['path']}.")
         protocol.commit_output(output, partial)
     except BaseException:
         protocol.abandon_output(partial)

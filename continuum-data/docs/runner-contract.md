@@ -4,7 +4,7 @@ How the worker runs a pipeline step in a continuum-data-runner container, and wh
 
 Related: [Phase 1 spec](phase1-spec.md) (Sections 3, 4 and 5.3)
 
-Status: D1, D2a and D2b, written with the builds (2026-10-16).
+Status: D1 and D2 (a, b, c), written with the builds (2026-10-16).
 
 ## 1. Starting a step
 
@@ -45,6 +45,9 @@ Params:
 - Downloads each file to `<output>/<path>`, following redirects, retrying three times with back-off, resuming partial files with `Range` when the server supports it.
 - Checks `bytes` and `sha256` when given. Stops with error `TOO_BIG` when the total would pass `maxBytes`.
 - Only `https://` URLs (and `http://` when `allowHttp` is true).
+- Every host is resolved before connecting, on every try and every redirect. A host that resolves to a private, loopback, link-local, reserved or multicast address is refused (`PRIVATE_ADDRESS`), so a link can't reach Continuum's own services or the local network. `Authorization` and other credentials are dropped when a redirect goes to another host.
+- `extract` (D2c, default false): `.zip`, `.tar`, `.tar.gz` and `.tgz` files are unpacked into a folder of their name and then removed. Paths that leave that folder are refused (`UNSAFE_ARCHIVE`); links and devices are skipped; unpacking stops past `maxBytes` (`TOO_BIG`) or 100,000 files (`TOO_MANY_FILES`). The result's file entries get `unpacked: { files, bytes }`.
+- `headers` may carry a source's token (Kaggle). The worker adds it for this run only; it is never stored with the run.
 - Progress in bytes.
 - Result: `{ "files": [{ "path", "bytes", "sha256" }], "bytes": <total> }`.
 

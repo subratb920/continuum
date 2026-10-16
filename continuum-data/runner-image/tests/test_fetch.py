@@ -86,7 +86,7 @@ def server():
 
 
 def fetch(store, files, **kw):
-    params = {"output": "raw/run1", "files": files, "maxBytes": 10_000_000, "headers": {}, "allowHttp": True, **kw}
+    params = {"output": "raw/run1", "files": files, "maxBytes": 10_000_000, "headers": {}, "allowHttp": True, "allowPrivate": True, **kw}
     return run_cdata("fetch", params, store)
 
 
@@ -172,7 +172,7 @@ def test_fetch_path_escape(store, server):
     for bad in ("../x.csv", "/abs.csv", "a/../../x.csv"):
         r = fetch(store, [{"url": f"{server}/small.csv", "path": bad}])
         assert r.code == 2 and r.error["code"] == "PATH_OUTSIDE_STORE", bad
-    r = run_cdata("fetch", {"output": "../out", "files": [{"url": f"{server}/small.csv", "path": "s"}], "allowHttp": True}, store)
+    r = run_cdata("fetch", {"output": "../out", "files": [{"url": f"{server}/small.csv", "path": "s"}], "allowHttp": True, "allowPrivate": True}, store)
     assert r.code == 2
 
 

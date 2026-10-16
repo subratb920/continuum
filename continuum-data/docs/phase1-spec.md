@@ -662,7 +662,16 @@ D2 build notes:
 - Near copies are found with MinHash in polars, without `datasketch`.
 - The safety step is a word list until the AI checks of D4.
 
-The criteria for D2c to D6 are written when each phase starts.
+### 11.4 D2c acceptance criteria (built 2026-10-16)
+
+1. Sources from OpenML, UCI, Kaggle and any https link can be searched (Kaggle only with the user's token) and added by pasting their page's link; plain links stay private to whoever added them.
+2. Archives are unpacked safely: paths that leave the folder are refused, links skipped, and size and file count capped.
+3. A link that resolves to a private address is refused by the runner, also after a redirect.
+4. Tokens are sealed (AES-256-GCM, `DATA_SECRET_KEY`). The UI shows only their last four characters. A run records which token it needs, but never the token, and no event or log line carries it.
+
+D2c build note: OpenML, UCI and Kaggle couldn't be reached from the development network on 2026-10-16. Their connectors are tested against recorded answers in the shape of each documented API, and still need a live check.
+
+The criteria for D3 to D6 are written when each phase starts.
 
 ## 12. Questions for the owner
 
