@@ -40,6 +40,8 @@ continuum-api's cloud image (`continuum-api/Dockerfile.cloud`, built from the re
 - **A pod per step** (`src/runtime/kubeRunner.js`): the runner image as uid 1000, read-only root, no privileges, no ServiceAccount token, only its user's folder as `/store`, on the store's machine (the disk is attached there). Its output is followed from the pod's log.
 - **Network rules**: steps get no network; downloads (`fetch`) get the internet only, never the cluster, the machine or Google's metadata server.
 
+Room: `continuum.infra.json` at the repository root asks Continuum Deploy for up to 16 vCPU, 48 GiB and 60 running pieces for the continuum project (two steps at 2 vCPU and 8 GiB each, plus the apps, the store and the database).
+
 Settings: `DATA_RUNNER_IMAGE` (`${data-runner.image}`), `DATA_RUNNER_CPU` / `DATA_RUNNER_MEMORY` per step, `DATA_MONGO_URI` from Continuum Deploy's database (`continuum_data`), `DATA_SECRET_KEY` on the deploy page. Without a replica set the Data screen's live updates read new events every second instead of using a change stream.
 
 ## Tests

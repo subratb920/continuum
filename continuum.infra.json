@@ -1,0 +1,3 @@
+{
+  "project": { "cpu": 16, "memory": "48Gi", "pods": 60 }
+}

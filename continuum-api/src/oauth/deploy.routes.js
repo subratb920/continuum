@@ -6,8 +6,9 @@
 //   GET /deploy/projects            the signed-in user's projects (id, name, GitHub repo)
 //   GET /deploy/projects/:id/scan   app folders in that project's repository at the branch's
 //                                   latest commit (reported as commit), and its
-//                                   continuum.deploy.json if present (read with the
-//                                   user's GitHub sign-in; the GitHub token never leaves)
+//                                   continuum.deploy.json and continuum.infra.json if
+//                                   present (read with the user's GitHub sign-in; the
+//                                   GitHub token never leaves)
 //   POST /deploy/projects/:id/source  the branch's latest commit, the folders with a
 //                                   Dockerfile, and a signed one-hour download address
 //   GET /deploy/archives/:token     that commit's source (tar.gz), streamed from GitHub
@@ -90,6 +91,8 @@ const APP_MARKERS = {
 };
 const SKIP_DIRS = new Set(["node_modules", "dist", "build", "vendor", ".git", ".github", "coverage", "out", ".next"]);
 const MANIFEST = "continuum.deploy.json";
+// The room the project needs on Google Cloud (Continuum Deploy reads it at each deploy)
+const INFRA = "continuum.infra.json";
 const MAX_DEPTH = 2; // root, a/, a/b/
 
 async function github(token, path) {
@@ -166,17 +169,17 @@ router.get("/projects/:id/scan", requireDeployToken, async (req, res) => {
   // A plain HTML site (an index.html at the root, nothing else that marks an app): the whole repository
   if (!folders.size && (tree.body.tree ?? []).some((i) => i.type === "blob" && i.path === "index.html")) folders.set("", new Set(["static"]));
 
-  // continuum.deploy.json at the repository root, if present
-  let manifest = null;
-  let manifestError = null;
-  if ((tree.body.tree ?? []).some((i) => i.type === "blob" && i.path === MANIFEST)) {
-    const file = await github(token, `/repos/${repo}/contents/${MANIFEST}?ref=${commit}`);
+  // continuum.deploy.json and continuum.infra.json at the repository root, if present
+  const rootJson = async (name) => {
+    if (!(tree.body.tree ?? []).some((i) => i.type === "blob" && i.path === name)) return { value: null, error: null };
+    const file = await github(token, `/repos/${repo}/contents/${name}?ref=${commit}`);
     try {
-      manifest = JSON.parse(Buffer.from(file.body?.content ?? "", "base64").toString("utf8"));
+      return { value: JSON.parse(Buffer.from(file.body?.content ?? "", "base64").toString("utf8")), error: null };
     } catch {
-      manifestError = `${MANIFEST} isn't valid JSON.`;
+      return { value: null, error: `${name} isn't valid JSON.` };
     }
-  }
+  };
+  const [{ value: manifest, error: manifestError }, { value: infra, error: infraError }] = await Promise.all([rootJson(MANIFEST), rootJson(INFRA)]);
 
   // Which database the code uses (dependency files, compose files, .env.example names only), overall and per app folder
   let databases = [];
@@ -202,6 +205,8 @@ router.get("/projects/:id/scan", requireDeployToken, async (req, res) => {
     defaultBranch: info.body.default_branch,
     manifest,
     manifestError,
+    infra,
+    infraError,
     databases,
     byFolder: perFolder,
     folders: [...folders.entries()].map(([path, kinds]) => ({ path, kinds: [...kinds].sort() })).sort((a, b) => a.path.localeCompare(b.path)),
