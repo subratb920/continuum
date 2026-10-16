@@ -125,30 +125,43 @@ body .shell-header {
     font-weight: 600;
   }
 
-  /* Console: one pane at a time fills the main area (Interval Setup by default) */
+  /* Console: the three parts side by side on one track; the track slides so the
+     part shown fills the main area (PageShell sets --part-pos: 0 left, 1 middle,
+     2 right; --part-drag follows a finger while swiping). Every part moves
+     together, with the parts bar's labels on the same timing (PhoneNav.css). */
   body .app {
-    grid-template-columns: minmax(0, 1fr);
+    display: flex;
+    overflow: hidden;
+  }
+  body .app > .left,
+  body .app > .center,
+  body .app > .right {
+    flex: 0 0 100%;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    border: none;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    /* Vertical scrolling stays the browser's; horizontal swipes move the parts */
+    touch-action: pan-y;
+    transform: translate3d(calc(var(--part-pos, 1) * -100% + var(--part-drag, 0px)), 0, 0);
+    transition: transform var(--part-slide) var(--part-ease);
+    will-change: transform;
   }
   body .app > .left,
   body .app > .right {
-    display: none;
-  }
-  body .app.app-view-left > .left,
-  body .app.app-view-right > .right {
-    display: block;
-    width: auto;
-    border: none;
     padding: 16px calc(16px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
     background: var(--page);
   }
-  body .app.app-view-left > .center,
-  body .app.app-view-right > .center {
-    display: none;
+  /* While a finger moves them, they follow it exactly (no easing) */
+  body .parts-dragging .app > .left,
+  body .parts-dragging .app > .center,
+  body .parts-dragging .app > .right {
+    transition: none;
   }
   body .center {
     padding: 20px calc(16px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
-    overflow-y: auto;
-    min-height: 0;
   }
   /* Interval Setup centred, equal margins on both sides (tablets: wider than the card) */
   body .interval-setup {
@@ -168,6 +181,7 @@ body .shell-header {
 
 @media (prefers-reduced-motion: reduce) {
   body .app > .left,
+  body .app > .center,
   body .app > .right {
     transition: none !important;
   }

@@ -37,8 +37,9 @@ function getInitials(email) {
  * Shared header on every signed-in page (see PageShell).
  * Wide screens: Interval Setup, Create/Import and Deploy, and the profile avatar
  * (whose menu holds Help, Settings, Support… and Sign out). Small screens
- * (under 900px): ☰ · title · avatar; the ☰ menu shows Interval Setup,
- * Projects, Bridges, Create or Deploy in the main area (see ThreePanelLayout).
+ * (under 900px): ☰ · title · avatar, with the screen tabs and the parts bar
+ * under the header (PhoneNav); the ☰ menu holds the screens, Workspaces,
+ * Create/Import and Deploy, in groups.
  * Only one menu is open at a time.
  * selectedProject (console only): Deploy on Railway or GCP deploys that project's
  * GitHub repository; without one it opens that cloud's deployments list.
@@ -99,22 +100,25 @@ export default function ShellHeader({ selectedProject = null }) {
   const screen = screenForPath(pathname);
   const consoleScreen = screen ?? SCREENS[0];
 
-  // Small screens: the ☰ menu's views (the screen's panes, shown in the main area),
-  // then the other screens and pages
-  const VIEWS = [
-    ["center", consoleScreen.center.label, consoleScreen.center.icon],
-    ["left", consoleScreen.left.label, consoleScreen.left.icon],
-    ["right", consoleScreen.right.label, consoleScreen.right.icon],
-    ...SCREENS.filter((s) => s.switcher && s !== consoleScreen).map((s) => [`screen:${s.id}`, s.label, s.icon]),
-    ["workspaces", "Workspaces", "💻"],
-    ["create", "Create/Import", "＋"],
-    ...(DEPLOY_AVAILABLE ? [["deploy", "Deploy", "🚀"]] : []),
+  // Small screens: the ☰ menu, in groups. The screen's own parts aren't in it:
+  // the parts bar under the header moves between them (PhoneNav)
+  const MENU = [
+    { title: "Screens", items: SCREENS.filter((s) => s.switcher).map((s) => [`screen:${s.id}`, s.label, s.icon]) },
+    { title: "Pages", items: [["workspaces", "Workspaces", "💻"]] },
+    { title: "Create & deploy", items: [["create", "Create/Import", "＋"], ...(DEPLOY_AVAILABLE ? [["deploy", "Deploy", "🚀"]] : [])] },
   ];
   const onConsole = panels.enabled && !!screen;
-  const currentView = pathname === "/workspaces" ? "workspaces" : onConsole ? (panels.panel ?? "center") : null;
+  const currentView =
+    pathname === "/workspaces"
+      ? "workspaces"
+      : onConsole && (panels.panel === "create" || panels.panel === "deploy")
+        ? panels.panel
+        : screen
+          ? `screen:${screen.id}`
+          : null;
   function showScreen(s) {
     setOpenMenu(null);
-    panels.close(); // a new screen opens on its centre
+    if (s === screen) return panels.close(); // this screen: back to its middle
     navigate(s.path);
   }
   function showView(view) {
@@ -122,9 +126,9 @@ export default function ShellHeader({ selectedProject = null }) {
     // Workspaces is a page of its own (not a console pane)
     if (view === "workspaces") return navigate("/workspaces");
     if (view.startsWith("screen:")) return showScreen(SCREENS.find((s) => `screen:${s.id}` === view));
-    const panel = view === "center" ? null : view;
-    if (onConsole) panels.open(panel);
-    else navigate(consoleScreen.path, { state: { view: panel } });
+    // Create/Import and Deploy fill the console's middle
+    if (onConsole) panels.open(view);
+    else navigate(consoleScreen.path, { state: { part: view } });
   }
 
   function handleSignOut() {
@@ -178,18 +182,23 @@ export default function ShellHeader({ selectedProject = null }) {
             <span aria-hidden="true">☰</span>
           </button>
           {openMenu === "nav" && (
-            <div className="menu-dropdown views-menu" role="menu" aria-label="Show">
-              {VIEWS.map(([id, label, icon]) => (
-                <button
-                  key={id}
-                  role="menuitem"
-                  className="profile-menu-item"
-                  aria-current={currentView === id ? "page" : undefined}
-                  onClick={() => showView(id)}
-                >
-                  <span className="profile-menu-icon" aria-hidden="true">{icon}</span>
-                  <span className="profile-menu-label">{label}</span>
-                </button>
+            <div className="menu-dropdown views-menu" role="menu" aria-label="Menu">
+              {MENU.map((group) => (
+                <div key={group.title} className="views-menu-group" role="group" aria-label={group.title}>
+                  <div className="views-menu-title">{group.title}</div>
+                  {group.items.map(([id, label, icon]) => (
+                    <button
+                      key={id}
+                      role="menuitem"
+                      className="profile-menu-item"
+                      aria-current={currentView === id ? "page" : undefined}
+                      onClick={() => showView(id)}
+                    >
+                      <span className="profile-menu-icon" aria-hidden="true">{icon}</span>
+                      <span className="profile-menu-label">{label}</span>
+                    </button>
+                  ))}
+                </div>
               ))}
             </div>
           )}

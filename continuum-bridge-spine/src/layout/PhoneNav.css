@@ -1,0 +1,113 @@
+/* Small screens: the screen tabs and the parts bar under the header (hidden on wide screens) */
+.phone-nav {
+  display: none;
+}
+
+/* How the parts (and their labels) slide: one duration and one curve for both */
+:root {
+  --part-slide: 340ms;
+  --part-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@media (max-width: 899px) {
+  .phone-nav {
+    display: block;
+    flex-shrink: 0;
+    background: var(--header);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ---------- Screen tabs: evenly spaced ---------- */
+  .phone-tabs {
+    display: flex;
+    padding: 0 calc(8px + env(safe-area-inset-right)) 0 calc(8px + env(safe-area-inset-left));
+  }
+  .phone-tab {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 8px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .phone-tab[aria-current="page"] {
+    color: var(--text);
+    border-bottom-color: var(--brand);
+  }
+  .phone-tab:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+  .phone-tab-badge {
+    min-width: 16px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--agent-waiting);
+    color: var(--on-accent);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+  }
+
+  /* ---------- Parts bar: a strip of left · middle · right that slides with the parts ---------- */
+  .parts-bar {
+    overflow: hidden;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .parts-strip {
+    display: flex;
+    /* The current part's label sits in the middle slot: one part's width of the
+       page moves the labels one slot (a third of the bar), on the same timing */
+    transform: translate3d(calc((1 - var(--part-pos, 1)) * 100% / 3 + var(--part-drag, 0px) / 3), 0, 0);
+    transition: transform var(--part-slide) var(--part-ease);
+    will-change: transform;
+  }
+  .parts-dragging .parts-strip {
+    transition: none;
+  }
+  .parts-label {
+    flex: 0 0 calc(100% / 3);
+    min-width: 0;
+    padding: 8px 6px;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 13px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .parts-label.is-current {
+    color: var(--text);
+    font-weight: 700;
+  }
+  .parts-label.is-side {
+    color: var(--link);
+    cursor: pointer;
+  }
+  .parts-label.is-side:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+  .parts-label.is-hidden {
+    visibility: hidden;
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .parts-strip {
+    transition: none;
+  }
+}
