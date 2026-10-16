@@ -1,6 +1,6 @@
 /* Fills the page area under the shared header (was fixed full-screen) */
 .github-import-root {
-  min-height: calc(100vh - 48px); /* 48px = shared header height */
+  min-height: calc(100vh - 48px - var(--legal-footer-h)); /* 48px = shared header height */
   box-sizing: border-box;
   background-color: var(--gh-bg);
   display: flex;

@@ -15,7 +15,7 @@ body {
 .app {
   display: grid;
   grid-template-columns: var(--left-w) minmax(0, 1fr) var(--right-w);
-  height: 100vh;
+  height: calc(100vh - var(--legal-footer-h));
 }
 
 .left, .right {

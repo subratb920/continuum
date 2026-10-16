@@ -96,9 +96,10 @@ export function createProxy({ target, log, now = () => Date.now() }) {
   return { server, idle, lastUsed, forget };
 }
 
+/** A short status page (starting, stopped…), with Continuum's copyright line like every Continuum screen. */
 function page(res, status, text, retrySeconds = 0) {
   const retry = retrySeconds ? `<meta http-equiv="refresh" content="${retrySeconds}">` : "";
   res.writeHead(status, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" }).end(
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${retry}<title>Continuum workspace</title><style>:root{color-scheme:light dark}body{font:16px/1.5 system-ui,sans-serif;margin:0;display:grid;place-items:center;min-height:100vh;padding:16px}main{max-width:420px;text-align:center}</style></head><body><main><h1>Continuum workspace</h1><p>${text}</p></main></body></html>`,
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${retry}<title>Continuum workspace</title><style>:root{color-scheme:light dark}body{font:16px/1.5 system-ui,sans-serif;margin:0;display:grid;place-items:center;min-height:100vh;padding:16px}main{max-width:420px;text-align:center}footer{position:fixed;left:0;right:0;bottom:0;padding:6px 16px;font-size:12px;opacity:.65;text-align:center}</style></head><body><main><h1>Continuum workspace</h1><p>${text}</p></main><footer>© ${new Date().getFullYear()} Continuum. All rights reserved.</footer></body></html>`,
   );
 }

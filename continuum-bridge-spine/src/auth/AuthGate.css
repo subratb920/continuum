@@ -1,5 +1,5 @@
 .auth-root {
-  height: 100vh;
+  height: calc(100vh - var(--legal-footer-h));
   display: flex;
   align-items: center;
   justify-content: center;

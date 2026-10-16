@@ -10,12 +10,15 @@ import { applyAppearance } from "./utils/preferences";
 
 applyAppearance(); // Settings → Appearance, before the first paint
 import { AuthProvider } from "./state/authStore";
+import LegalFooter from "./legal/LegalFooter";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
         <App />
+        {/* Every screen: the copyright line and the Legal page link */}
+        <LegalFooter />
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>

@@ -2,8 +2,8 @@
 .page-shell {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  height: 100dvh; /* phones: the visible height, without the browser's bars */
+  height: calc(100vh - var(--legal-footer-h)); /* the legal footer sits under every screen */
+  height: calc(100dvh - var(--legal-footer-h)); /* phones: the visible height, without the browser's bars */
 }
 
 .page-shell > .shell-header {

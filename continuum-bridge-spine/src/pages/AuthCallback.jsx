@@ -37,7 +37,7 @@ export default function AuthCallback() {
   return (
     <div
       style={{
-        minHeight: "100dvh",
+        minHeight: "calc(100dvh - var(--legal-footer-h))",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

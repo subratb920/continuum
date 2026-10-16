@@ -15,6 +15,7 @@ import Dashboard, { DashboardNav } from "./components/Dashboard";
 import { IMPORT_EVENT } from "./utils/importFromDevice";
 import Welcome from "./screens/Welcome";
 import HelpPage from "./pages/HelpPage";
+import LegalPage from "./legal/LegalPage";
 import EmptyConsole from "./components/EmptyConsole";
 import PhoneCard from "./components/PhoneCard";
 
@@ -363,6 +364,8 @@ export default function App() {
      🔒 AUTH GATES
      ========================================================= */
 
+  // The Legal page: open to everyone, signed in or not
+  if (pathname === "/legal") return <LegalPage />;
   if (status === "checking") return null;
   if (pathname === "/auth/callback") {
     return <AuthCallback />;

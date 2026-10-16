@@ -222,8 +222,8 @@ body .shell-header {
 /* ---------- Sign-in, the Deploy sign-in page and full-screen states ---------- */
 body .auth-root {
   height: auto;
-  min-height: 100vh;
-  min-height: 100dvh;
+  min-height: calc(100vh - var(--legal-footer-h));
+  min-height: calc(100dvh - var(--legal-footer-h));
   padding: 16px;
   box-sizing: border-box;
 }
