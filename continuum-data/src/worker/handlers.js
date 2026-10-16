@@ -16,6 +16,10 @@ export const STEP_LABEL = {
   fill_missing: "Fill empty cells",
   outliers: "Handle unusual numbers",
   split: "Split for training and testing",
+  redact_pii: "Hide personal details",
+  safety: "Remove unsafe text",
+  balance: "Balance labels",
+  to_chat: "Make chat examples",
   validate: "Check quality",
   export: "Pack for download",
 };

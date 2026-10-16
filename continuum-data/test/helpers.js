@@ -38,7 +38,7 @@ export function fakeRunner(store, behaviour = {}) {
         await writeFile(path.join(root, p.output, "manifest.json"), JSON.stringify({ files: [{ path: "data/part-00000.parquet", sha256: "abc", bytes: 1 }], licences: [{ spdx: p.licence, rows: 3 }] }));
         onLine({ kind: "log", message: "Read 3 rows." });
         onLine({ kind: "result", rows: 3, bytes: 10, modality: "text", task: "classify", schema: [{ name: "text", type: "string", role: "input" }], labels: ["neg", "pos"], splits: { train: 3 } });
-      } else if (["dedupe", "filter", "fix_types", "fill_missing", "outliers", "split"].includes(spec.op)) {
+      } else if (["dedupe", "filter", "fix_types", "fill_missing", "outliers", "split", "redact_pii", "safety", "balance", "to_chat"].includes(spec.op)) {
         const removed = spec.op === "dedupe" ? 1 : 0;
         await mkdir(path.join(root, p.output, "data"), { recursive: true });
         await writeFile(path.join(root, p.output, "manifest.json"), JSON.stringify({ files: [{ path: "data/part-00000.parquet", sha256: spec.op, bytes: 1 }], licences: [] }));

@@ -76,6 +76,47 @@ export const STEP_CATALOG = {
       leakageCheck: { kind: "boolean", default: true, label: "Move copies so none sit on both sides" },
     },
   },
+  redact_pii: {
+    label: "Hide personal details",
+    hint: "Finds emails, phone and card numbers, ID numbers and IP addresses, and replaces them with markers like [EMAIL].",
+    modalities: ["text", "tabular"],
+    params: {
+      action: { kind: "enum", choices: ["replace", "drop", "flag"], default: "replace", label: "What to do", labels: { replace: "Replace with a marker", drop: "Remove those rows", flag: "Only mark those rows" } },
+      kinds: { kind: "enum-list", choices: ["email", "phone", "card", "iban", "aadhaar", "ssn", "pan", "ip"], default: null, label: "Which details (all when none chosen)", labels: { email: "Emails", phone: "Phone numbers", card: "Card numbers", iban: "Bank accounts", aadhaar: "Aadhaar", ssn: "SSN", pan: "PAN", ip: "IP addresses" } },
+    },
+  },
+  safety: {
+    label: "Remove unsafe text",
+    hint: "Takes out rows with clearly adult or abusive words. A simple word check for now.",
+    modalities: ["text"],
+    params: {
+      action: { kind: "enum", choices: ["drop", "flag"], default: "drop", label: "What to do", labels: { drop: "Remove those rows", flag: "Only mark those rows" } },
+      extraWords: { kind: "words", default: null, label: "Other words to catch (comma-separated)" },
+    },
+  },
+  balance: {
+    label: "Balance labels",
+    hint: "Evens out how many rows each label has, so the model doesn't just learn the most common one. Only train rows change.",
+    modalities: ["text", "tabular"],
+    needsLabel: true,
+    params: {
+      method: { kind: "enum", choices: ["under", "over", "both"], default: "under", label: "How", labels: { under: "Leave out some rows of big labels", over: "Copy rows of small labels", both: "A bit of both" } },
+      targetRatio: { kind: "number", min: 0.1, max: 1, step: 0.1, default: 1, label: "Smallest label at least this share of the largest" },
+      seed: { kind: "integer", min: 0, default: 42, label: "Shuffle number" },
+    },
+  },
+  to_chat: {
+    label: "Make chat examples",
+    hint: "Turns two columns (a question and its answer), or a text and its label, into chat examples for training a chatbot.",
+    modalities: ["text", "tabular"],
+    params: {
+      mode: { kind: "enum", choices: ["columns", "classify"], default: "columns", label: "From", labels: { columns: "A question column and an answer column", classify: "A text and its label" } },
+      promptColumn: { kind: "column", default: null, label: "Question column", showIf: { mode: "columns" } },
+      answerColumn: { kind: "column", default: null, label: "Answer column", showIf: { mode: "columns" } },
+      instruction: { kind: "text", default: null, label: "Question to ask about each text", placeholder: "Which label fits this text?", showIf: { mode: "classify" } },
+      systemPrompt: { kind: "text", default: null, label: "How the chatbot should behave (optional)", placeholder: "You are a friendly helper." },
+    },
+  },
   validate: {
     label: "Check quality",
     hint: "Runs the quality checks and gives a score from 0 to 100.",
@@ -88,16 +129,18 @@ export const STEP_CATALOG = {
 };
 
 /** Ops that write a new version (the others report on one). */
-export const VERSION_OPS = new Set(["dedupe", "filter", "fix_types", "fill_missing", "outliers", "split"]);
+export const VERSION_OPS = new Set(["dedupe", "filter", "fix_types", "fill_missing", "outliers", "split", "redact_pii", "safety", "balance", "to_chat"]);
 export const EXPORT_FORMATS = ["parquet", "csv", "jsonl", "hf"];
 
 export const TEMPLATES = [
   {
     id: "text-classifier",
     name: "Clean text for a classifier",
-    description: "Remove copies and empty or tiny texts, then split with no copy on both sides.",
+    description: "Hide personal details, remove unsafe text, copies and empty or tiny texts, then split with no copy on both sides.",
     modalities: ["text"],
     steps: [
+      { op: "redact_pii", params: {} },
+      { op: "safety", params: {} },
       { op: "dedupe", params: { mode: "near" } },
       { op: "filter", params: { dropEmpty: true, minChars: 5 } },
       { op: "split", params: { mode: "stratified" } },
@@ -107,9 +150,11 @@ export const TEMPLATES = [
   {
     id: "chat",
     name: "Clean a chat or instruction dataset",
-    description: "Remove copies and empty answers, then split.",
+    description: "Hide personal details, remove unsafe text, copies and empty answers, then split.",
     modalities: ["text"],
     steps: [
+      { op: "redact_pii", params: {} },
+      { op: "safety", params: {} },
       { op: "dedupe", params: { mode: "near" } },
       { op: "filter", params: { dropEmpty: true } },
       { op: "split", params: { mode: "random" } },
@@ -119,11 +164,12 @@ export const TEMPLATES = [
   {
     id: "table",
     name: "Clean a table",
-    description: "Fix column kinds, fill empty cells, pull in unusual numbers, remove copies, then split.",
+    description: "Fix column kinds, fill empty cells, hide personal details, pull in unusual numbers, remove copies, then split.",
     modalities: ["tabular"],
     steps: [
       { op: "fix_types", params: {} },
       { op: "fill_missing", params: { strategy: "auto" } },
+      { op: "redact_pii", params: {} },
       { op: "outliers", params: { action: "clip" } },
       { op: "dedupe", params: { mode: "exact" } },
       { op: "split", params: { mode: "stratified" } },
@@ -159,6 +205,14 @@ function checkParam(op, name, spec, value) {
     case "columns":
       if (!Array.isArray(value) || value.some((c) => typeof c !== "string")) throw bad("must be a list of column names");
       return value.length ? value.slice(0, 200) : null;
+    case "enum-list":
+      if (!Array.isArray(value) || value.some((c) => !spec.choices.includes(c))) throw bad(`must be some of ${spec.choices.join(", ")}`);
+      return value.length ? [...new Set(value)] : null;
+    case "words": {
+      const list = (Array.isArray(value) ? value : String(value).split(",")).map((w) => String(w).trim()).filter(Boolean);
+      if (list.length > 200 || list.some((w) => w.length > 60)) throw bad("must be up to 200 short words");
+      return list.length ? list : null;
+    }
     case "ratios": {
       if (!Array.isArray(value) || value.length !== 3 || value.some((x) => !Number.isFinite(Number(x)) || Number(x) < 0)) throw bad("must be three shares");
       const r = value.map(Number);
@@ -205,10 +259,15 @@ export function suggestSteps(profile, modality, splits) {
   const steps = [];
   if (modality === "tabular") steps.push({ op: "fix_types", params: {} });
   if (ops.has("fill_missing") && modality === "tabular") steps.push({ op: "fill_missing", params: { strategy: "auto" } });
+  // On by default (spec 9.1): personal details hidden, unsafe text removed.
+  // Before removing copies: hiding details can turn two texts into copies.
+  steps.push({ op: "redact_pii", params: {} });
+  if (modality === "text") steps.push({ op: "safety", params: {} });
   if (ops.has("dedupe")) steps.push({ op: "dedupe", params: { mode: modality === "text" ? "near" : "exact" } });
   if (ops.has("filter") && modality === "text") steps.push({ op: "filter", params: { dropEmpty: true } });
   const hasTest = splits && (splits.test || splits.validation);
   steps.push({ op: "split", params: { mode: hasTest ? "keep" : profile?.labels?.counts?.length ? "stratified" : "random" } });
+  if (ops.has("balance") && profile?.labels?.counts?.length) steps.push({ op: "balance", params: { method: "under" } });
   steps.push({ op: "validate", params: {} });
   return steps;
 }

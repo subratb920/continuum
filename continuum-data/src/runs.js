@@ -65,8 +65,8 @@ export function pipelineSteps({ datasetId, input, steps, ObjectIdCtor }) {
 }
 
 /** An export run: one step that packs a version as a zip. */
-export function exportSteps({ version, format }) {
-  return [{ op: "export", params: { input: version.path, output: `exports/${version._id}`, format }, exports: version._id, format, state: "pending", metrics: {}, progress: null, result: null, error: null, startedAt: null, endedAt: null }];
+export function exportSteps({ version, format, card = null }) {
+  return [{ op: "export", params: { input: version.path, output: `exports/${version._id}`, format, ...(card && { card }) }, exports: version._id, format, state: "pending", metrics: {}, progress: null, result: null, error: null, startedAt: null, endedAt: null }];
 }
 
 export async function createRun(db, { runId = new ObjectId(), userId, datasetId, inputVersionId = null, kind, steps, cleanup = [], recipeName = null }, now = new Date()) {

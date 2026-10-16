@@ -10,6 +10,7 @@ import { stat } from "node:fs/promises";
 import { saveSources, searchSources, sourceView } from "../catalogue/index.js";
 import { licenceInfo } from "../catalogue/licences.js";
 import { readRows } from "./rows.js";
+import { STEP_LABEL as STEP_LABELS } from "../worker/handlers.js";
 
 /**
  * The /data routes (spec 6). Every route needs Continuum sign-in (the host's
@@ -408,6 +409,20 @@ export function createDataRouter({ engine, auth }) {
     res.json({ version: versionView({ ...v, frozen: true }) });
   }));
 
+  /** What the download's README tells: name, goal, sources and licences, how each version was made, quality. */
+  async function cardInfo(dataset, version) {
+    const chain = [];
+    for (let v = version; v && chain.length < 50; v = v.parentVersionId ? await col("versions").findOne({ _id: v.parentVersionId }) : null) chain.unshift(v);
+    const sources = await col("sources").find({ _id: { $in: dataset.sourceIds ?? [] } }).toArray();
+    return {
+      name: dataset.name,
+      goal: dataset.goal || null,
+      sources: sources.map((s) => ({ title: s.title, ref: s.connector === "upload" ? null : s.ref, licence: licenceInfo(s.licence) })),
+      history: chain.map((v) => ({ number: v.number, op: v.madeBy?.op, label: STEP_LABELS[v.madeBy?.op] ?? v.madeBy?.op, notes: (v.changes?.notes ?? []).slice(0, 4) })),
+      quality: version.quality ? { score: version.quality.score, verdict: version.quality.verdict, gates: (version.quality.gates ?? []).map(({ title, passed, reason }) => ({ title, passed, reason })) } : null,
+    };
+  }
+
   async function startRun(userId, dataset, input, kind, steps, recipeName = null) {
     const { runsActive } = await usage(userId);
     if (runsActive >= cfg.limits.runsAtOnce) throw new DataError(429, "TOO_MANY_RUNS", `You can run ${cfg.limits.runsAtOnce} things at once. Wait for one to finish.`);
@@ -424,7 +439,7 @@ export function createDataRouter({ engine, auth }) {
     const format = String(req.body?.format ?? "parquet");
     if (!EXPORT_FORMATS.includes(format)) throw badRequest(`Choose one of ${EXPORT_FORMATS.join(", ")}.`, "BAD_FORMAT");
     const dataset = await col("datasets").findOne({ _id: v.datasetId });
-    const run = await startRun(req.userId, dataset, v, "export", exportSteps({ version: v, format }));
+    const run = await startRun(req.userId, dataset, v, "export", exportSteps({ version: v, format, card: await cardInfo(dataset, v) }));
     res.status(202).json({ run: runView(run) });
   }));
 

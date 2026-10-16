@@ -33,8 +33,8 @@ test("steps are checked and get their defaults; unknown ones are refused", () =>
 
 test("the suggested recipe follows the profile's findings", () => {
   const steps = suggestSteps({ findings: [{ suggest: "dedupe" }, { suggest: "filter" }], labels: { counts: [1] } }, "text", { train: 10 });
-  assert.deepEqual(steps.map((s) => s.op), ["dedupe", "filter", "split", "validate"]);
-  assert.equal(steps[2].params.mode, "stratified");
+  assert.deepEqual(steps.map((s) => s.op), ["redact_pii", "safety", "dedupe", "filter", "split", "validate"]);
+  assert.equal(steps.find((s) => s.op === "split").params.mode, "stratified");
   assert.equal(suggestSteps({ findings: [] }, "text", { train: 8, test: 2 }).find((s) => s.op === "split").params.mode, "keep");
 });
 
@@ -68,6 +68,20 @@ test("a pipeline makes one version per step, chained, then measures and checks i
   assert.equal(ds2.headVersionId, v3.id);
 });
 
+test("privacy, safety, balance and chat steps run in a pipeline", async () => {
+  const api = t.api(t.users.a);
+  const ds = await readyDataset(api, "Pipeline three");
+  const run = await api("POST", "/runs", { datasetId: ds.id, steps: [{ op: "redact_pii" }, { op: "safety", params: { extraWords: "spoiler, boring" } }, { op: "split" }, { op: "balance" }, { op: "to_chat", params: { mode: "classify" } }] });
+  assert.equal(run.status, 201, JSON.stringify(run.body));
+  const call = (op) => t.engine.runner.calls.find((c) => c.op === op && c.name.includes(run.body.run.id));
+  await waitFor(async () => (await api("GET", `/runs/${run.body.run.id}`)).body.run.state === "succeeded");
+  assert.deepEqual(call("safety").params.extraWords, ["spoiler", "boring"]);
+  assert.equal(call("redact_pii").params.action, "replace");
+  assert.equal(call("balance").params.method, "under");
+  const bad = await api("POST", "/runs", { datasetId: ds.id, steps: [{ op: "redact_pii", params: { kinds: ["dna"] } }] });
+  assert.equal(bad.status, 400);
+});
+
 test("templates, saved recipes and suggestions run the same way", async () => {
   const api = t.api(t.users.a);
   const ds = await readyDataset(api, "Pipeline two");
@@ -95,6 +109,10 @@ test("export makes a download; publish freezes the version", async () => {
   assert.equal(bad.status, 400);
   const ex = await api("POST", `/versions/${vid}/exports`, { format: "hf" });
   assert.equal(ex.status, 202);
+  const call = await waitFor(() => t.engine.runner.calls.find((c) => c.op === "export" && c.params.input.includes(vid)));
+  assert.equal(call.params.card.name, "Exported");
+  assert.equal(call.params.card.sources[0].licence.spdx, "other");
+  assert.deepEqual(call.params.card.history.map((h) => h.label), ["Read and tidy up"]);
   await waitFor(async () => (await api("GET", `/versions/${vid}`)).body.version.exports.hf);
   const res = await fetch(`${t.base}/versions/${vid}/exports/hf/download`, { headers: { "x-test-user": t.users.a } });
   assert.equal(res.status, 200);
