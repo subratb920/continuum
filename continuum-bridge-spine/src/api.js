@@ -325,3 +325,22 @@ export async function fetchAccountPreferences() {
 export async function saveAccountTheme(theme) {
   return request("PATCH", "/me/preferences", { theme });
 }
+
+/* ==================================================
+   Admin (admins only): users, roles, sign-ins
+   ================================================== */
+
+export const adminApi = {
+  features: () => request("GET", "/admin/features"),
+  users: (query = {}) => request("GET", `/admin/users?${new URLSearchParams(Object.entries(query).filter(([, v]) => v !== "" && v != null))}`),
+  user: (id) => request("GET", `/admin/users/${id}`),
+  updateUser: (id, changes) => request("PATCH", `/admin/users/${id}`, changes),
+  roles: () => request("GET", "/admin/roles"),
+  createRole: (role) => request("POST", "/admin/roles", role),
+  updateRole: (id, changes) => request("PATCH", `/admin/roles/${encodeURIComponent(id)}`, changes),
+  deleteRole: (id, moveTo) => request("DELETE", `/admin/roles/${encodeURIComponent(id)}?moveTo=${encodeURIComponent(moveTo)}`),
+  settings: () => request("GET", "/admin/settings"),
+  saveSettings: (s) => request("PUT", "/admin/settings", s),
+  activity: ({ failed = false } = {}) => request("GET", `/admin/activity?limit=200${failed ? "&failed=1" : ""}`),
+  changes: () => request("GET", "/admin/changes?limit=200"),
+};

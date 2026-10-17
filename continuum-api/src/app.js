@@ -20,6 +20,7 @@ import { createWorkspacesRouter } from "./workspaces/routes.js";
 import { createServiceRouter } from "./service/routes.js";
 import { createBrainRouter, streamToken } from "./brain/routes.js";
 import { dataEngine } from "./data/engine.js";
+import { createAdminRouter } from "./admin/admin.routes.js";
 
 
 const app = express();
@@ -55,6 +56,7 @@ const createAccess = (req, res, next) => (req.path.startsWith("/github") ? requi
 app.use("/create", authed, createAccess, uses("create"), createRoutes);
 app.use("/me", authed, meRoutes); // you: your access, and your preferences (theme), shared with Continuum Deploy
 app.use("/workspaces", authed, requireFeature("workspaces"), uses("workspaces"), createWorkspacesRouter()); // development servers per project (continuum-workspaces)
+app.use("/admin", authed, requireFeature("admin"), createAdminRouter()); // users, roles, sign-ins (admins only)
 app.use("/service", createServiceRouter()); // read-only data for continuum-brain (its service token only)
 app.use("/brain", streamToken, authed, requireFeature("agents"), uses("agents"), createBrainRouter()); // the Agents screen, relayed to continuum-brain
 if (dataEngine) app.use("/data", dataEngine.router({ auth: [...authed, requireFeature("data"), uses("data")] })); // datasets: sources, versions, pipelines (continuum-data)

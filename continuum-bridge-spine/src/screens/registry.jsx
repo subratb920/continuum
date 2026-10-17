@@ -10,6 +10,10 @@ import { DATA_ENABLED } from "../data/dataApi";
 import DataLibrary from "./data/DataLibrary";
 import DataWorkbench from "./data/DataWorkbench";
 import DataInspector from "./data/DataInspector";
+import { AdminProvider } from "./admin/AdminProvider";
+import AdminNav from "./admin/AdminNav";
+import AdminMain from "./admin/AdminMain";
+import AdminDetail from "./admin/AdminDetail";
 
 /**
  * The console's screens: each one fills the three panes (left · centre · right)
@@ -85,6 +89,20 @@ export const SCREENS = [
     center: { label: "Dashboard", icon: "📊" },
     right: { label: "Bridges", icon: "🌉" },
     slots: (ctx) => ({ left: <DashboardNav onIntervalSetup={() => ctx.navigate("/console")} />, center: ctx.dashboardCenter }),
+  },
+  // Admins only: users, roles (each feature a switch), sign-ins; the profile menu opens it
+  {
+    id: "admin",
+    feature: "admin",
+    path: "/admin",
+    label: "Admin",
+    icon: "🛡",
+    switcher: false,
+    left: { label: "Sections", icon: "📑" },
+    center: { label: "Admin", icon: "🛡" },
+    right: { label: "Details", icon: "☰" },
+    Provider: AdminProvider,
+    slots: () => ({ left: <AdminNav />, center: <AdminMain />, right: <AdminDetail /> }),
   },
 ];
 

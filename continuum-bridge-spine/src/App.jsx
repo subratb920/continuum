@@ -52,7 +52,7 @@ import {
 
 // Last page on reopen (see App): only these pages are remembered
 const LAST_PATH_KEY = "continuum_last_path";
-const RESTORABLE_PATHS = ["/", "/console", "/brain", "/data", "/dashboard", "/help"];
+const RESTORABLE_PATHS = ["/", "/console", "/brain", "/data", "/dashboard", "/admin", "/help"];
 
 function readLastPath() {
   try {

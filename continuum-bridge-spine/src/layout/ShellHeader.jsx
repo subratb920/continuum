@@ -46,7 +46,7 @@ function getInitials(email) {
  * GitHub repository; without one it opens that cloud's deployments list.
  */
 export default function ShellHeader({ selectedProject = null }) {
-  const { user, authProvider, logout } = useAuth();
+  const { user, authProvider, logout, access } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -344,6 +344,21 @@ export default function ShellHeader({ selectedProject = null }) {
                   <span className="profile-menu-icon" aria-hidden="true">📊</span>
                   <span className="profile-menu-label">Dashboard</span>
                 </button>
+                {/* Admins only: the item isn't there for anyone else */}
+                {access?.isAdmin && (
+                  <button
+                    role="menuitem"
+                    className="profile-menu-item"
+                    aria-current={pathname === "/admin" ? "page" : undefined}
+                    onClick={() => {
+                      setOpenMenu(null);
+                      navigate("/admin");
+                    }}
+                  >
+                    <span className="profile-menu-icon" aria-hidden="true">🛡</span>
+                    <span className="profile-menu-label">Admin</span>
+                  </button>
+                )}
               </div>
 
               <div className="profile-menu-group">

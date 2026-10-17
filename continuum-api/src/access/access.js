@@ -44,6 +44,7 @@ export async function ensureAccess(db) {
   }
   await db.collection("settings").updateOne({ _id: "access" }, { $setOnInsert: { defaultRoleId: MEMBER_ROLE, updatedAt: now } }, { upsert: true });
   await db.collection("users").createIndex({ roleId: 1 }, { name: "roleId" });
+  await db.collection("admin_audit").createIndex({ at: -1 }, { name: "at" }); // what admins changed
 }
 
 /** The role a new user gets (the default role, if it still exists). */
