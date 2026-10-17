@@ -23,6 +23,20 @@ function UserDetail({ id }) {
   const [user, setUser] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [signedOut, setSignedOut] = useState(false);
+
+  async function signOut() {
+    setBusy(true);
+    setError("");
+    try {
+      await adminApi.signOutUser(id);
+      setSignedOut(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   useEffect(() => {
     let live = true;
@@ -79,15 +93,11 @@ function UserDetail({ id }) {
 
       <section className="admin-block">
         <h4>Role</h4>
-        {user.adminByEmail ? (
-          <p className="admin-muted">Always an admin (set on the server): this can't be changed here.</p>
-        ) : (
-          <select value={user.role.id} disabled={busy} onChange={(e) => change({ roleId: e.target.value })} aria-label="Role">
-            {roles.map((r) => (
-              <option key={r.id} value={r.id}>{r.name}</option>
-            ))}
-          </select>
-        )}
+        <select value={user.role.id} disabled={busy} onChange={(e) => change({ roleId: e.target.value })} aria-label="Role">
+          {roles.map((r) => (
+            <option key={r.id} value={r.id}>{r.name}</option>
+          ))}
+        </select>
       </section>
 
       <section className="admin-block">
@@ -95,11 +105,15 @@ function UserDetail({ id }) {
         {user.disabled ? (
           <button type="button" className="admin-btn is-primary" disabled={busy} onClick={() => change({ disabled: false })}>Enable account</button>
         ) : (
-          <button type="button" className="admin-btn is-danger" disabled={busy || me || user.adminByEmail} title={me ? "You can't disable your own account" : user.adminByEmail ? "Always an admin (set on the server): can't be disabled here" : "They can't use Continuum or Deploy until enabled"} onClick={() => change({ disabled: true })}>
+          <button type="button" className="admin-btn is-danger" disabled={busy || me} title={me ? "You can't disable your own account" : "They're signed out everywhere and can't use Continuum or Deploy until enabled"} onClick={() => change({ disabled: true })}>
             Disable account
           </button>
         )}
         {user.disabled && <p className="admin-muted">Disabled: they can't use Continuum or Continuum Deploy.</p>}
+        <button type="button" className="admin-btn" disabled={busy} onClick={signOut} title="Every device: they must sign in again (Continuum and Continuum Deploy)">
+          Sign out everywhere
+        </button>
+        {signedOut && <p className="admin-muted" role="status">{me ? "Signed out everywhere: this page will ask you to sign in again." : "Signed out everywhere: they must sign in again."}</p>}
       </section>
 
       {error && <p className="admin-error" role="alert">{error}</p>}

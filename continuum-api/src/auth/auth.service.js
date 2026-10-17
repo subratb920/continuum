@@ -1,7 +1,7 @@
 import { hashPassword, verifyPassword } from "../utils/hash.js";
 import { signToken } from "../utils/jwt.js";
 import { AppError } from "../errors/AppError.js";
-import { roleForNewUser } from "../access/access.js";
+import { roleForNewUser, sessionVersion } from "../access/access.js";
 
 // Same message for unknown email, wrong password and GitHub-only accounts,
 // so the login form can't be used to discover which emails are registered.
@@ -65,6 +65,7 @@ export function createAuthService(db) {
       userId,
       email,
       authProvider: "local", // 🔥 ADD
+      tv: 0, // session version: "sign out everywhere" ends tokens with an older one
     });
 
     return { token, userId };
@@ -92,6 +93,7 @@ export function createAuthService(db) {
       userId: user._id,
       email: user.email,
       authProvider: "local", // 🔥 ADD
+      tv: sessionVersion(user),
     });
 
     return {

@@ -4,7 +4,8 @@
 //   GET    /admin/features                       every feature a role can switch
 //   GET    /admin/users?search=&role=&status=&seenDays=&sort=&page=
 //   GET    /admin/users/:id                      one user: sign-ins, apps used, projects
-//   PATCH  /admin/users/:id {roleId?, disabled?}
+//   PATCH  /admin/users/:id {roleId?, disabled?}   (disabling also signs them out everywhere)
+//   POST   /admin/users/:id/signout              signs them out everywhere (Continuum and Deploy)
 //   GET    /admin/roles   POST /admin/roles {name, description?, features}
 //   PATCH  /admin/roles/:id {name?, description?, features?}
 //   DELETE /admin/roles/:id?moveTo=              its users move to another role
@@ -43,6 +44,12 @@ export function createAdminRouter(opts = {}) {
     const r = await svc().updateUser(req.user.id, req.params.id, req.body ?? {});
     await audit(req, AUDIT_EVENTS.ADMIN_USER_UPDATED, { target: req.params.id, email: r.user.email, before: r.before, after: r.after });
     res.json(r.user);
+  });
+
+  router.post("/users/:id/signout", async (req, res) => {
+    const r = await svc().signOut(req.params.id);
+    await audit(req, AUDIT_EVENTS.ADMIN_USER_SIGNED_OUT, { target: req.params.id, ...r });
+    res.json(r);
   });
 
   router.get("/roles", async (_req, res) => res.json(await svc().listRoles()));

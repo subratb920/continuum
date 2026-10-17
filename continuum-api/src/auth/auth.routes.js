@@ -3,7 +3,7 @@ import { signup, login } from "./auth.controller.js";
 import fetch from "node-fetch";
 import jwt from "jsonwebtoken";
 import { getDB } from "../config/db.js";
-import { roleForNewUser } from "../access/access.js";
+import { roleForNewUser, sessionVersion } from "../access/access.js";
 import { recordLogin } from "../access/activity.js";
 import { clientAuthCallbackUrl, githubAuthorizeUrl, githubCallbackUrl } from "../config/urls.js";
 
@@ -199,7 +199,9 @@ router.get("/github/callback", async (req, res) => {
 
         if (existingSession) {
             try {
-                jwt.verify(existingSession.token, JWT_SECRET);
+                const kept = jwt.verify(existingSession.token, JWT_SECRET);
+                // A session from before "sign out everywhere" isn't reused
+                if ((kept.tv ?? 0) !== sessionVersion(dbUser)) throw new Error("old session");
 
                 await recordLogin(db, { userId: dbUser._id, email: primaryEmail, method: "github", req }).catch(() => {});
                 return res.redirect(clientAuthCallbackUrl(existingSession.token));
@@ -216,6 +218,7 @@ router.get("/github/callback", async (req, res) => {
                 userId: dbUser._id,
                 email: primaryEmail,
                 authProvider: "github",
+                tv: sessionVersion(dbUser), // session version (sign out everywhere)
             },
             JWT_SECRET,
             { expiresIn: "7d" }

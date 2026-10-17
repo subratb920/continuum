@@ -8,7 +8,7 @@
 
 import { ObjectId } from "mongodb";
 import { AppError } from "../errors/AppError.js";
-import { ADMIN_ROLE, MEMBER_ROLE, adminEmails, clearAccessCache, roleFeatures } from "../access/access.js";
+import { ADMIN_ROLE, MEMBER_ROLE, clearAccessCache, countAdmins, roleFeatures, signOutEverywhere } from "../access/access.js";
 import { FEATURES, FEATURE_IDS } from "../access/features.js";
 
 const PAGE = 50;
@@ -31,16 +31,14 @@ const features = (v) => {
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** A user as the list shows them. */
-function userRow(u, roles, admins, apps) {
-  const adminByEmail = admins.has(String(u.email ?? "").toLowerCase());
-  const roleId = adminByEmail ? ADMIN_ROLE : u.roleId ?? MEMBER_ROLE;
+function userRow(u, roles, apps) {
+  const roleId = u.roleId ?? MEMBER_ROLE;
   return {
     id: String(u._id),
     email: u.email ?? null,
     signsInWith: u.githubId ? "github" : "email",
     github: u.github ?? null,
     role: { id: roleId, name: roles.get(roleId)?.name ?? roleId },
-    adminByEmail, // in ADMIN_EMAILS: always admin, can't be changed here
     disabled: !!u.disabled,
     createdAt: u.createdAt ?? null,
     lastLoginAt: u.lastLoginAt ?? null,
@@ -51,7 +49,7 @@ function userRow(u, roles, admins, apps) {
   };
 }
 
-export function createAdminService(db, { env = process.env } = {}) {
+export function createAdminService(db) {
   const users = db.collection("users");
   const roles = db.collection("roles");
 
@@ -87,7 +85,6 @@ export function createAdminService(db, { env = process.env } = {}) {
      * filter by role, status (active | disabled) and seen in the last N days.
      */
     async listUsers({ search, role, status, seenDays, sort = "created", page = 1 } = {}) {
-      const admins = adminEmails(env);
       const q = {};
       if (search) {
         const re = new RegExp(escapeRe(String(search).slice(0, 100)), "i");
@@ -96,13 +93,8 @@ export function createAdminService(db, { env = process.env } = {}) {
       if (status === "disabled") q.disabled = true;
       if (status === "active") q.disabled = { $ne: true };
       if (Number(seenDays) > 0) q.lastSeenAt = { $gte: new Date(Date.now() - Number(seenDays) * 86_400_000) };
-      if (role) {
-        // ADMIN_EMAILS are admins whatever their roleId; users without one are members
-        const emails = [...admins];
-        if (role === ADMIN_ROLE) q.$and = [{ $or: [{ roleId: ADMIN_ROLE }, { email: { $in: emails } }] }];
-        else if (role === MEMBER_ROLE) q.$and = [{ $or: [{ roleId: MEMBER_ROLE }, { roleId: { $exists: false } }] }, { email: { $nin: emails } }];
-        else q.$and = [{ roleId: role }, { email: { $nin: emails } }];
-      }
+      // Users without a role (from before roles) are members
+      if (role) q.$and = [role === MEMBER_ROLE ? { $or: [{ roleId: MEMBER_ROLE }, { roleId: { $exists: false } }] } : { roleId: String(role) }];
       const p = Math.max(1, Number(page) || 1);
       const order = sort === "seen" ? { lastSeenAt: -1, _id: -1 } : { createdAt: -1, _id: -1 };
       const projection = { passwordHash: 0, githubAccessToken: 0 };
@@ -112,7 +104,7 @@ export function createAdminService(db, { env = process.env } = {}) {
         roleMap(),
       ]);
       const apps = await appsOf(list.map((u) => u._id));
-      return { users: list.map((u) => userRow(u, rmap, admins, apps)), total, page: p, pageSize: PAGE };
+      return { users: list.map((u) => userRow(u, rmap, apps)), total, page: p, pageSize: PAGE };
     },
 
     /** One user: everything in the list, plus their sign-ins and how much they have. */
@@ -127,15 +119,16 @@ export function createAdminService(db, { env = process.env } = {}) {
         db.collection("projects").countDocuments({ userId: _id }),
       ]);
       return {
-        ...userRow(u, rmap, adminEmails(env), apps),
+        ...userRow(u, rmap, apps),
         projects,
         logins: logins.map(({ _id: lid, userId, expireAt, ...l }) => ({ id: String(lid), ...l })),
       };
     },
 
     /**
-     * Changes a user's role or disables them. An ADMIN_EMAILS user can't be
-     * changed here (always admin), and nobody disables themself.
+     * Changes a user's role or disables them. Nobody disables themself, and
+     * the last admin who can sign in stays an admin (nobody could get back
+     * in otherwise). Disabling also signs them out everywhere.
      */
     async updateUser(actorId, id, body = {}) {
       const _id = oid(id);
@@ -143,29 +136,38 @@ export function createAdminService(db, { env = process.env } = {}) {
       if (!u) throw new AppError("No such user.", 404, "NOT_FOUND");
       const set = {};
       if (body.roleId !== undefined) {
-        if (adminEmails(env).has(String(u.email ?? "").toLowerCase())) throw new AppError("This user is always an admin (set on the server): their role can't be changed here.", 409, "ADMIN_BY_EMAIL");
         if (!(await roles.findOne({ _id: String(body.roleId) }, { projection: { _id: 1 } }))) throw new AppError("No such role.", 400, "VALIDATION_ERROR");
         set.roleId = String(body.roleId);
       }
       if (body.disabled !== undefined) {
         if (typeof body.disabled !== "boolean") throw new AppError("disabled must be true or false.", 400, "VALIDATION_ERROR");
         if (body.disabled && String(_id) === String(actorId)) throw new AppError("You can't disable your own account.", 409, "SELF");
-        if (body.disabled && adminEmails(env).has(String(u.email ?? "").toLowerCase())) throw new AppError("This user is always an admin (set on the server): they can't be disabled here.", 409, "ADMIN_BY_EMAIL");
         set.disabled = body.disabled;
       }
       if (!Object.keys(set).length) throw new AppError("Nothing to change (roleId, disabled).", 400, "VALIDATION_ERROR");
+      const wasAdmin = u.roleId === ADMIN_ROLE && !u.disabled;
+      const staysAdmin = (set.roleId ?? u.roleId) === ADMIN_ROLE && !(set.disabled ?? u.disabled);
+      if (wasAdmin && !staysAdmin && (await countAdmins(db)) <= 1) {
+        throw new AppError("This is the last admin: make someone else an admin first.", 409, "LAST_ADMIN");
+      }
       await users.updateOne({ _id }, { $set: { ...set, updatedAt: new Date() } });
+      if (set.disabled === true) await signOutEverywhere(db, _id);
       clearAccessCache(_id);
       return { before: { roleId: u.roleId ?? MEMBER_ROLE, disabled: !!u.disabled }, after: set, user: await this.getUser(id) };
     },
 
+    /** Signs a user out everywhere: Continuum (every device) and Continuum Deploy. */
+    async signOut(id) {
+      const _id = oid(id);
+      if (!(await users.findOne({ _id }, { projection: { _id: 1 } }))) throw new AppError("No such user.", 404, "NOT_FOUND");
+      return signOutEverywhere(db, _id);
+    },
+
     /** Roles, with how many users have each and its features (admin: all, always). */
     async listRoles() {
-      const admins = [...adminEmails(env)];
       const list = await roles.find().sort({ builtIn: -1, name: 1 }).toArray();
       const settings = await db.collection("settings").findOne({ _id: "access" });
-      const counts = new Map((await users.aggregate([{ $match: { email: { $nin: admins } } }, { $group: { _id: { $ifNull: ["$roleId", MEMBER_ROLE] }, n: { $sum: 1 } } }]).toArray()).map((r) => [r._id, r.n]));
-      const byEmail = admins.length ? await users.countDocuments({ email: { $in: admins } }) : 0;
+      const counts = new Map((await users.aggregate([{ $group: { _id: { $ifNull: ["$roleId", MEMBER_ROLE] }, n: { $sum: 1 } } }]).toArray()).map((r) => [r._id, r.n]));
       return list.map((r) => ({
         id: r._id,
         name: r.name,
@@ -174,7 +176,7 @@ export function createAdminService(db, { env = process.env } = {}) {
         builtIn: !!r.builtIn,
         locked: r._id === ADMIN_ROLE, // always everything
         isDefault: (settings?.defaultRoleId ?? MEMBER_ROLE) === r._id,
-        users: (counts.get(r._id) ?? 0) + (r._id === ADMIN_ROLE ? byEmail : 0),
+        users: counts.get(r._id) ?? 0,
       }));
     },
 
@@ -228,7 +230,6 @@ export function createAdminService(db, { env = process.env } = {}) {
 
     async getSettings() {
       const s = await db.collection("settings").findOne({ _id: "access" });
-      // (Which emails are always admins stays on the server: never sent to a page)
       return { defaultRoleId: s?.defaultRoleId ?? MEMBER_ROLE };
     },
 

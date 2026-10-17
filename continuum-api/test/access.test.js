@@ -43,7 +43,7 @@ async function setup() {
   return { db, user };
 }
 
-const env = { ADMIN_EMAILS: "Boss@Example.com, second@example.com" };
+const env = {};
 
 test("access: users from before roles are members (everything but admin); a role's features are what it switches on", async () => {
   const { db, user } = await setup();
@@ -62,10 +62,14 @@ test("access: users from before roles are members (everything but admin); a role
   assert.equal(await accessFor(db, new ObjectId(), { env }), null, "no such user");
 });
 
-test("access: ADMIN_EMAILS are always admins, and admin always has every feature", async () => {
+test("access: only the admin role makes an admin (nothing outside the database does), and admin always has every feature", async () => {
   const { db, user } = await setup();
+  process.env.ADMIN_EMAILS = "boss@example.com"; // a setting like this means nothing
   const boss = await accessFor(db, user({ email: "boss@example.com", roleId: "viewer" }), { env });
-  assert.deepEqual([boss.role.id, boss.isAdmin, boss.features], [ADMIN_ROLE, true, FEATURE_IDS]);
+  delete process.env.ADMIN_EMAILS;
+  assert.equal(boss.isAdmin, false);
+  const admin = await accessFor(db, user({ roleId: ADMIN_ROLE }), { env });
+  assert.deepEqual([admin.role.id, admin.isAdmin, admin.features], [ADMIN_ROLE, true, FEATURE_IDS]);
   // Even if the admin role's document were edited down
   await db.collection("roles").updateOne({ _id: ADMIN_ROLE }, { $set: { features: ["dashboard"] } });
   clearAccessCache();
@@ -95,13 +99,14 @@ test("access: cached for a minute, cleared at once by the copy that changes it",
   assert.equal((await accessFor(db, id, { env, now: 62_000 })).disabled, false, "cleared");
 });
 
-test("access: a feature switched off answers 403 No feature access; reading and changing can need different features; disabled accounts get nothing", async () => {
+test("access: a feature switched off answers 403 No feature access; reading and changing can need different features; disabled accounts get nothing; old sessions end", async () => {
   const { db, user } = await setup();
   await db.collection("roles").updateOne({ _id: "viewer" }, { $setOnInsert: { name: "Viewer", features: ["dashboard"] } }, { upsert: true });
-  const ids = { viewer: user({ roleId: "viewer" }), member: user({}), off: user({ disabled: true }) };
+  const ids = { viewer: user({ roleId: "viewer" }), member: user({}), off: user({ disabled: true }), outdated: user({ tokenVersion: 1 }) };
 
   const app = express();
-  app.use((req, _res, next) => ((req.user = { id: ids[req.get("x-who")] }), next()));
+  // Tokens carry the session version they were made with (here 0: before any "sign out everywhere")
+  app.use((req, _res, next) => ((req.user = { id: ids[req.get("x-who")], tv: 0 }), next()));
   app.use(withAccess({ db: () => db, env }));
   app.get("/brain", requireFeature("agents"), (_req, res) => res.json({ ok: true }));
   app.all("/projects", requireFeatureByMethod({ read: ["interval", "dashboard"], write: ["interval"] }), (_req, res) => res.json({ ok: true }));
@@ -124,6 +129,11 @@ test("access: a feature switched off answers 403 No feature access; reading and 
     const disabled = await call("GET", "/brain", "off");
     assert.equal(disabled.status, 403);
     assert.equal((await disabled.json()).code, "ACCOUNT_DISABLED");
+
+    // Signed out everywhere since the token was made: sign in again
+    const ended = await call("GET", "/brain", "outdated");
+    assert.equal(ended.status, 401);
+    assert.equal((await ended.json()).code, "SESSION_ENDED");
   } finally {
     server.close();
   }

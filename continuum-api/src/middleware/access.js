@@ -26,6 +26,8 @@ export function withAccess(opts = {}) {
       const access = await accessFor(db(), req.user.id, opts);
       if (!access) return res.status(401).json({ error: "This account no longer exists.", code: "NO_ACCOUNT" });
       if (access.disabled) return res.status(403).json({ error: "This account is disabled. Ask your admin.", code: "ACCOUNT_DISABLED" });
+      // Signed out everywhere since this token was made: sign in again
+      if ((req.user.tv ?? 0) !== access.tokenVersion) return res.status(401).json({ error: "You were signed out. Sign in again.", code: "SESSION_ENDED" });
       req.access = access;
       if (!opts.db) usage.sawUser(req.user.id); // last seen (not in tests with their own database)
       next();

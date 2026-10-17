@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 
 const TOKEN_KEY = "continuum_token";
@@ -104,10 +104,15 @@ export function AuthProvider({ children }) {
     setStatus("unauthenticated");
   }
 
+  useEffect(() => {
+    logoutRef.current = logout;
+  });
+
   function overrideAuthProvider(provider) {
     setAuthProvider(provider);
   }
 
+  const logoutRef = useRef(null);
   // Your access: once signed in, and again whenever this tab comes back (an admin may have changed your role)
   const loadAccess = useCallback(async () => {
     const token = localStorage.getItem(TOKEN_KEY);
@@ -115,6 +120,8 @@ export function AuthProvider({ children }) {
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/me`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
       if (res.ok) setAccess(await res.json());
+      // Signed out everywhere (or the account is gone): sign in again
+      else if (res.status === 401) logoutRef.current?.();
       // A disabled account: nothing is open
       else if (res.status === 403) setAccess({ disabled: true, features: [], allFeatures: [], role: null, isAdmin: false });
       // An API from before roles (no /me): everything stays open, as it was

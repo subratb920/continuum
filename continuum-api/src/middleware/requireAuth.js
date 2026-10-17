@@ -18,6 +18,7 @@ export function requireAuth(req, res, next) {
         typeof payload.userId === "string"
           ? new ObjectId(payload.userId)
           : payload.userId,
+      tv: payload.tv ?? 0, // the session version it was made with (withAccess checks it)
     };
 
     // ✅ LOG AFTER user is set

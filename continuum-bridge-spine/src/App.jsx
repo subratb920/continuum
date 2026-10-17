@@ -4,6 +4,7 @@ import { assertProject } from "./utils/assertions";
 
 import { useAuth } from "./state/authStore";
 import NoAccess from "./components/NoAccess";
+import AdminClaim from "./screens/admin/AdminClaim";
 import { useAppOpened } from "./state/useAppOpened";
 import AuthGate from "./auth/AuthGate";
 import SsoAuthorize from "./pages/SsoAuthorize";
@@ -83,7 +84,7 @@ export default function App() {
      🔒 AUTH + CORE STATE
      ========================================================= */
 
-  const { status, logout, can } = useAuth();
+  const { status, logout, can, access } = useAuth();
   // Projects and intervals can be read with Interval Setup or the Dashboard switched on
   const projectsOpen = can("interval") || can("dashboard");
   const { pathname, state: locationState } = useLocation();
@@ -620,8 +621,11 @@ export default function App() {
     />
   );
 
-  // A screen your role has switched off: "No feature access" in its panes
+  // No admin yet: the Admin screen offers to claim it (the one-time setup code)
   const slots =
+    screen.id === "admin" && !can("admin") && access?.adminSetup
+      ? { left: <NoAccess feature="admin" compact />, center: <AdminClaim />, right: <NoAccess feature="admin" compact /> }
+      : // A screen your role has switched off: "No feature access" in its panes
     screen.feature && !can(screen.feature)
       ? { left: <NoAccess feature={screen.feature} compact />, center: <NoAccess feature={screen.feature} />, right: <NoAccess feature={screen.feature} compact /> }
       : screen.slots({ intervalCenter, dashboardCenter, navigate });

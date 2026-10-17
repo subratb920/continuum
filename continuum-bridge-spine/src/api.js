@@ -335,6 +335,9 @@ export const adminApi = {
   users: (query = {}) => request("GET", `/admin/users?${new URLSearchParams(Object.entries(query).filter(([, v]) => v !== "" && v != null))}`),
   user: (id) => request("GET", `/admin/users/${id}`),
   updateUser: (id, changes) => request("PATCH", `/admin/users/${id}`, changes),
+  signOutUser: (id) => request("POST", `/admin/users/${id}/signout`),
+  /** The first admin: the one-time setup code from continuum-api's log. */
+  claim: (code) => request("POST", "/me/claim-admin", { code }),
   roles: () => request("GET", "/admin/roles"),
   createRole: (role) => request("POST", "/admin/roles", role),
   updateRole: (id, changes) => request("PATCH", `/admin/roles/${encodeURIComponent(id)}`, changes),

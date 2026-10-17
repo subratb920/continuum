@@ -3,7 +3,7 @@
 // What a role can switch on or off. Each feature opens part of Continuum;
 // a role is the set of features switched on. Off: the screen says "No feature
 // access" and the server refuses (403 NO_FEATURE_ACCESS). Admin opens the
-// admin area; only roles with it (and ADMIN_EMAILS) are admins.
+// admin area; only users whose role has it (in the database) are admins.
 
 export const FEATURES = [
   { id: "interval", label: "Interval Setup", description: "Projects, intervals and the Bridge Spine" },

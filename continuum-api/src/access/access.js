@@ -5,14 +5,23 @@
 // and member (everything but admin). Users from before roles, with no roleId,
 // are members. A new user gets the default role (settings "access").
 //
-// ADMIN_EMAILS (comma-separated) are always admins, whatever their role says:
-// the first admin comes from there, and nobody can lock everyone out.
+// Admins are only ever users whose role is admin, in this database: nothing
+// outside it (no setting, no cloud) says who they are. The first one claims
+// it with a one-time setup code that this API writes to its own log while
+// there's no admin (claimAdmin); after that, admins make admins. The last
+// admin can't be removed (admin.service.js).
+//
+// Sessions: each user has a session version (users.tokenVersion); every
+// sign-in token carries it (tv). Signing someone out everywhere raises it,
+// so every token made before stops working at once.
 //
 // A user's access is cached for a minute per API copy (cleared at once in the
 // copy that changes it), so a change applies within a minute everywhere.
 
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { ObjectId } from "mongodb";
 import { FEATURE_IDS } from "./features.js";
+import { createOAuthStore } from "../oauth/oauth.store.js";
 
 export const ADMIN_ROLE = "admin";
 export const MEMBER_ROLE = "member";
@@ -23,17 +32,8 @@ const BUILT_IN = [
 ];
 
 const CACHE_MS = 60_000;
+const SETUP_HOURS = 24;
 const cache = new Map(); // userId → { at, access }
-
-/** The emails that are always admins (ADMIN_EMAILS), lowercased. */
-export function adminEmails(env = process.env) {
-  return new Set(
-    String(env.ADMIN_EMAILS ?? "")
-      .split(",")
-      .map((e) => e.trim().toLowerCase())
-      .filter(Boolean)
-  );
-}
 
 /** The built-in roles and the access settings, created once (safe on every start). */
 export async function ensureAccess(db) {
@@ -45,6 +45,61 @@ export async function ensureAccess(db) {
   await db.collection("settings").updateOne({ _id: "access" }, { $setOnInsert: { defaultRoleId: MEMBER_ROLE, updatedAt: now } }, { upsert: true });
   await db.collection("users").createIndex({ roleId: 1 }, { name: "roleId" });
   await db.collection("admin_audit").createIndex({ at: -1 }, { name: "at" }); // what admins changed
+}
+
+/** Admins who can sign in (admin role, not disabled). */
+export function countAdmins(db) {
+  return db.collection("users").countDocuments({ roleId: ADMIN_ROLE, disabled: { $ne: true } });
+}
+
+const hashCode = (code) => createHash("sha256").update(String(code).replace(/[^A-Z0-9]/gi, "").toUpperCase()).digest();
+
+/**
+ * While there's no admin: a one-time setup code (24 hours), returned for the
+ * API's own log only (never sent to a page). A code still valid is kept (only
+ * its hash is stored, so another copy of the API starting doesn't replace the
+ * one already in a log): { existing: true }. With an admin: none, and any old
+ * code is gone. Run on every start.
+ */
+export async function prepareAdminSetup(db, { now = new Date() } = {}) {
+  const settings = db.collection("settings");
+  if ((await countAdmins(db)) > 0) {
+    await settings.updateOne({ _id: "access" }, { $unset: { adminSetup: "" } });
+    return null;
+  }
+  const current = (await settings.findOne({ _id: "access" }, { projection: { adminSetup: 1 } }))?.adminSetup;
+  if (current?.expiresAt > now) return { existing: true, expiresAt: current.expiresAt };
+  const raw = randomBytes(10).toString("base64url").replace(/[^A-Za-z0-9]/g, "").toUpperCase().padEnd(12, "X").slice(0, 12);
+  const code = `${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8, 12)}`;
+  const expiresAt = new Date(now.getTime() + SETUP_HOURS * 3_600_000);
+  await settings.updateOne({ _id: "access" }, { $set: { adminSetup: { codeHash: hashCode(code).toString("hex"), expiresAt } } }, { upsert: true });
+  return { code, expiresAt };
+}
+
+/** Is there no admin yet, with a setup code waiting (the Admin page then offers to claim it)? */
+export async function adminSetupOpen(db, { now = new Date() } = {}) {
+  const s = await db.collection("settings").findOne({ _id: "access" }, { projection: { adminSetup: 1 } });
+  if (!s?.adminSetup || s.adminSetup.expiresAt <= now) return false;
+  return (await countAdmins(db)) === 0;
+}
+
+/**
+ * The first admin: a signed-in user with the setup code becomes admin, once,
+ * only while there's no admin. False for a wrong or expired code.
+ */
+export async function claimAdmin(db, userId, code, { now = new Date() } = {}) {
+  const settings = db.collection("settings");
+  const s = await settings.findOne({ _id: "access" }, { projection: { adminSetup: 1 } });
+  if (!s?.adminSetup || s.adminSetup.expiresAt <= now || (await countAdmins(db)) > 0) return false;
+  const want = Buffer.from(s.adminSetup.codeHash, "hex");
+  const got = hashCode(code ?? "");
+  if (want.length !== got.length || !timingSafeEqual(want, got)) return false;
+  // Used once: the code goes before the role is given (two claims at once: one wins)
+  const taken = await settings.updateOne({ _id: "access", "adminSetup.codeHash": s.adminSetup.codeHash }, { $unset: { adminSetup: "" } });
+  if (taken.modifiedCount !== 1) return false;
+  await db.collection("users").updateOne({ _id: new ObjectId(String(userId)) }, { $set: { roleId: ADMIN_ROLE, updatedAt: now } });
+  clearAccessCache(userId);
+  return true;
 }
 
 /** The role a new user gets (the default role, if it still exists). */
@@ -60,20 +115,21 @@ export function roleFeatures(role) {
   return FEATURE_IDS.filter((f) => role?.features?.includes(f));
 }
 
+/** A user's session version: what their sign-in tokens must carry (tv). */
+export const sessionVersion = (user) => user?.tokenVersion ?? 0;
+
 /**
- * A user's access now: { userId, email, disabled, role: { id, name }, features, isAdmin },
- * or null when there's no such user.
+ * A user's access now: { userId, email, disabled, role: { id, name }, features,
+ * isAdmin, tokenVersion }, or null when there's no such user.
  */
-export async function accessFor(db, userId, { env = process.env, now = Date.now() } = {}) {
+export async function accessFor(db, userId, { now = Date.now() } = {}) {
   const key = String(userId);
   const hit = cache.get(key);
   if (hit && now - hit.at < CACHE_MS) return hit.access;
 
-  const user = await db.collection("users").findOne({ _id: new ObjectId(key) }, { projection: { email: 1, roleId: 1, disabled: 1 } });
+  const user = await db.collection("users").findOne({ _id: new ObjectId(key) }, { projection: { email: 1, roleId: 1, disabled: 1, tokenVersion: 1 } });
   if (!user) return null;
-  const email = String(user.email ?? "").toLowerCase();
-  const roleId = adminEmails(env).has(email) ? ADMIN_ROLE : user.roleId ?? MEMBER_ROLE;
-  const role = (await db.collection("roles").findOne({ _id: roleId })) ?? (await db.collection("roles").findOne({ _id: MEMBER_ROLE })) ?? BUILT_IN[1];
+  const role = (await db.collection("roles").findOne({ _id: user.roleId ?? MEMBER_ROLE })) ?? (await db.collection("roles").findOne({ _id: MEMBER_ROLE })) ?? BUILT_IN[1];
   const features = roleFeatures(role);
   const access = {
     userId: key,
@@ -82,6 +138,7 @@ export async function accessFor(db, userId, { env = process.env, now = Date.now(
     role: { id: role._id, name: role.name },
     features,
     isAdmin: features.includes("admin"),
+    tokenVersion: sessionVersion(user),
   };
   cache.set(key, { at: now, access });
   return access;
@@ -91,4 +148,18 @@ export async function accessFor(db, userId, { env = process.env, now = Date.now(
 export function clearAccessCache(userId) {
   if (userId === undefined) cache.clear();
   else cache.delete(String(userId));
+}
+
+/**
+ * Signs a user out everywhere: every Continuum sign-in token made before stops
+ * working (session version up), GitHub sign-in's kept session goes, and so do
+ * their Continuum Deploy sessions.
+ */
+export async function signOutEverywhere(db, userId, { now = new Date() } = {}) {
+  const _id = new ObjectId(String(userId));
+  await db.collection("users").updateOne({ _id }, { $inc: { tokenVersion: 1 }, $set: { updatedAt: now } });
+  await db.collection("sessions").deleteMany({ userId: _id });
+  const deploySessions = await createOAuthStore(db).revokeAllForUser(_id);
+  clearAccessCache(_id);
+  return { deploySessions };
 }
