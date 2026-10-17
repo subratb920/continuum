@@ -8,6 +8,7 @@
     {
       "name": "continuum-api",
       "path": "continuum-api",
+      "clientInfo": true,
       "dockerfile": "continuum-api/Dockerfile.cloud",
       "dependsOn": [
         "data-runner"
