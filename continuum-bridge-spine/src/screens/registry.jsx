@@ -23,12 +23,15 @@ import DataInspector from "./data/DataInspector";
  *     pane keeps the console's own (Projects on the left, Bridge Spine on the right)
  *   Provider: state the screen keeps while another screen shows (see ScreenProviders.jsx)
  *   useBadge(): a count beside the switcher button (a hook, called on every render)
+ *   feature: what your role must have switched on (access/features); off, the
+ *     screen shows "No feature access" (and the switcher a lock)
  *
  * ctx comes from App: { intervalCenter, dashboardCenter, navigate }
  */
 export const SCREENS = [
   {
     id: "interval",
+    feature: "interval",
     path: "/console",
     label: "Interval Setup",
     icon: "⏱",
@@ -40,6 +43,7 @@ export const SCREENS = [
   },
   {
     id: "agents",
+    feature: "agents",
     path: "/brain",
     label: "Agents",
     icon: "✦",
@@ -56,6 +60,7 @@ export const SCREENS = [
     ? [
         {
           id: "data",
+          feature: "data",
           path: "/data",
           label: "Data",
           icon: "▦",
@@ -71,6 +76,7 @@ export const SCREENS = [
     : []),
   {
     id: "dashboard",
+    feature: "dashboard",
     path: "/dashboard",
     label: "Dashboard",
     icon: "📊",

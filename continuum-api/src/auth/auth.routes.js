@@ -3,6 +3,7 @@ import { signup, login } from "./auth.controller.js";
 import fetch from "node-fetch";
 import jwt from "jsonwebtoken";
 import { getDB } from "../config/db.js";
+import { roleForNewUser } from "../access/access.js";
 import { clientAuthCallbackUrl, githubAuthorizeUrl, githubCallbackUrl } from "../config/urls.js";
 
 const router = Router();
@@ -118,6 +119,7 @@ router.get("/github/callback", async (req, res) => {
            const result = await users.insertOne({
                githubId: githubUser.id,
                email: primaryEmail,
+               roleId: await roleForNewUser(db), // the default role for new users
                createdAt: new Date(),
                updatedAt: new Date(),
             });

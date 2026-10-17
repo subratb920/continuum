@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { DEPLOY_AVAILABLE, deployCloudPageUrl, deployHomeUrl, deployListUrl, deployProjectUrl } from "../deployLinks";
 import { importFromDevice } from "../utils/importFromDevice";
+import { useAuth } from "../state/authStore";
 
 /**
  * What Create/Import and Deploy do, shared by the header's menus (wide screens)
@@ -19,10 +20,20 @@ export const DEPLOY_TARGETS = [
   { label: "Google Cloud (GCP)", cloud: "gcp", deploysProject: true },
 ];
 
-/** The actions; `done` runs first (e.g. close the menu it was chosen from). */
+/**
+ * The actions; `done` runs first (e.g. close the menu it was chosen from).
+ * One your role has switched off opens "No feature access" instead.
+ */
 export function useShellActions(selectedProject, done = () => {}) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { can } = useAuth();
+  /** The action, or "No feature access" when its feature is switched off. */
+  const gated = (feature, act) => (...args) => {
+    if (can(feature)) return act(...args);
+    done();
+    navigate("/no-access", { state: { feature, from: pathname } });
+  };
   // Only a project imported from GitHub has a repository to deploy
   const deployable = selectedProject?.source === "github" ? selectedProject : null;
 
@@ -30,7 +41,7 @@ export function useShellActions(selectedProject, done = () => {}) {
     deployable,
 
     /** Continuum Deploy, in a new tab so a running interval here is never interrupted */
-    openDeployApp(target) {
+    openDeployApp: gated("deploy", (target) => {
       done();
       // No cloud ("Show all"): the start screen with every cloud. A cloud: the selected project's
       // deploy page, or (none selected) Railway's deployments / GCP's step-by-step page
@@ -42,27 +53,27 @@ export function useShellActions(selectedProject, done = () => {}) {
             ? deployCloudPageUrl("gcp")
             : deployListUrl(target.cloud);
       window.open(url, "_blank", "noopener");
-    },
+    }),
 
-    newProject() {
+    newProject: gated("create", () => {
       done();
       navigate("/new", { state: { from: pathname } });
-    },
+    }),
 
-    externalCreate() {
+    externalCreate: gated("create", () => {
       done();
       if (CREATE_URL) window.open(CREATE_URL, "_blank", "noopener");
-    },
+    }),
 
     /** Pick a folder; the console's Create Project window opens with its name */
-    importFromDevice() {
+    importFromDevice: gated("create", () => {
       done();
       importFromDevice(() => pathname !== "/console" && navigate("/console"));
-    },
+    }),
 
-    importFromGithub() {
+    importFromGithub: gated("import_github", () => {
       done();
       navigate("/import", { state: { from: pathname } });
-    },
+    }),
   };
 }

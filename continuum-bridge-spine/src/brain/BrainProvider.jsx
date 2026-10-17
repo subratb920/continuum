@@ -166,8 +166,9 @@ function view(state, t) {
 }
 
 export function BrainProvider({ children }) {
-  const { status } = useAuth();
-  const signedIn = status === "authenticated";
+  const { status, can } = useAuth();
+  // Signed in, with Agents switched on for your role (else nothing connects; the screen says "No feature access")
+  const signedIn = status === "authenticated" && can("agents");
   const [state, dispatch] = useReducer(reducer, initial);
   const client = getBrainClient();
   const interval = useRunningInterval();

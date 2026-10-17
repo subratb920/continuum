@@ -23,6 +23,7 @@
 
 import { Router } from "express";
 import { getDB } from "../config/db.js";
+import { accessFor } from "../access/access.js";
 import { getOAuthConfig } from "./oauth.config.js";
 import { randomToken, signJwt, verifyJwt } from "./oauth.crypto.js";
 import { byFolder, detectDatabases, filesToRead } from "./detect-databases.js";
@@ -33,8 +34,11 @@ import { createSupportService } from "../services/supportRequests.js";
 
 const router = Router();
 
-/** Only continuum-deploy's access tokens, checked in full (signature, issuer, audience, expiry). */
-function requireDeployToken(req, res, next) {
+/**
+ * Only continuum-deploy's access tokens, checked in full (signature, issuer,
+ * audience, expiry), for users whose role still has the deploy feature.
+ */
+async function requireDeployToken(req, res, next) {
   const cfg = getOAuthConfig();
   if (!cfg) return res.status(503).json({ error: "SSO is not configured on this server." });
   const header = req.headers.authorization ?? "";
@@ -43,6 +47,13 @@ function requireDeployToken(req, res, next) {
   if (!claims) return res.status(401).json({ error: "Invalid or expired access token." });
   if (!ObjectId.isValid(claims.sub)) return res.status(401).json({ error: "Invalid or expired access token." });
   req.deployUser = { id: new ObjectId(claims.sub), email: claims.email };
+  try {
+    const access = await accessFor(getDB(), req.deployUser.id);
+    if (!access || access.disabled) return res.status(403).json({ error: "This account is disabled. Ask your admin.", code: "ACCOUNT_DISABLED" });
+    if (!access.features.includes("deploy")) return res.status(403).json({ error: "No feature access: Deploy isn't switched on for your role. Ask your admin.", code: "NO_FEATURE_ACCESS", feature: "deploy" });
+  } catch (err) {
+    return next(err);
+  }
   next();
 }
 

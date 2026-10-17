@@ -25,6 +25,7 @@ export function createItems(actions, authProvider) {
   return [
     {
       key: "continuum",
+      feature: "create",
       icon: <LuSparkles className="menu-logo menu-logo-brand" />,
       title: phone ? "Create on GitHub" : "Create using Continuum",
       hint: phone ? "Made on Continuum's server, kept in your GitHub." : "A starter project: React, Node, Spring, Python and more.",
@@ -36,6 +37,7 @@ export function createItems(actions, authProvider) {
       : [
           {
             key: "device",
+            feature: "create",
             icon: <LuFolderOpen className="menu-logo" />,
             title: "Import from device",
             hint: "A project folder on this device.",
@@ -44,6 +46,7 @@ export function createItems(actions, authProvider) {
         ]),
     {
       key: "github",
+      feature: "import_github",
       icon: <SiGithub className="menu-logo" />,
       title: "Import from GitHub",
       // GitHub sign-ins only; greyed out (with the reason) for email sign-ins
@@ -55,6 +58,7 @@ export function createItems(actions, authProvider) {
       ? [
           {
             key: "backstage",
+            feature: "create",
             icon: <SiBackstage className="menu-logo" />,
             title: "Create via Backstage",
             hint: "Your organisation's templates.",
@@ -72,6 +76,7 @@ export function deployItems(actions) {
   return [
     ...DEPLOY_TARGETS.map((t) => ({
       key: t.cloud,
+      feature: "deploy",
       icon: CLOUD_ICONS[t.cloud],
       title: `Deploy on ${t.label}`,
       hint: deployable ? `Deploys ${deployable.name}.` : t.cloud === "gcp" ? "Account, infrastructure and projects." : "Your Railway deployments.",
@@ -79,6 +84,7 @@ export function deployItems(actions) {
     })),
     {
       key: "all",
+      feature: "deploy",
       icon: <LuLayoutGrid className="menu-logo" />,
       title: "Show all",
       hint: "Every cloud, in Continuum Deploy.",

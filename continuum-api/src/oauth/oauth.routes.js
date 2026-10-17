@@ -13,6 +13,8 @@ import express from "express";
 import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
 import { requireAuth } from "../middleware/requireAuth.js";
+import { authed, requireFeature } from "../middleware/access.js";
+import { accessFor } from "../access/access.js";
 import { getOAuthConfig } from "./oauth.config.js";
 import { isValidChallenge, publicJwk, randomToken, safeEqual, sha256, signJwt, verifyPkce } from "./oauth.crypto.js";
 import { createOAuthStore } from "./oauth.store.js";
@@ -74,7 +76,8 @@ async function issueTokens(cfg, store, user, familyId) {
 }
 
 // --- Authorize: called by the Continuum UI page /sso/authorize -------------------
-router.post("/authorize", requireConfig, requireAuth, async (req, res) => {
+// Signing in to Deploy needs the deploy feature (and an account that isn't disabled)
+router.post("/authorize", requireConfig, authed, requireFeature("deploy"), async (req, res) => {
   const cfg = req.oauth;
   const { client_id, redirect_uri, state, code_challenge, code_challenge_method } = req.body ?? {};
 
@@ -106,6 +109,12 @@ router.post("/authorize", requireConfig, requireAuth, async (req, res) => {
 });
 
 // --- Token: server-to-server from continuum-deploy-api ---------------------------
+/** May this user use Continuum Deploy now (deploy feature on, account not disabled)? */
+async function deployAllowed(db, userId) {
+  const access = await accessFor(db, userId);
+  return !!access && !access.disabled && access.features.includes("deploy");
+}
+
 router.post("/token", requireConfig, async (req, res) => {
   const cfg = req.oauth;
   const body = req.body ?? {};
@@ -133,6 +142,7 @@ router.post("/token", requireConfig, async (req, res) => {
 
     const user = await users.findOne({ _id: new ObjectId(String(doc.userId)) });
     if (!user) return oauthError(res, 400, "invalid_grant", "User no longer exists.");
+    if (!(await deployAllowed(db, user._id))) return oauthError(res, 400, "invalid_grant", "No feature access: Deploy isn't switched on for this account's role.");
 
     const familyId = randomToken(16);
     await store.linkCodeToFamily(code, familyId);
@@ -149,6 +159,8 @@ router.post("/token", requireConfig, async (req, res) => {
     }
     const user = await users.findOne({ _id: new ObjectId(String(result.doc.userId)) });
     if (!user) return oauthError(res, 400, "invalid_grant", "User no longer exists.");
+    // Deploy switched off (or the account disabled) since: no more tokens, so Deploy signs out
+    if (!(await deployAllowed(db, user._id))) return oauthError(res, 400, "invalid_grant", "No feature access: Deploy isn't switched on for this account's role.");
     return res.json(await issueTokens(cfg, store, user, result.doc.familyId));
   }
 
@@ -165,6 +177,7 @@ router.post("/revoke", requireConfig, async (req, res) => {
 });
 
 // --- Revoke all: Continuum sign-out ends continuum-deploy sessions too ------------
+// Signing out always works (a disabled account too)
 router.post("/revoke-all", requireConfig, requireAuth, async (req, res) => {
   const count = await createOAuthStore(getDB()).revokeAllForUser(req.user.id);
   req.log.info({ userId: req.user.id, revoked: count }, "SSO sessions revoked at sign-out");

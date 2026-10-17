@@ -1,3 +1,4 @@
+import { LockMark } from "../components/NoAccess";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/authStore";
@@ -230,6 +231,7 @@ export default function ShellHeader({ selectedProject = null }) {
               }}
             >
               Workspaces
+              <LockMark feature="workspaces" />
             </button>
 
             {/* Create/Import (no icon: like the other header buttons) */}
@@ -270,7 +272,7 @@ export default function ShellHeader({ selectedProject = null }) {
                 aria-expanded={openMenu === "deploy"}
                 title="Open Continuum Deploy (every cloud)"
               >
-                Deploy ▾
+                Deploy<LockMark feature="deploy" /> ▾
               </button>
 
               {openMenu === "deploy" && (
@@ -408,6 +410,7 @@ function ScreenButton({ screen, current, onClick }) {
   return (
     <button type="button" className="shell-nav-btn shell-switcher-btn" aria-current={current ? "page" : undefined} onClick={onClick}>
       {screen.label}
+      {screen.feature && <LockMark feature={screen.feature} />}
       {badge > 0 && (
         <span className="switcher-badge" aria-label={`${badge} waiting`}>
           {badge}

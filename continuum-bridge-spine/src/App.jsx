@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { assertProject } from "./utils/assertions";
 
 import { useAuth } from "./state/authStore";
+import NoAccess from "./components/NoAccess";
 import AuthGate from "./auth/AuthGate";
 import SsoAuthorize from "./pages/SsoAuthorize";
 
@@ -81,7 +82,9 @@ export default function App() {
      🔒 AUTH + CORE STATE
      ========================================================= */
 
-  const { status, logout } = useAuth();
+  const { status, logout, can } = useAuth();
+  // Projects and intervals can be read with Interval Setup or the Dashboard switched on
+  const projectsOpen = can("interval") || can("dashboard");
   const { pathname, state: locationState } = useLocation();
   const navigate = useNavigate();
 
@@ -205,6 +208,11 @@ export default function App() {
 
   useEffect(() => {
     if (status !== "authenticated") return;
+    // Neither Interval Setup nor the Dashboard: no projects to load (the screens say "No feature access")
+    if (!projectsOpen) {
+      setLoading(false);
+      return;
+    }
 
     async function load() {
       try {
@@ -288,7 +296,7 @@ export default function App() {
     }
 
     load();
-  }, [status, logout]);
+  }, [status, logout, projectsOpen]);
 
   /* =========================================================
      ✅ INVARIANT: selectedProject mirrors activeProject
@@ -406,6 +414,23 @@ export default function App() {
      sign-in (AuthCallback sends GitHub sign-ins here)
      ========================================================= */
 
+  // An action your role has switched off (Deploy, Import from device…) lands here
+  if (pathname === "/no-access") {
+    return (
+      <PageShell scroll>
+        <NoAccess feature={locationState?.feature ?? "admin"} />
+      </PageShell>
+    );
+  }
+
+  if (pathname === "/import" && !can("import_github")) {
+    return (
+      <PageShell scroll>
+        <NoAccess feature="import_github" />
+      </PageShell>
+    );
+  }
+
   if (pathname === "/import") {
     return (
       <PageShell scroll>
@@ -437,6 +462,14 @@ export default function App() {
      💻 WORKSPACES (/workspaces) — a development server per
      project with a GitHub repository (continuum-workspaces)
      ========================================================= */
+
+  if ((pathname === "/workspaces" && !can("workspaces")) || (pathname === "/new" && !can("create"))) {
+    return (
+      <PageShell scroll>
+        <NoAccess feature={pathname === "/new" ? "create" : "workspaces"} />
+      </PageShell>
+    );
+  }
 
   if (pathname === "/workspaces") {
     return (
@@ -585,7 +618,11 @@ export default function App() {
     />
   );
 
-  const slots = screen.slots({ intervalCenter, dashboardCenter, navigate });
+  // A screen your role has switched off: "No feature access" in its panes
+  const slots =
+    screen.feature && !can(screen.feature)
+      ? { left: <NoAccess feature={screen.feature} compact />, center: <NoAccess feature={screen.feature} />, right: <NoAccess feature={screen.feature} compact /> }
+      : screen.slots({ intervalCenter, dashboardCenter, navigate });
 
   /* =========================================================
      🖥️ UI

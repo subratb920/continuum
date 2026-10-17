@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 
 const TOKEN_KEY = "continuum_token";
@@ -9,6 +9,8 @@ export function AuthProvider({ children }) {
   const [status, setStatus] = useState("checking"); // checking | authenticated | unauthenticated
   const [user, setUser] = useState(null);
   const [authProvider, setAuthProvider] = useState("local");
+  // Your access (GET /me): your role and the features it has switched on; null until known
+  const [access, setAccess] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem(TOKEN_KEY);
@@ -82,6 +84,42 @@ export function AuthProvider({ children }) {
     setAuthProvider(provider);
   }
 
+  // Your access: once signed in, and again whenever this tab comes back (an admin may have changed your role)
+  const loadAccess = useCallback(async () => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/me`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+      if (res.ok) setAccess(await res.json());
+      // A disabled account: nothing is open
+      else if (res.status === 403) setAccess({ disabled: true, features: [], allFeatures: [], role: null, isAdmin: false });
+      // An API from before roles (no /me): everything stays open, as it was
+      else if (res.status === 404) setAccess({ legacy: true, features: [], allFeatures: [], role: null, isAdmin: false });
+    } catch {
+      // offline: keep what's known
+    }
+  }, []);
+  useEffect(() => {
+    if (status !== "authenticated") return undefined;
+    const first = setTimeout(loadAccess, 0);
+    const onVisible = () => document.visibilityState === "visible" && loadAccess();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearTimeout(first);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [status, loadAccess]);
+
+  /**
+   * May you use this feature? Until your access is known, yes (the server
+   * refuses anyway); a feature your role has switched off: no.
+   */
+  // Signed out: no access known (whatever was loaded before)
+  const known = status === "authenticated" ? access : null;
+  const can = useCallback((feature) => !known || known.legacy || (!known.disabled && known.features.includes(feature)), [known]);
+  /** A feature's name, e.g. "Agents". */
+  const featureName = useCallback((feature) => known?.allFeatures?.find((f) => f.id === feature)?.label ?? feature, [known]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -91,6 +129,10 @@ export function AuthProvider({ children }) {
         login,
         logout,
         overrideAuthProvider,
+        access: known,
+        can,
+        featureName,
+        reloadAccess: loadAccess,
       }}
     >
       {children}

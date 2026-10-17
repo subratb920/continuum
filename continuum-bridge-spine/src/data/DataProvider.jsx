@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DataContext } from "./dataContext";
 import { dataApi } from "./dataApi";
+import { useAuth } from "../state/authStore";
 
 /**
  * The Data screen's live state: the user's datasets, which one is open, its
@@ -10,6 +11,8 @@ import { dataApi } from "./dataApi";
 const EVENTS_KEPT = 600;
 
 export function DataProvider({ children }) {
+  // Only with Data switched on for your role (else the screen says "No feature access")
+  const open = useAuth().can("data");
   const [datasets, setDatasets] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(null);
@@ -78,10 +81,12 @@ export function DataProvider({ children }) {
   );
 
   useEffect(() => {
+    if (!open) return;
     dataApi.catalog().then(setCatalog).catch(() => {});
-  }, []);
+  }, [open]);
 
   useEffect(() => {
+    if (!open) return undefined;
     refresh();
     const stop = dataApi.subscribe(
       (e) => {
@@ -101,7 +106,7 @@ export function DataProvider({ children }) {
       },
     );
     return stop;
-  }, [refresh, reloadSoon]);
+  }, [refresh, reloadSoon, open]);
 
   const value = useMemo(() => {
     const selected = datasets.find((d) => d.id === selectedId) ?? null;

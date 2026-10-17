@@ -1,6 +1,7 @@
 import { hashPassword, verifyPassword } from "../utils/hash.js";
 import { signToken } from "../utils/jwt.js";
 import { AppError } from "../errors/AppError.js";
+import { roleForNewUser } from "../access/access.js";
 
 // Same message for unknown email, wrong password and GitHub-only accounts,
 // so the login form can't be used to discover which emails are registered.
@@ -33,6 +34,7 @@ export function createAuthService(db) {
     const userDoc = {
       email,
       passwordHash,
+      roleId: await roleForNewUser(db), // the default role for new users
       createdAt: new Date(),
       updatedAt: new Date(),
     };
