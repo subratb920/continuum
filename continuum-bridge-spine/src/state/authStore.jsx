@@ -7,7 +7,8 @@ const AuthContext = createContext(null);
 
 /**
  * What this browser is, sent once after a sign-in (added to that sign-in, for
- * the admin's view): platform, screen, time zone, language, touch, memory, cores.
+ * the admin's view): platform, screen, time zone, language, touch, memory,
+ * cores, and its network (connection type, speed, round-trip time, data saver).
  */
 function sendDeviceDetails(token) {
   const n = navigator;
@@ -19,6 +20,12 @@ function sendDeviceDetails(token) {
     touch: (n.maxTouchPoints ?? 0) > 0,
     ...(n.deviceMemory ? { memory: n.deviceMemory } : {}),
     ...(n.hardwareConcurrency ? { cores: n.hardwareConcurrency } : {}),
+    // The network, as the browser sees it (Chrome, Edge and Android; others don't say)
+    ...(n.connection?.type ? { netType: n.connection.type } : {}),
+    ...(n.connection?.effectiveType ? { netEffective: n.connection.effectiveType } : {}),
+    ...(Number.isFinite(n.connection?.downlink) ? { netDownlinkMbps: n.connection.downlink } : {}),
+    ...(Number.isFinite(n.connection?.rtt) ? { netRttMs: n.connection.rtt } : {}),
+    ...(typeof n.connection?.saveData === "boolean" ? { netSaveData: n.connection.saveData } : {}),
   };
   fetch(`${import.meta.env.VITE_API_BASE_URL}/me/session`, {
     method: "POST",

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { adminApi } from "../../api";
 import { useAuth } from "../../state/authStore";
-import { deviceText, since, useAdmin } from "./adminContext";
+import { deviceText, networkText, placeText, since, useAdmin } from "./adminContext";
 import { LoginList } from "./AdminMain";
 import "./admin.css";
 
@@ -85,6 +85,8 @@ function UserDetail({ id }) {
         <dd>
           {deviceText(user.lastDevice) || "—"}
           {user.lastDevice?.ip && <span className="admin-mono"> · {user.lastDevice.ip}</span>}
+          {placeText(user.lastDevice) && <span> · {placeText(user.lastDevice)}</span>}
+          {networkText(user.lastDevice) && <span className="admin-client">{networkText(user.lastDevice)}</span>}
           {user.lastDevice?.client && <span className="admin-client">{[user.lastDevice.client.platform, user.lastDevice.client.screen, user.lastDevice.client.timezone, user.lastDevice.client.language].filter(Boolean).join(" · ")}</span>}
         </dd>
         <dt>Projects</dt>

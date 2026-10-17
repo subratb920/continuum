@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ObjectId } from "mongodb";
-import { attachClient, cleanClient, createUsageTracker, historyDays, parseUserAgent, recordLogin } from "../src/access/activity.js";
+import { attachClient, cleanClient, createUsageTracker, historyDays, networkOf, parseUserAgent, recordLogin } from "../src/access/activity.js";
 
 /** Just enough of MongoDB for what activity.js writes. */
 function fakeDb() {
@@ -116,4 +116,23 @@ test("activity: app use is counted in memory and written once (per user, app and
   await usage.flush();
   assert.equal(db.collection("app_usage").docs.find((r) => String(r.userId) === String(a) && r.app === "agents").count, 3);
   assert.equal(usage.pending(), 0);
+});
+
+test("activity: the network a sign-in came over: IPv4/IPv6, the proxies' chain, protocol, and Google's view of the client when the load balancer adds it", () => {
+  const r = { ...req({ "x-forwarded-for": "198.51.100.1, 203.0.113.7, 35.191.0.1", "x-client-subdivision": "INKA", "x-client-lat-long": "12.971599,77.594566", "x-client-rtt": "38", "x-client-tls": "TLSv1.3", "x-client-cipher": "TLS_AES_128_GCM_SHA256" }), protocol: "https", httpVersion: "1.1" };
+  assert.deepEqual(networkOf(r), {
+    ipVersion: 4,
+    forwardedFor: ["198.51.100.1", "203.0.113.7", "35.191.0.1"],
+    protocol: "https",
+    httpVersion: "1.1",
+    subdivision: "INKA",
+    cityLatLong: "12.971599,77.594566",
+    rttMs: 38,
+    tlsVersion: "TLSv1.3",
+    tlsCipher: "TLS_AES_128_GCM_SHA256",
+  });
+  assert.equal(networkOf(req({}, "2001:db8::1")).ipVersion, 6);
+  assert.equal(networkOf(req({}, "::ffff:203.0.113.7")).ipVersion, 4, "an IPv4 address in IPv6 form");
+  assert.equal(networkOf(req({ "x-client-lat-long": "<script>" })).cityLatLong, undefined, "only a position");
+  assert.deepEqual(cleanClient({ netType: "wifi", netEffective: "4g", netDownlinkMbps: 10, netRttMs: 50, netSaveData: false }), { netType: "wifi", netEffective: "4g", netDownlinkMbps: 10, netRttMs: 50, netSaveData: false });
 });

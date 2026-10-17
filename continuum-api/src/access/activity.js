@@ -1,8 +1,9 @@
 // src/access/activity.js
 //
 // What admins see about people using Continuum: each sign-in (email, GitHub,
-// Continuum Deploy; failed email sign-ins too) with when, how, from where and
-// on what device; which apps each person uses, per day; and on each user their
+// Continuum Deploy; failed email sign-ins too) with when, how, from where, over
+// what network (as the request and Google's load balancer report it; nobody
+// else is asked) and on what device; which apps each person uses, per day; and on each user their
 // last sign-in, last seen and last device. Kept LOGIN_HISTORY_DAYS (180 unless
 // set), then removed by MongoDB itself (expireAt). Admins only see it.
 
@@ -74,16 +75,52 @@ export function parseUserAgent(ua = "") {
   return { browser, os, device };
 }
 
-/** Where a request came from: its address (behind a proxy, TRUST_PROXY must be set) and the region if the load balancer says. */
+const short = (v, n = 80) => (typeof v === "string" && v ? v.slice(0, n) : null);
+const num = (v) => (v !== undefined && v !== null && v !== "" && Number.isFinite(Number(v)) ? Number(v) : null);
+
+/**
+ * The network a request came over, from the request itself: IPv4 or IPv6, the
+ * chain of addresses proxies passed on (X-Forwarded-For, as reported: the
+ * first can be made up by the client), the protocol and HTTP version; and,
+ * when the app's load balancer adds them ("clientInfo" in continuum.deploy.json),
+ * Google's view of the client: its country, area and city (with the city's
+ * position, not the device's), round-trip time and TLS.
+ */
+export function networkOf(req) {
+  const g = (h) => short(req.get?.(h) ?? null);
+  const ip = req.ip ?? null;
+  const chain = String(req.get?.("x-forwarded-for") ?? "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .slice(0, 10);
+  const latLong = /^-?\d{1,3}(\.\d+)?,-?\d{1,3}(\.\d+)?$/.test(g("x-client-lat-long") ?? "") ? g("x-client-lat-long") : null;
+  const out = {
+    ipVersion: ip ? (ip.includes(":") && !ip.startsWith("::ffff:") ? 6 : 4) : null,
+    forwardedFor: chain.length ? chain : null,
+    protocol: short(req.protocol ?? null, 10),
+    httpVersion: short(req.httpVersion ?? null, 10),
+    via: g("via"),
+    subdivision: g("x-client-subdivision"),
+    cityLatLong: latLong,
+    rttMs: num(g("x-client-rtt")),
+    tlsVersion: g("x-client-tls"),
+    tlsCipher: g("x-client-cipher"),
+  };
+  return Object.fromEntries(Object.entries(out).filter(([, v]) => v !== null));
+}
+
+/** Where a request came from: its address (behind a proxy, TRUST_PROXY must be set), the network, and the region if the load balancer says. */
 export function origin(req) {
   const ua = req.get?.("user-agent") ?? "";
   return {
     ip: req.ip ?? null,
     userAgent: ua.slice(0, 400) || null,
     ...parseUserAgent(ua),
-    // Google's load balancer can add these (custom request headers on the backend)
+    // Google's load balancer adds these when asked (custom request headers)
     region: req.get?.("x-client-region") || null,
     city: req.get?.("x-client-city") || null,
+    network: networkOf(req),
   };
 }
 
@@ -107,7 +144,7 @@ export async function recordLogin(db, { userId = null, email = null, method, ok 
   };
   await db.collection("login_events").insertOne(doc);
   if (ok && userId) {
-    const device = { ip: from.ip, browser: from.browser, os: from.os, device: from.device, region: from.region, at: now };
+    const device = { ip: from.ip, browser: from.browser, os: from.os, device: from.device, region: from.region, city: from.city, network: from.network, at: now };
     await db.collection("users").updateOne(
       { _id: userId },
       { $set: { lastLoginAt: now, lastLoginMethod: method, lastSeenAt: now, lastDevice: device } }
@@ -116,7 +153,8 @@ export async function recordLogin(db, { userId = null, email = null, method, ok 
   return doc;
 }
 
-const CLIENT_KEYS = ["platform", "screen", "timezone", "language", "touch", "memory", "cores"];
+// What the browser says about itself and its network (the Network Information API, where it has one)
+const CLIENT_KEYS = ["platform", "screen", "timezone", "language", "touch", "memory", "cores", "netType", "netEffective", "netDownlinkMbps", "netRttMs", "netSaveData"];
 
 /** What the browser says about itself after a sign-in, kept short. */
 export function cleanClient(body) {

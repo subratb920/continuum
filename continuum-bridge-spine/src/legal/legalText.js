@@ -39,7 +39,7 @@ export const LEGAL_SECTIONS = [
   },
   {
     title: "Your work stays yours",
-    text: "Projects, code, repositories and anything else you bring to Continuum or make with it belong to you. Continuum claims no ownership of them and uses them only to provide the service to you. To run and secure the service, Continuum records sign-ins (when, how, IP address, browser and device) and which parts of it you use, and keeps these records for up to 180 days.",
+    text: "Projects, code, repositories and anything else you bring to Continuum or make with it belong to you. Continuum claims no ownership of them and uses them only to provide the service to you. To run and secure the service, Continuum records sign-ins (when, how, IP address and approximate location from it, network details such as connection type and speed, browser and device) and which parts of it you use, and keeps these records for up to 180 days.",
   },
   {
     title: "Open-source software",

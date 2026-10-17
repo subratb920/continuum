@@ -32,3 +32,26 @@ export function deviceText(d) {
   if (!d) return "";
   return [d.browser, d.os, d.device].filter(Boolean).join(" · ");
 }
+
+/** "IPv4 · Wi-Fi, 4g, 10 Mbit/s · 38 ms · TLSv1.3" (whatever is known about the network; the proxies' chain is a tooltip). */
+export function networkText(d) {
+  if (!d) return "";
+  const n = d.network ?? {};
+  const c = d.client ?? {};
+  const connection = [c.netType && ({ wifi: "Wi-Fi", cellular: "mobile data", ethernet: "wired" }[c.netType] ?? c.netType), c.netEffective, c.netDownlinkMbps !== undefined && `${c.netDownlinkMbps} Mbit/s`, c.netSaveData && "data saver"].filter(Boolean).join(", ");
+  const rtt = n.rttMs ?? c.netRttMs;
+  return [
+    n.ipVersion && `IPv${n.ipVersion}`,
+    connection,
+    rtt !== undefined && rtt !== null && `${rtt} ms`,
+    n.tlsVersion,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/** "Bengaluru, INKA, IN" (the load balancer's view; the city's position, never the device's). */
+export function placeText(d) {
+  if (!d) return "";
+  return [d.city, d.network?.subdivision, d.region].filter(Boolean).join(", ");
+}

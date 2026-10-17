@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { deviceText, since, useAdmin } from "./adminContext";
+import { deviceText, networkText, placeText, since, useAdmin } from "./adminContext";
 import "./admin.css";
 
 /**
@@ -245,8 +245,9 @@ export function LoginList({ logins, onUser, loading, showWho = false, compact = 
             <span className="admin-muted">{deviceText(l) || "—"}</span>
             <span className="admin-mono admin-muted">
               {l.ip ?? "—"}
-              {l.region && ` · ${[l.city, l.region].filter(Boolean).join(", ")}`}
+              {placeText(l) && ` · ${placeText(l)}`}
             </span>
+            {networkText(l) && <span className="admin-client" title={l.network?.forwardedFor?.join(" → ")}>{networkText(l)}</span>}
             {l.client && <span className="admin-client">{[l.client.screen, l.client.timezone, l.client.language].filter(Boolean).join(" · ")}</span>}
           </li>
         ))}
@@ -282,7 +283,12 @@ export function LoginList({ logins, onUser, loading, showWho = false, compact = 
               </td>
               <td className="admin-mono">
                 {l.ip ?? "—"}
-                {l.region && <span className="admin-muted"> · {[l.city, l.region].filter(Boolean).join(", ")}</span>}
+                {placeText(l) && <span className="admin-muted"> · {placeText(l)}</span>}
+                {networkText(l) && (
+                  <span className="admin-client" title={l.network?.forwardedFor ? `Addresses passed on: ${l.network.forwardedFor.join(" → ")}` : undefined}>
+                    {networkText(l)}
+                  </span>
+                )}
               </td>
               <td className="admin-muted" title={l.userAgent ?? ""}>
                 {deviceText(l) || "—"}
