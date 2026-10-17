@@ -242,28 +242,49 @@ function AskCard({ event, showWho = false }) {
   );
 }
 
+/**
+ * Chat with your brain. What you send shows at once ("Sending…") and stays
+ * until the brain's own record of it arrives; if it can't be sent (your brain
+ * is starting, the connection is down) you see why, and can send it again.
+ */
 function Chat() {
-  const { core, coreIds, events, say, replay } = useBrain();
+  const { core, coreIds, events, say, replay, connected } = useBrain();
   const [text, setText] = useState("");
+  const [outbox, setOutbox] = useState([]); // [{ id, text, at, error? }]
   const log = useRef(null);
   // The whole conversation, across the brain's restarts
   const messages = events.filter((e) => coreIds.has(e.agentId) && (e.kind === "user" || e.kind === "text"));
+  // Sent, not yet heard back: the brain's record of the same words since it was sent replaces it
+  const waiting = outbox.filter((o) => o.error || !messages.some((m) => m.kind === "user" && m.text === o.text && Date.parse(m.at) >= o.at - 60_000));
+  const starting = core && ["queued", "starting"].includes(core.state);
 
   // To the newest message: only the log scrolls (scrollIntoView would also
   // scroll the screen's own frames, leaving the screen blank)
   useEffect(() => {
     if (log.current) log.current.scrollTop = log.current.scrollHeight;
-  }, [messages.length]);
+  }, [messages.length, waiting.length]);
+
+  async function send(words, id = crypto.randomUUID()) {
+    setOutbox((o) => [...o.filter((x) => x.id !== id), { id, text: words, at: Date.now() }]);
+    try {
+      await say(words);
+    } catch (err) {
+      const why = err.code === "BRAIN_BUSY" || err.status === 409 ? err.message || "Your brain is starting; send it again when it's ready." : err.message || "It couldn't be sent.";
+      setOutbox((o) => o.map((x) => (x.id === id ? { ...x, error: why } : x)));
+    }
+  }
 
   function submit(e) {
     e.preventDefault();
     if (!text.trim()) return;
-    say(text.trim());
+    send(text.trim());
     setText("");
   }
 
   return (
     <div className="inspector-body chat">
+      {connected === false && <p className="chat-status is-warning" role="status">Connection lost: reconnecting… Your messages will show once it's back.</p>}
+      {starting && <p className="chat-status" role="status">Your brain is starting. It can take a minute the first time.</p>}
       <ol className="chat-log" ref={log}>
         {messages.map((m) => (
           <li key={m._id} className={`chat-msg ${m.kind === "user" ? "from-you" : "from-core"}`}>
@@ -271,7 +292,20 @@ function Chat() {
             <time className="event-time">{clock(m.at)}</time>
           </li>
         ))}
-        {!messages.length && <li className="brain-empty">Talk to your brain: it plans and hands work to workers.</li>}
+        {waiting.map((o) => (
+          <li key={o.id} className={`chat-msg from-you${o.error ? " failed" : " sending"}`}>
+            <span className="chat-bubble">{o.text}</span>
+            {o.error ? (
+              <span className="chat-error" role="alert">
+                {o.error}{" "}
+                <button type="button" className="brain-link" onClick={() => send(o.text, o.id)}>Retry</button>
+              </span>
+            ) : (
+              <span className="event-time">Sending…</span>
+            )}
+          </li>
+        ))}
+        {!messages.length && !waiting.length && <li className="brain-empty">Talk to your brain: it plans and hands work to workers.</li>}
       </ol>
       <form className="chat-input" onSubmit={submit}>
         <input value={text} onChange={(e) => setText(e.target.value)} placeholder={!replay.live ? "Replaying — go live to send" : BRAIN_IS_MOCK && !core ? "Waking the brain…" : "Message the core…"} disabled={!replay.live || (BRAIN_IS_MOCK && !core)} aria-label="Message the core" />

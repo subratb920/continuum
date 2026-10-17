@@ -624,6 +624,18 @@ html.reduce-motion .model-change svg { transition: none; }
 .chat-bubble { padding: 7px 10px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); color: var(--text); }
 .chat-msg.from-you .chat-bubble { background: var(--selected); border-color: var(--accent-border); }
 .chat-msg.from-core .chat-bubble { border-left: 3px solid var(--agent-core); }
+.chat-msg.sending .chat-bubble { opacity: 0.6; }
+.chat-msg.failed .chat-bubble { border-color: var(--danger-border); }
+.chat-error { max-width: 100%; color: var(--danger-text); font-size: 11px; text-align: right; overflow-wrap: anywhere; }
+.chat-status {
+  flex: none;
+  margin: 0;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.chat-status.is-warning { color: var(--warning-text); background: var(--warning-soft); }
 .chat-input {
   flex: none;
   padding: 8px;

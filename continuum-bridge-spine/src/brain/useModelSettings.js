@@ -39,9 +39,10 @@ export function useModelSettings() {
     error: state.error,
     settings,
     /** What every agent runs on: your choice, else the server's default. */
-    model: settings ? settings.model ?? settings.chosen ?? settings.defaults?.model ?? null : null,
-    chosen: settings?.chosen ?? null,
-    defaultModel: settings?.defaults?.model ?? null,
+    // (A brain from before one model answers brainModel / defaults.brain: still shown)
+    model: settings ? settings.model ?? settings.chosen ?? settings.brainModel ?? settings.defaults?.model ?? settings.defaults?.brain ?? null : null,
+    chosen: settings ? settings.chosen ?? settings.brainModel ?? null : null,
+    defaultModel: settings?.defaults?.model ?? settings?.defaults?.brain ?? null,
     refresh,
     save,
   };

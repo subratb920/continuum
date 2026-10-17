@@ -36,6 +36,7 @@ const initial = {
   replied: {},
   selectedId: null,
   replay: { at: null, playing: false, speed: 4 },
+  connected: null, // the live stream: null (not yet), true, false (lost, reconnecting)
 };
 
 /** Adds events in the brain's order (seq), skipping ones already here. */
@@ -109,6 +110,8 @@ function reducer(state, action) {
       }
       return changed ? { ...next, replied } : state;
     }
+    case "connected":
+      return state.connected === action.connected ? state : { ...state, connected: action.connected };
     case "select":
       return { ...state, selectedId: action.id };
     case "replay":
@@ -223,7 +226,10 @@ export function BrainProvider({ children }) {
     const unsubscribe = client.subscribe((m) => {
       if (m.type === "agent") dispatch({ type: "agents", agents: [m.agent] });
       else if (m.type === "answered") dispatch({ type: "answered", id: m.event._id, answer: m.event.answer, at: m.event.answeredAt, source: "stream" });
-      else if (m.type === "connected") resync(); // (re)connected: messages may have been missed meanwhile
+      else if (m.type === "connected") {
+        dispatch({ type: "connected", connected: true });
+        resync(); // (re)connected: messages may have been missed meanwhile
+      } else if (m.type === "disconnected") dispatch({ type: "connected", connected: false });
       else {
         dispatch({ type: "event", event: m.event });
         afterChange(m.event);
@@ -271,6 +277,7 @@ export function BrainProvider({ children }) {
       livePending: live.pending,
       live, // now, even while replaying (what the running interval records)
       selectedId: state.selectedId,
+      connected: state.connected,
       replay: { ...state.replay, live: state.replay.at == null, from: first },
       select: (id) => dispatch({ type: "select", id }),
       /** Replay from time t (ms), or null: live. */

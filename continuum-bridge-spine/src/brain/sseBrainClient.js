@@ -64,6 +64,7 @@ export function createSseBrainClient(base = import.meta.env.VITE_BRAIN_API_URL) 
           emit({ type: "event", event });
         });
         source.onerror = () => {
+          emit({ type: "disconnected" }); // the screen says so until it's back
           source.close();
           if (!closed) retry = setTimeout(open, 3000);
         };
