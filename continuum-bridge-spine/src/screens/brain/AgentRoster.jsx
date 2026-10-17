@@ -2,14 +2,17 @@ import { useState } from "react";
 import { useBrain } from "../../brain/brainContext";
 import { ACTIVE_STATES, STATE_LABEL } from "../../brain/brainTypes";
 import { BRAIN_IS_MOCK } from "../../brain/brainClient";
-import { agentName, elapsed, useNow } from "./agentDisplay";
+import { agentName, elapsed, runningModel, useNow } from "./agentDisplay";
+import ModelSettings from "./ModelSettings";
+import { useModelSettings } from "../../brain/useModelSettings";
 import "./brain.css";
 
 /**
  * Agents pane (left): the core, then its workers, each with its state, task,
  * the interval goal it works on, branch and running time. Spawn starts a
  * worker through the core (on one of the running interval's goals, if you
- * pick one); a failed worker can be retried. While replaying, the actions wait.
+ * pick one); a failed worker can be retried. Model: the one model your brain
+ * and every worker run on. While replaying, the actions wait.
  */
 export default function AgentRoster() {
   const brain = useBrain();
@@ -17,6 +20,7 @@ export default function AgentRoster() {
   const [spawning, setSpawning] = useState(false);
   const [task, setTask] = useState("");
   const [goalId, setGoalId] = useState("");
+  const models = useModelSettings();
 
   if (!brain) return null;
   const { core, workers, pending, selectedId, select, stop, retry, replay, interval } = brain;
@@ -62,6 +66,11 @@ export default function AgentRoster() {
             {a.retryOf && <span className="agent-row-note">Retry of {agentName(brain.agents[a.retryOf], workers)}</span>}
             {a.retriedBy && <span className="agent-row-note">Retried by {agentName(brain.agents[a.retriedBy], workers)}</span>}
             {a.branch && <span className="agent-row-branch">{a.branch}</span>}
+            {runningModel(a) && (
+              <span className="agent-row-model" title={a.runtimeModel ? `Runs on ${a.runtimeModel}` : `Will run on ${a.model}`}>
+                {runningModel(a)}
+              </span>
+            )}
             {replay.live && a.state === "failed" && !a.retriedBy && (
               <button type="button" className="brain-btn agent-row-retry" onClick={(e) => (e.stopPropagation(), retry(a._id))}>
                 ↻ Retry
@@ -92,6 +101,8 @@ export default function AgentRoster() {
         </h2>
         {BRAIN_IS_MOCK && <span className="brain-sim" title="Simulated agents until brain-api is connected (VITE_BRAIN_MODE=live)">Simulated</span>}
       </div>
+
+      <ModelSettings models={models} />
 
       {spawning ? (
         <form className="agent-spawn" onSubmit={submit}>

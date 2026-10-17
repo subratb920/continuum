@@ -9,6 +9,6 @@ export function corsMiddleware() {
   return cors({
     origin: ENV.CLIENT_ORIGIN,
     credentials: true,
-    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // PUT: /brain/settings (your models)
   });
 }

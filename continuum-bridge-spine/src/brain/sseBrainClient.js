@@ -9,7 +9,10 @@ import { sharedFeed } from "../utils/sharedFeed";
  *        answer) messages, from change streams on brain_agents / brain_events; after= (the
  *        last event's seq) catches up first
  *   GET  /brain/pending                    → what waits on you (requests not yet answered)
- *   POST /brain/agents              {task, repo?, goal?: {bridgeId, goalId}}
+ *   GET  /brain/models                     → the models agents can use, by provider
+ *   GET  /brain/settings  PUT /brain/settings {model}  the one model all your agents run on (null: the
+ *        default); only while nothing is awake or waits on you (409 otherwise)
+ *   POST /brain/agents              {task, repo?, goal?: {bridgeId, goalId}}  (on your one model)
  *        a worker: on that repository, or that interval goal's project; else the core picks
  *   POST /brain/agents/:id/stop
  *   POST /brain/agents/:id/reply    {eventId, answer, message?}   a permission or question
@@ -76,6 +79,9 @@ export function createSseBrainClient(base = import.meta.env.VITE_BRAIN_API_URL) 
 
     // A goal is sent as its ids: brain-api takes its text (and the project) from Continuum
     spawn: (task, { repo, goal } = {}) => call("POST", "/brain/agents", { task, repo, ...(goal ? { goal: { bridgeId: goal.bridgeId, goalId: goal.goalId } } : {}) }),
+    models: () => call("GET", "/brain/models"),
+    settings: () => call("GET", "/brain/settings"),
+    saveSettings: (changes) => call("PUT", "/brain/settings", changes),
     stop: (agentId) => call("POST", `/brain/agents/${agentId}/stop`),
     // A worker's changes on its branch, one file of its copy, and pushing them to its own branch on GitHub
     changes: (agentId) => call("GET", `/brain/agents/${agentId}/changes`),

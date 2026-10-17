@@ -419,6 +419,14 @@
 .inspector-facts dt { color: var(--text-faint); }
 .inspector-facts dd { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .inspector-error { color: var(--danger-text); white-space: normal !important; }
+.inspector-model-asked { color: var(--text-faint); }
+.agent-row-model {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-faint);
+  font: 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
 
 .event-feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .event {
@@ -489,6 +497,47 @@
 .ask-card-answer,
 .chat-input { display: flex; gap: 6px; }
 .ask-card-answer { flex-wrap: wrap; }
+
+/* Models: what your brain and new workers run on */
+.model-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 12px;
+}
+.model-settings-summary { display: flex; align-items: flex-start; gap: 8px; }
+.model-settings-summary dl {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 8px;
+  margin: 0;
+}
+.model-settings-summary dt { color: var(--text-faint); }
+.model-settings-summary dd { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
+.model-settings-form { display: flex; flex-direction: column; gap: 8px; }
+.model-settings-form label { display: flex; flex-direction: column; gap: 3px; color: var(--text-muted); font-weight: 600; }
+.model-settings-error { margin: 0; color: var(--danger-text); font-size: 12px; overflow-wrap: anywhere; }
+.model-settings-warning { margin: 0; color: var(--warning-text); font-size: 12px; }
+.model-asleep { font-family: inherit; color: var(--text-faint); }
+.model-settings-summary .brain-link:disabled { color: var(--text-faint); cursor: not-allowed; }
+.model-select {
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+}
+@media (hover: none) { .model-select { min-height: 40px; } }
 
 /* Approvals: one worker's requests, or all */
 .ask-filter { display: flex; flex-wrap: wrap; gap: 6px; }

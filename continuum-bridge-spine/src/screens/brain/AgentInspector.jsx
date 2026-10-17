@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useBrain } from "../../brain/brainContext";
 import { ACTIVE_STATES, STATE_LABEL } from "../../brain/brainTypes";
 import { BRAIN_IS_MOCK } from "../../brain/brainClient";
-import { agentName, ago, clock, KIND_ICON, useNow } from "./agentDisplay";
+import { agentName, ago, clock, KIND_ICON, runningModel, useNow } from "./agentDisplay";
 import WorkerWork from "./WorkerWork";
 import "./brain.css";
 
@@ -60,7 +60,11 @@ function Activity() {
             {agent.goal && (<><dt>Goal</dt><dd className="inspector-goal" title={agent.goal.text}>◎ {agent.goal.text}</dd></>)}
             {agent.repo && (<><dt>Repo</dt><dd>{agent.repo}</dd></>)}
             {agent.branch && (<><dt>Branch</dt><dd className="brain-mono">{agent.branch}</dd></>)}
-            <dt>Model</dt><dd className="brain-mono">{agent.model}</dd>
+            <dt>Model</dt>
+            <dd className="brain-mono" title={agent.runtimeModel ? `Running on ${agent.runtimeModel}${agent.runtimeModel !== agent.model ? ` (asked for ${agent.model})` : ""}` : `${agent.model} (not started yet)`}>
+              {runningModel(agent)}
+              {agent.runtimeModel && agent.runtimeModel !== agent.model && <span className="inspector-model-asked"> · asked for {agent.model}</span>}
+            </dd>
             {agent.error && (<><dt>Error</dt><dd className="inspector-error">{agent.error.message}</dd></>)}
           </dl>
           {/* Its work: copied into your own folder, its changes, and pushing them to GitHub */}

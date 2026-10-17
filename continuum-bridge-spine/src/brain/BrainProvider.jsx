@@ -302,6 +302,10 @@ export function BrainProvider({ children }) {
       say: (text) => client.say(text),
       // A worker's work: its changes, copying them into your folder, and pushing them to its own branch
       changes: client.changes ? (id) => client.changes(id) : null,
+      // Model: the one model your brain and every worker run on (and the models available)
+      models: client.models ? () => client.models() : null,
+      settings: client.settings ? () => client.settings() : null,
+      saveSettings: client.saveSettings ? (changes) => client.saveSettings(changes) : null,
       push: client.push ? (id, message) => client.push(id, message) : null,
       copyToLocal: (agent, opts) => copyToLocal(agent, client, opts),
     };

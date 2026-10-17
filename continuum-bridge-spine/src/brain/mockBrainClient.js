@@ -42,13 +42,33 @@ export function createMockBrainClient({ speed = 1 } = {}) {
     update(id, {
       state,
       ...extra,
-      ...(state === "starting" && !a.startedAt && { startedAt: now() }),
+      ...(state === "starting" && !a.startedAt && { startedAt: now(), runtimeModel: a.model }), // what it runs on, once started (as the orchestrator says)
       ...((state === "stopped" || state === "failed") && { finishedAt: now() }),
     });
     event(id, "state", state, { state });
   }
 
-  function addAgent(kind, task, { repo = null, goal = null, retryOf = null } = {}) {
+  // The models a pretend brain offers, and your choice (as brain-api's /models and /settings)
+  const MODELS = {
+    providers: [
+      { provider: "ollama", setUp: true },
+      { provider: "anthropic", setUp: false },
+      { provider: "openai", setUp: false },
+      { provider: "opencode", setUp: true },
+      { provider: "compat", setUp: false },
+    ],
+    models: [
+      { id: "ollama/neural-chat:latest", provider: "ollama", name: "neural-chat:latest", tools: false, maxContext: 32768, size: "7B" },
+      { id: "ollama/qwen3:1.7b", provider: "ollama", name: "qwen3:1.7b", tools: true, maxContext: 40960, size: "2.0B" },
+      { id: "ollama/qwen3:4b", provider: "ollama", name: "qwen3:4b", tools: true, maxContext: 40960, size: "4.0B" },
+      { id: "opencode/big-pickle", provider: "opencode", name: "big-pickle", tools: true, maxContext: null },
+    ],
+  };
+  const DEFAULT_MODEL = "ollama/qwen3:4b";
+  const choice = { model: null }; // one model for the brain and every worker
+  const oneModel = () => choice.model ?? DEFAULT_MODEL;
+
+  function addAgent(kind, task, { repo = null, goal = null, retryOf = null, model = null } = {}) {
     const id = `a${String(++agentSeq).padStart(4, "0")}`;
     const a = {
       _id: id,
@@ -57,7 +77,7 @@ export function createMockBrainClient({ speed = 1 } = {}) {
       repo,
       branch: kind === "worker" ? `continuum/agent-${id}` : null,
       task,
-      model: kind === "core" ? "anthropic/claude-sonnet-5-5" : "ollama/qwen3:1.7b-40k",
+      model: model ?? oneModel(),
       size: "standard",
       state: "queued",
       goal, // { bridgeId, goalId, text } — the interval goal it works on
@@ -149,8 +169,8 @@ export function createMockBrainClient({ speed = 1 } = {}) {
     "Migrate bridge goals to the new status field",
   ];
 
-  function startWorker(task, { goal = null, retryOf = null, script } = {}) {
-    const w = addAgent("worker", task, { repo: "subrat/continuum", goal, retryOf });
+  function startWorker(task, { goal = null, retryOf = null, script, model = null } = {}) {
+    const w = addAgent("worker", task, { repo: "subrat/continuum", goal, retryOf, model });
     worker(w, script ?? { files: ["src/App.jsx", "src/api.js"] });
     return w;
   }
@@ -200,6 +220,39 @@ export function createMockBrainClient({ speed = 1 } = {}) {
 
     setInterval(next) {
       interval = next;
+    },
+
+    async models() {
+      return structuredClone(MODELS);
+    },
+
+    async settings() {
+      const awake = [...agents.values()].some((a) => ["queued", "starting", "working", "stopping"].includes(a.state)) || waiting.size > 0;
+      return { model: oneModel(), chosen: choice.model, defaults: { model: DEFAULT_MODEL }, changeable: !awake, locked: awake ? "Agents are awake." : null };
+    },
+
+    /**
+     * The one model (as brain-api): only while nothing is awake and nothing
+     * waits on you; a model it lists, that can use tools; idle agents stop.
+     */
+    async saveSettings({ model }) {
+      const awake = [...agents.values()].filter((a) => ["queued", "starting", "working", "stopping"].includes(a.state)).length;
+      if (awake) throw new Error(`${awake} ${awake === 1 ? "agent is" : "agents are"} awake. Change the model once everything is idle.`);
+      if (waiting.size) throw new Error(`${waiting.size} ${waiting.size === 1 ? "request waits" : "requests wait"} for your answer. Answer them first, then change the model.`);
+      const m = model && MODELS.models.find((x) => x.id === model);
+      if (model && !m) throw new Error(`${model} isn't available.`);
+      if (m && m.tools === false) throw new Error(`${m.name} can't use tools, and agents need them.`);
+      const before = oneModel();
+      choice.model = model || null;
+      let stopped = 0;
+      if (oneModel() !== before) {
+        for (const a of agents.values()) {
+          if (a.state !== "idle") continue;
+          this.stop(a._id);
+          stopped++;
+        }
+      }
+      return { ...(await this.settings()), stopped };
     },
 
     async spawn(task, { goal = null } = {}) {

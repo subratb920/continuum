@@ -21,6 +21,15 @@ export function elapsed(from, to = Date.now()) {
   return `${Math.floor(s / 3600)}h ${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}m`;
 }
 
+/**
+ * The model an agent actually runs on: what the orchestrator started it with
+ * (runtimeModel, e.g. an Ollama copy with a bigger context), else the one it
+ * was given until it starts.
+ */
+export function runningModel(agent) {
+  return agent?.runtimeModel || agent?.model || null;
+}
+
 /** just now, 5 min ago, 2 h ago, 3 d ago */
 export function ago(at, now = Date.now()) {
   const s = Math.max(0, Math.round((now - new Date(at)) / 1000));

@@ -80,6 +80,9 @@ test("brain relay: your brain and workers; a worker on a project, or your brain 
   assert.equal((await s.call("POST", "/agents", { task: "Add a footer", projectId: "p".repeat(24) })).status, 201);
   assert.equal((await s.call("POST", "/agents", { task: "Add a footer" })).status, 202);
   assert.match(b.calls.at(-1), /POST \/brain\/messages .*Pick the right project.*Task: Add a footer/);
+  // One model for all: a model sent for one worker isn't passed on
+  await s.call("POST", "/agents", { task: "Tests", projectId: "p".repeat(24), model: "opencode/big-pickle" });
+  assert.match(b.calls.at(-1), /POST \/agents {"projectId":"p{24}","task":"Tests"}$/);
   // An interval goal or a repository (a retry) starts the worker directly, not through the brain
   await s.call("POST", "/agents", { task: "", goal: { bridgeId: "b".repeat(24), goalId: "g1", text: "ignored" } });
   assert.match(b.calls.at(-1), /POST \/agents {"goal":{"bridgeId":"b{24}","goalId":"g1"},"task":""}/);

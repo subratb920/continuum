@@ -7,7 +7,7 @@
 //                                           sent events; after= an event's seq; EventSource can't send
 //                                           headers, so this route also takes the sign-in token as ?token=)
 //   GET    /brain/pending                   what waits on you: requests not yet answered, oldest first
-//   POST   /brain/agents {task, projectId? | goal?: {bridgeId, goalId} | repo?}
+//   POST   /brain/agents {task, projectId? | goal?: {bridgeId, goalId} | repo?}  (on your one model)
 //                                           a worker: on that project, interval goal or repository;
 //                                           with none of them, your brain picks the project
 //   POST   /brain/agents/:id/stop   DELETE /brain/agents/:id
@@ -18,7 +18,7 @@
 //                                           a permission (approve | always | deny, with a note) or a question;
 //                                           answered already: 200 with alreadyAnswered
 //   POST   /brain/core/messages {text}      a message to your brain
-//   GET    /brain/models   GET|PUT /brain/settings
+//   GET    /brain/models   GET|PUT /brain/settings {model}   the one model all your agents run on
 
 import express from "express";
 import { AppError } from "../errors/AppError.js";
@@ -153,11 +153,12 @@ export function createBrainRouter(opts = {}) {
   router.post("/agents", async (req, res) => {
     const task = typeof req.body?.task === "string" ? req.body.task.trim() : "";
     if (!task && !req.body?.goal) throw new AppError("Say what the worker should do.", 400, "VALIDATION_ERROR");
-    const { projectId, repo, goal, model } = req.body ?? {};
+    const { projectId, repo, goal } = req.body ?? {};
     // Started directly: on a project, an interval goal (its project, from Continuum) or a repository (a retry)
     if (projectId || goal || repo) {
       const where = goal ? { goal: { bridgeId: goal.bridgeId, goalId: goal.goalId } } : projectId ? { projectId } : { repo };
-      return res.status(201).json(toAgent(await brain(req, "POST", "/agents", { ...where, task, ...(model ? { model } : {}) })));
+      // No model: your brain and every worker run on one model (Models, /brain/settings)
+      return res.status(201).json(toAgent(await brain(req, "POST", "/agents", { ...where, task })));
     }
     // Nothing given: your brain picks the project (and asks you when it isn't clear)
     const text = `Start a worker agent for this task. Pick the right project with your tools; if it isn't clear which one, ask me first.\n\nTask: ${task}`;

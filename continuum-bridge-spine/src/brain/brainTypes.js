@@ -14,7 +14,8 @@
  * @property {string|null} repo     "owner/name"; null for the core
  * @property {string|null} branch   continuum/agent-<id>; never main
  * @property {string} task
- * @property {string} model
+ * @property {string} model        the model it was given (yours, the brain's pick, or the default)
+ * @property {string|null} [runtimeModel]  what it actually runs on once started (the orchestrator says)
  * @property {"small"|"standard"|"large"} size
  * @property {AgentState} state
  * @property {{bridgeId: string, goalId: string, text: string}|null} [goal]  the interval goal it works on (UI-side for now; brain-api to carry it)
