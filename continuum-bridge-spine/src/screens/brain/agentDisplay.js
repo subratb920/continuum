@@ -21,6 +21,15 @@ export function elapsed(from, to = Date.now()) {
   return `${Math.floor(s / 3600)}h ${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}m`;
 }
 
+/** just now, 5 min ago, 2 h ago, 3 d ago */
+export function ago(at, now = Date.now()) {
+  const s = Math.max(0, Math.round((now - new Date(at)) / 1000));
+  if (s < 45) return "just now";
+  if (s < 3600) return `${Math.round(s / 60)} min ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+  return `${Math.floor(s / 86400)} d ago`;
+}
+
 export function clock(at) {
   return new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }

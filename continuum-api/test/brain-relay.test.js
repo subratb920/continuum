@@ -23,6 +23,7 @@ function fakeBrain() {
       if (path === "/agents" && method === "GET") return { status: 200, data: [agent] };
       if (path === "/brain") return { status: 200, data: { brain: { id: "c".repeat(24), kind: "core", state: "idle" }, events: [] } };
       if (path.endsWith("/events")) return { status: 200, data: events };
+      if (path === "/pending") return { status: 200, data: events.filter((e) => !e.answeredAt) };
       if (path === "/agents" && body?.projectId === "nope") return { status: 404, data: { error: { code: "NOT_FOUND", message: "No such project." } } };
       return { status: 200, data: agent };
     },
@@ -98,6 +99,10 @@ test("brain relay: Approve is allow once, Deny is reject; a question gets its op
   assert.match(b.calls.at(-1), /POST \/agents\/a+\/permissions\/per_1 {"reply":"once"}/);
   await s.call("POST", `/agents/${W}/reply`, { eventId: PER, answer: "deny" });
   assert.match(b.calls.at(-1), /{"reply":"reject"}/);
+  await s.call("POST", `/agents/${W}/reply`, { eventId: PER, answer: "deny", message: " Keep the old footer " });
+  assert.match(b.calls.at(-1), /{"reply":"reject","message":"Keep the old footer"}/, "a denial's note goes along");
+  await s.call("POST", `/agents/${W}/reply`, { eventId: PER, answer: "approve", message: "ignored" });
+  assert.match(b.calls.at(-1), /{"reply":"once"}$/, "only a denial carries a note");
   assert.equal((await s.call("POST", `/agents/${W}/reply`, { eventId: PER, answer: "maybe" })).status, 400);
   await s.call("POST", `/agents/${W}/reply`, { eventId: QUE, answer: "Blue" });
   assert.match(b.calls.at(-1), /POST \/agents\/a+\/questions\/que_1 {"answers":\[\["Blue"\]\]}/);
@@ -127,4 +132,36 @@ test("brain relay: the live stream passes through in the screen's shapes; a fres
   await (await fetch(`${s.base}/stream?after=${PER}`)).text();
   assert.equal(b.calls.at(-1), `stream after=${PER}`);
   s.close();
+});
+
+test("brain relay: what waits on you, however old; answering twice is harmless; streams resume by seq", async () => {
+  const b = fakeBrain();
+  const s = await serve(b);
+  const pending = await (await s.call("GET", "/pending")).json();
+  assert.deepEqual(pending.map((e) => [e._id, e.data.target ?? e.data.options?.[0]]), [[PER, "src/footer.html"], [QUE, "Blue"]]);
+  // A request found among what waits is answered without reading the agent's whole history
+  b.calls.length = 0;
+  assert.equal((await s.call("POST", `/agents/${W}/reply`, { eventId: PER, answer: "approve" })).status, 200);
+  assert.ok(!b.calls.some((c) => c.includes("/events")), "found in /pending");
+  // Answered already (another tab, a second click): 200, and nothing is sent to the agent
+  const answered = fakeBrain();
+  const t = await serve(answered);
+  answered.call = ((orig) => async (u, m, p, body) => {
+    const r = await orig(u, m, p, body);
+    if (p === "/pending") return { status: 200, data: [] };
+    if (p.endsWith("/events")) return { status: 200, data: r.data.map((e) => ({ ...e, answeredAt: "2026-10-17T10:00:00Z", answer: "once" })) };
+    return r;
+  })(answered.call);
+  const again = await t.call("POST", `/agents/${W}/reply`, { eventId: PER, answer: "approve" });
+  assert.equal(again.status, 200);
+  assert.equal((await again.json()).alreadyAnswered, true);
+  assert.ok(!answered.calls.some((c) => c.includes("/permissions/")), "not sent again");
+  // ?after= a seq goes to brain-api as is
+  const ctl = new AbortController();
+  const r = await fetch(`${s.base}/stream?after=42`, { signal: ctl.signal });
+  await r.body.getReader().read();
+  ctl.abort();
+  assert.ok(b.calls.includes("stream after=42"));
+  s.close();
+  t.close();
 });

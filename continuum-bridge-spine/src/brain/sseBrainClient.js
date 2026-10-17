@@ -1,16 +1,19 @@
 import { sharedFeed } from "../utils/sharedFeed";
 
 /**
- * The brain as brain-api will serve it (not built yet; see continuum-brain/apps/brain-api).
- * Expected endpoints, under VITE_BRAIN_API_URL:
+ * The brain, through continuum-api's relay to brain-api (continuum-api/src/brain/routes.js).
+ * Endpoints, under VITE_BRAIN_API_URL:
  *   GET  /brain/agents                     → Agent[]
- *   GET  /brain/stream?after=<eventId>&token=<jwt>
- *        SSE: "agent" (Agent) and "event" (AgentEvent) messages, from a change
- *        stream on brain_agents / brain_events; after= catches up first
+ *   GET  /brain/stream?after=<seq>&token=<jwt>
+ *        SSE: "agent" (Agent), "event" (AgentEvent) and "answered" (a request that got its
+ *        answer) messages, from change streams on brain_agents / brain_events; after= (the
+ *        last event's seq) catches up first
+ *   GET  /brain/pending                    → what waits on you (requests not yet answered)
  *   POST /brain/agents              {task, repo?, goal?: {bridgeId, goalId}}
  *        a worker: on that repository, or that interval goal's project; else the core picks
  *   POST /brain/agents/:id/stop
- *   POST /brain/agents/:id/reply    {eventId, answer}   a permission or question
+ *   POST /brain/agents/:id/reply    {eventId, answer, message?}   a permission or question
+ *        (answered already: 200 with alreadyAnswered)
  *   POST /brain/core/messages       {text}
  * EventSource can't send headers, so the stream takes the token as a query parameter.
  *
@@ -25,7 +28,11 @@ export function createSseBrainClient(base = import.meta.env.VITE_BRAIN_API_URL) 
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
       body: body ? JSON.stringify(body) : undefined,
     });
-    if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || `brain-api ${res.status}`);
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      // The status and code go along: a 404 on an answer means the request no longer waits
+      throw Object.assign(new Error(body?.error || `brain-api ${res.status}`), { status: res.status, code: body?.code ?? null });
+    }
     return res.status === 204 ? null : res.json();
   }
 
@@ -42,10 +49,15 @@ export function createSseBrainClient(base = import.meta.env.VITE_BRAIN_API_URL) 
       const open = () => {
         const q = new URLSearchParams({ token: token() ?? "", ...(last ? { after: last } : {}) });
         source = new EventSource(`${base}/brain/stream?${q}`);
+        // (Re)connected: what waits on you is asked again, in case anything was missed meanwhile
+        source.addEventListener("open", () => emit({ type: "connected" }));
         source.addEventListener("agent", (e) => emit({ type: "agent", agent: JSON.parse(e.data) }));
+        source.addEventListener("answered", (e) => emit({ type: "answered", event: JSON.parse(e.data) }));
         source.addEventListener("event", (e) => {
           const event = JSON.parse(e.data);
-          last = event._id; // reconnects resume after the last one seen
+          // Reconnects resume after the last one seen, by the brain's order (its seq)
+          if (event.seq != null && (typeof last !== "number" || event.seq > last)) last = event.seq;
+          else if (event.seq == null && last == null) last = event._id;
           emit({ type: "event", event });
         });
         source.onerror = () => {
@@ -69,7 +81,8 @@ export function createSseBrainClient(base = import.meta.env.VITE_BRAIN_API_URL) 
     changes: (agentId) => call("GET", `/brain/agents/${agentId}/changes`),
     file: (agentId, path) => call("GET", `/brain/agents/${agentId}/file?path=${encodeURIComponent(path)}`),
     push: (agentId, message) => call("POST", `/brain/agents/${agentId}/push`, message ? { message } : {}),
-    reply: (agentId, eventId, answer) => call("POST", `/brain/agents/${agentId}/reply`, { eventId, answer }),
+    pending: () => call("GET", "/brain/pending"),
+    reply: (agentId, eventId, answer, { message } = {}) => call("POST", `/brain/agents/${agentId}/reply`, { eventId, answer, ...(message ? { message } : {}) }),
     say: (text) => call("POST", "/brain/core/messages", { text }),
   };
 }

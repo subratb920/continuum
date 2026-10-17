@@ -24,7 +24,7 @@ export function createMockBrainClient({ speed = 1 } = {}) {
   const coreId = () => [...agents.values()].find((a) => a.kind === "core")?._id;
 
   function event(agentId, kind, text, data) {
-    const e = { _id: `e${String(++seq).padStart(7, "0")}`, agentId, at: now(), kind, text, ...(data && { data }) };
+    const e = { _id: `e${String(++seq).padStart(7, "0")}`, seq, agentId, at: now(), kind, text, ...(data && { data }) };
     if (history.push(e) > 5000) history.shift();
     emit({ type: "event", event: e });
     return e;
@@ -116,10 +116,11 @@ export function createMockBrainClient({ speed = 1 } = {}) {
     }
     const target = files[files.length - 1];
     setState(id, "idle");
-    const ok = await ask(id, "permission", `Edit ${target}`, { tool: "edit", target, diff: "+12 −3" });
+    event(id, "text", `I'll add the goal progress to ${target} next; it needs your OK to edit it.`);
+    const ok = await ask(id, "permission", `Edit ${target}`, { tool: "edit", target, diff: "+3 −1", detail: sampleDiff(target) });
     if (!alive(id)) return;
     setState(id, "working");
-    if (ok !== "approve") {
+    if (ok !== "approve" && ok !== "always") {
       event(id, "text", `Skipped the edit to ${target}; leaving notes on the branch instead.`);
     } else {
       event(id, "tool", `edit ${target}`, { tool: "edit", target });
@@ -131,6 +132,10 @@ export function createMockBrainClient({ speed = 1 } = {}) {
     await sleep(1200);
     setState(id, "idle");
   }
+
+  /** The change a demo worker asks to make (what a real permission request carries as detail). */
+  const sampleDiff = (file) =>
+    [`--- a/${file}`, `+++ b/${file}`, "@@ -12,4 +12,6 @@", "   const goals = bridge.goals ?? [];", "-  return goals;", "+  const done = goals.filter((g) => g.status === \"done\").length;", "+  // Progress: done goals of all", "+  return { goals, done, total: goals.length };", " }"].join("\n");
 
   // What the demo workers do, by turn: the second asks a question, the third fails
   const SCRIPTS = [
@@ -227,8 +232,15 @@ export function createMockBrainClient({ speed = 1 } = {}) {
       setState(agentId, "stopped");
     },
 
+    /** What waits on you: requests not yet answered (as brain-api's /pending). */
+    async pending() {
+      return history.filter((e) => waiting.has(e._id));
+    },
+
     async reply(agentId, eventId, answer) {
-      event(agentId, "user", answer === "approve" ? "Approved" : answer === "deny" ? "Denied" : answer, { replyTo: eventId, answer });
+      if (!waiting.has(eventId)) return { alreadyAnswered: true }; // as brain-api: harmless twice
+      const said = { approve: "Allowed once", always: "Allowed for this task", deny: "Denied" }[answer] ?? answer;
+      event(agentId, "user", said, { replyTo: eventId, answer });
       waiting.get(eventId)?.resolve(answer);
       waiting.delete(eventId);
     },

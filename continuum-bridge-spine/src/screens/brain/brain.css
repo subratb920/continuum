@@ -455,10 +455,64 @@
 .ask-card-top .event-time { margin-left: auto; }
 .ask-card-text { margin: 0; color: var(--text); font-weight: 500; }
 .ask-card-meta { margin: 0; color: var(--text-muted); }
+.ask-card-task {
+  margin: -4px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The change (or the command) it asks to make: the whole of it, to read before answering */
+.ask-diff {
+  margin: 0;
+  max-height: 240px;
+  overflow: auto;
+  padding: 6px 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-2);
+  font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.ask-diff > span { display: block; padding: 0 8px; white-space: pre; }
+.ask-diff > .add { background: var(--success-soft); color: var(--success-text); }
+.ask-diff > .del { background: var(--danger-soft); color: var(--danger-text); }
+.ask-diff > .hunk { color: var(--text-faint); }
+.ask-diff.ask-command { padding: 6px 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ask-card-why { margin: 0; color: var(--text-2); font-size: 12px; overflow-wrap: anywhere; }
+.ask-card-why > span { color: var(--text-muted); font-weight: 600; }
+.ask-card-warning { margin: 0; color: var(--warning-text); font-size: 12px; font-weight: 600; }
+.ask-card-error { margin: 0; color: var(--danger-text); font-size: 12px; }
 .ask-card-actions { display: flex; justify-content: flex-end; gap: 6px; }
 .ask-card-actions.wrap { flex-wrap: wrap; justify-content: flex-start; }
 .ask-card-answer,
 .chat-input { display: flex; gap: 6px; }
+.ask-card-answer { flex-wrap: wrap; }
+
+/* Approvals: one worker's requests, or all */
+.ask-filter { display: flex; flex-wrap: wrap; gap: 6px; }
+.ask-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.ask-filter-chip[aria-pressed="true"] { border-color: var(--agent-waiting); color: var(--text); font-weight: 600; }
+
+/* Touch: room for a finger on everything you answer with */
+@media (hover: none) {
+  .ask-card .brain-btn,
+  .ask-filter-chip,
+  .ask-card-answer input { min-height: 40px; }
+}
 .ask-card-answer input,
 .chat-input input {
   flex: 1;

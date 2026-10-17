@@ -3,9 +3,10 @@
 // The Agents screen's brain (signed-in users), relayed to continuum-brain's
 // brain-api for the signed-in user, in the screen's shapes (_id):
 //   GET    /brain/agents                    your brain and your workers
-//   GET    /brain/stream?after=&token=      live: "agent" and "event" messages (server-sent
-//                                           events; EventSource can't send headers, so this
-//                                           route also takes the sign-in token as ?token=)
+//   GET    /brain/stream?after=&token=      live: "agent", "event" and "answered" messages (server-
+//                                           sent events; after= an event's seq; EventSource can't send
+//                                           headers, so this route also takes the sign-in token as ?token=)
+//   GET    /brain/pending                   what waits on you: requests not yet answered, oldest first
 //   POST   /brain/agents {task, projectId? | goal?: {bridgeId, goalId} | repo?}
 //                                           a worker: on that project, interval goal or repository;
 //                                           with none of them, your brain picks the project
@@ -13,8 +14,9 @@
 //   GET    /brain/agents/:id/changes        what a worker changed on its branch (with diffs)
 //   GET    /brain/agents/:id/file?path=     one file of its working copy (written into your own folder)
 //   POST   /brain/agents/:id/push {message?} its changes to its own branch on GitHub (never main)
-//   POST   /brain/agents/:id/reply {eventId, answer}
-//                                           a permission (approve | always | deny) or a question
+//   POST   /brain/agents/:id/reply {eventId, answer, message?}
+//                                           a permission (approve | always | deny, with a note) or a question;
+//                                           answered already: 200 with alreadyAnswered
 //   POST   /brain/core/messages {text}      a message to your brain
 //   GET    /brain/models   GET|PUT /brain/settings
 
@@ -23,6 +25,8 @@ import { AppError } from "../errors/AppError.js";
 import { brainClient, BrainUnavailableError } from "./client.js";
 
 const ID = /^[a-f0-9]{24}$/;
+/** Where a stream resumes: an event's seq (or, from before seq, its id). */
+const CURSOR = /^(\d{1,15}|[a-f0-9]{24})$/;
 
 /** brain-api's id → the screen's _id. */
 export const toAgent = (a) => ({ ...a, _id: a.id });
@@ -96,12 +100,12 @@ export function createBrainRouter(opts = {}) {
   });
 
   router.get("/stream", async (req, res) => {
-    const after = typeof req.query.after === "string" && ID.test(req.query.after) ? req.query.after : (req.get("last-event-id") ?? "");
+    const after = typeof req.query.after === "string" && CURSOR.test(req.query.after) ? req.query.after : (req.get("last-event-id") ?? "");
     const ctl = new AbortController();
     req.on("close", () => ctl.abort());
     let upstream;
     try {
-      upstream = await client.stream(uid(req), ID.test(after) ? { after } : { history: "1" }, ctl.signal);
+      upstream = await client.stream(uid(req), CURSOR.test(after) ? { after } : { history: "1" }, ctl.signal);
     } catch (e) {
       if (e instanceof BrainUnavailableError) throw new AppError(e.message, 503, "BRAIN_UNAVAILABLE");
       throw e;
@@ -132,7 +136,7 @@ export function createBrainRouter(opts = {}) {
             continue;
           }
           const id = /^id: (.+)$/m.exec(block)?.[1];
-          const out = name === "agent" ? toAgent(v) : name === "event" ? toEvent(v) : v;
+          const out = name === "agent" ? toAgent(v) : name === "event" || name === "answered" ? toEvent(v) : v;
           res.write(`${id ? `id: ${id}\n` : ""}event: ${name}\ndata: ${JSON.stringify(out)}\n\n`);
         }
       }
@@ -140,6 +144,10 @@ export function createBrainRouter(opts = {}) {
       // the page went away, or brain-api restarted: the page reconnects by itself
     }
     res.end();
+  });
+
+  router.get("/pending", async (req, res) => {
+    res.set("Cache-Control", "no-store").json((await brain(req, "GET", "/pending")).map(toEvent));
   });
 
   router.post("/agents", async (req, res) => {
@@ -183,13 +191,17 @@ export function createBrainRouter(opts = {}) {
     const id = agentId(req);
     const { eventId, answer } = req.body ?? {};
     if (typeof eventId !== "string" || !ID.test(eventId)) throw new AppError("Which request are you answering?", 400, "VALIDATION_ERROR");
-    const events = await brain(req, "GET", `/agents/${id}/events`);
-    const asked = events.find((e) => e.id === eventId);
+    // What still waits first (however long ago it was asked), else the agent's events (answered already?)
+    const waiting = await brain(req, "GET", "/pending");
+    const asked = waiting.find((e) => e.id === eventId && e.agentId === id) ?? (await brain(req, "GET", `/agents/${id}/events`)).find((e) => e.id === eventId);
     if (!asked || !asked.data?.id) throw new AppError("That request isn't waiting any more.", 404, "NOT_FOUND");
+    if (asked.answeredAt) return res.json({ ...toAgent(await brain(req, "GET", `/agents/${id}`)), alreadyAnswered: true });
     if (asked.kind === "permission") {
       const reply = PERMISSION_REPLY[answer];
       if (!reply) throw new AppError("Answer approve, always or deny.", 400, "VALIDATION_ERROR");
-      return res.json(toAgent(await brain(req, "POST", `/agents/${id}/permissions/${asked.data.id}`, { reply })));
+      // A denial can say why, or what to do instead (the agent reads it)
+      const message = reply === "reject" && typeof req.body.message === "string" && req.body.message.trim() ? req.body.message.trim().slice(0, 2000) : null;
+      return res.json(toAgent(await brain(req, "POST", `/agents/${id}/permissions/${asked.data.id}`, { reply, ...(message ? { message } : {}) })));
     }
     if (asked.kind === "question") {
       if (answer !== null && (typeof answer !== "string" || !answer.trim())) throw new AppError("Give an answer.", 400, "VALIDATION_ERROR");

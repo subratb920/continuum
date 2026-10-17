@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useRef } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { useAuth } from "../state/authStore";
 import { BrainContext } from "./brainContext";
 import { getBrainClient } from "./brainClient";
@@ -15,17 +15,59 @@ import { copyToLocal, WRITE_TOOLS } from "./localSync";
  * Replay: with replay.at set, the screen shows the brain as it was then
  * (agents, states, what waited on you), rebuilt from the events. Actions act
  * on now, so the screen offers them only when live.
+ *
+ * What waits on you never gets stuck: events are kept in the brain's own
+ * order (seq) and only exact repeats are dropped (ids from different writers
+ * don't sort in time order). A request leaves the list once anything says it
+ * was answered: its reply note, the request itself (answeredAt), the stream's
+ * "answered" message, your own answer going through, or the server's list of
+ * what still waits (asked again after reconnecting, on coming back to the
+ * tab, and every minute while something waits).
  */
 const EVENTS_KEPT = 5000;
+const RESYNC_MS = 60_000;
 
 const initial = {
   agents: {},
   order: [],
   events: [],
+  seen: new Set(),
+  // Request id → { answer, at, source }: how it left the list (note, request, stream, you, server)
   replied: {},
   selectedId: null,
   replay: { at: null, playing: false, speed: 4 },
 };
+
+/** Adds events in the brain's order (seq), skipping ones already here. */
+function addEvents(state, list) {
+  let { events, seen, replied } = state;
+  for (const e of list) {
+    if (seen.has(e._id)) continue;
+    if (seen === state.seen) seen = new Set(seen);
+    seen.add(e._id);
+    if (events === state.events) events = [...events];
+    // Usually the newest: from the end, before any with a higher seq (events without seq go last, as heard)
+    let i = events.length;
+    if (e.seq != null) while (i > 0 && events[i - 1].seq != null && events[i - 1].seq > e.seq) i--;
+    events.splice(i, 0, e);
+    const answer = answerIn(e);
+    if (answer && !replied[answer.id]) replied = { ...replied, [answer.id]: answer.how };
+  }
+  if (events.length > EVENTS_KEPT) {
+    const gone = events.slice(0, events.length - EVENTS_KEPT);
+    events = events.slice(-EVENTS_KEPT);
+    seen = new Set(seen);
+    for (const e of gone) seen.delete(e._id);
+  }
+  return events === state.events ? state : { ...state, events, seen, replied };
+}
+
+/** What an event says was answered: a reply note (replyTo), or a request that knows its answer. */
+function answerIn(e) {
+  if (e.data?.replyTo) return { id: e.data.replyTo, how: { answer: e.data.answer ?? true, at: e.at, source: "note" } };
+  if (e.answeredAt && ASKING_KINDS.includes(e.kind)) return { id: e._id, how: { answer: e.answer ?? true, at: e.answeredAt, source: "request" } };
+  return null;
+}
 
 function reducer(state, action) {
   switch (action.type) {
@@ -38,12 +80,34 @@ function reducer(state, action) {
       }
       return { ...state, agents, order };
     }
-    case "event": {
-      const e = action.event;
-      if (state.events.length && state.events[state.events.length - 1]._id >= e._id) return state; // seen (catch-up overlap)
-      const events = state.events.length >= EVENTS_KEPT ? [...state.events.slice(-EVENTS_KEPT + 1), e] : [...state.events, e];
-      const replied = e.data?.replyTo ? { ...state.replied, [e.data.replyTo]: { answer: e.data.answer ?? true, at: e.at } } : state.replied;
-      return { ...state, events, replied };
+    case "event":
+      return addEvents(state, [action.event]);
+    // A request got its answer (the stream's "answered", or yours went through)
+    case "answered": {
+      if (state.replied[action.id]?.source === "note") return state;
+      return { ...state, replied: { ...state.replied, [action.id]: { answer: action.answer ?? true, at: action.at ?? new Date().toISOString(), source: action.source } } };
+    }
+    // The server's list of what still waits: requests on it wait (even ones older than the
+    // history here); requests this page had heard of when it asked (seq up to `upToSeq`) and
+    // not on it were answered meanwhile. (By seq, not time: the two clocks may differ.)
+    case "pending/sync": {
+      const next = addEvents(state, action.events);
+      const open = new Set(action.events.map((e) => e._id));
+      const replied = { ...next.replied };
+      let changed = next !== state;
+      for (const e of next.events) {
+        if (!ASKING_KINDS.includes(e.kind)) continue;
+        if (open.has(e._id)) {
+          if (replied[e._id] && replied[e._id].source !== "note" && replied[e._id].source !== "request") {
+            delete replied[e._id];
+            changed = true;
+          }
+        } else if (!replied[e._id] && e.seq != null && e.seq <= action.upToSeq) {
+          replied[e._id] = { answer: null, at: new Date().toISOString(), source: "server" };
+          changed = true;
+        }
+      }
+      return changed ? { ...next, replied } : state;
     }
     case "select":
       return { ...state, selectedId: action.id };
@@ -112,6 +176,26 @@ export function BrainProvider({ children }) {
 
   // A file change you allowed has been made: your own folder for that project follows
   // (only changes from now on: not the history a page replays when it opens)
+  // The newest seq heard so far (what the server's list of what waits can be compared with)
+  const lastSeq = useRef(0);
+  useEffect(() => {
+    // Kept in seq order: the last one with a seq has the highest
+    for (let i = state.events.length - 1; i >= 0; i--) {
+      if (state.events[i].seq == null) continue;
+      lastSeq.current = Math.max(lastSeq.current, state.events[i].seq);
+      break;
+    }
+  }, [state.events]);
+
+  const resync = useCallback(() => {
+    if (!client.pending) return;
+    const upToSeq = lastSeq.current;
+    client
+      .pending()
+      .then((events) => dispatch({ type: "pending/sync", events, upToSeq }))
+      .catch(() => {}); // the next try (reconnect, focus, the minute) catches up
+  }, [client]);
+
   const agentsNow = useRef({});
   useEffect(() => {
     agentsNow.current = state.agents;
@@ -138,16 +222,32 @@ export function BrainProvider({ children }) {
     client.listAgents().then((agents) => live && dispatch({ type: "agents", agents })).catch(() => {});
     const unsubscribe = client.subscribe((m) => {
       if (m.type === "agent") dispatch({ type: "agents", agents: [m.agent] });
+      else if (m.type === "answered") dispatch({ type: "answered", id: m.event._id, answer: m.event.answer, at: m.event.answeredAt, source: "stream" });
+      else if (m.type === "connected") resync(); // (re)connected: messages may have been missed meanwhile
       else {
         dispatch({ type: "event", event: m.event });
         afterChange(m.event);
       }
     });
+    resync();
     return () => {
       live = false;
       unsubscribe();
     };
-  }, [client, signedIn]);
+  }, [client, signedIn, resync]);
+
+  // The server's list of what waits: on coming back to the tab, and every minute while something waits
+  const waiting = view(state, null).pending.length > 0;
+  useEffect(() => {
+    if (!signedIn) return;
+    const onVisible = () => document.visibilityState === "visible" && resync();
+    document.addEventListener("visibilitychange", onVisible);
+    const timer = waiting ? setInterval(resync, RESYNC_MS) : null;
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      clearInterval(timer);
+    };
+  }, [signedIn, waiting, resync]);
 
   // Replay playing: time moves on at replay.speed, and goes live at the end
   const { at, playing, speed } = state.replay;
@@ -181,7 +281,24 @@ export function BrainProvider({ children }) {
       stop: (id) => client.stop(id),
       // brain-api has no retry yet: then a new worker gets the same task
       retry: (id) => (client.retry ? client.retry(id) : client.spawn(state.agents[id].task, { repo: state.agents[id].repo, goal: state.agents[id].goal })),
-      reply: (agentId, eventId, answer) => client.reply(agentId, eventId, answer),
+      /**
+       * Your answer to a request. Once it goes through (or it turns out it was
+       * answered already, or no longer waits), the request leaves the list at
+       * once; on any other failure it stays, and the error is thrown.
+       */
+      reply: async (agentId, eventId, answer, opts) => {
+        try {
+          const r = await client.reply(agentId, eventId, answer, opts);
+          dispatch({ type: "answered", id: eventId, answer, source: "you" });
+          return r;
+        } catch (err) {
+          if (err.status === 404) {
+            dispatch({ type: "answered", id: eventId, answer: null, source: "server" });
+            return { gone: true };
+          }
+          throw err;
+        }
+      },
       say: (text) => client.say(text),
       // A worker's work: its changes, copying them into your folder, and pushing them to its own branch
       changes: client.changes ? (id) => client.changes(id) : null,
