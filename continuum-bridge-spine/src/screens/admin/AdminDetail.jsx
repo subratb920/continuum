@@ -197,22 +197,30 @@ function RoleDetail({ role }) {
       <section className="admin-block">
         <h4>Features</h4>
         {role.locked && <p className="admin-muted">Admin always has every feature.</p>}
-        <ul className="admin-feature-list">
-          {features.map((f) => {
-            const on = role.features.includes(f.id);
-            return (
-              <li key={f.id}>
-                <span>
-                  {f.label}
-                  <span className="admin-muted">{f.description}</span>
-                </span>
-                <button type="button" role="switch" aria-checked={on} aria-label={`${f.label}: ${on ? "on" : "off"}`} className={`admin-switch${on ? " is-on" : ""}`} disabled={role.locked} onClick={() => run(() => toggleFeature(role, f.id, !on))}>
-                  <span className="admin-switch-knob" aria-hidden="true" />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        {[...new Set(features.map((f) => f.appLabel ?? "Continuum Console"))].map((app) => (
+          <div key={app}>
+            <h5 className="admin-app-title">{app}</h5>
+            <ul className="admin-feature-list">
+              {features
+                .filter((f) => (f.appLabel ?? "Continuum Console") === app)
+                .map((f) => {
+                  const on = role.features.includes(f.id);
+                  const appOff = f.parent && !role.features.includes(f.parent);
+                  return (
+                    <li key={f.id} className={f.parent ? "is-sub" : ""}>
+                      <span>
+                        {f.label}
+                        <span className="admin-muted">{f.description}</span>
+                      </span>
+                      <button type="button" role="switch" aria-checked={on} aria-label={`${f.label} (${app}): ${on ? "on" : "off"}`} className={`admin-switch${on ? " is-on" : ""}`} disabled={role.locked || appOff} title={appOff ? "Switch the app on first" : undefined} onClick={() => run(() => toggleFeature(role, f.id, !on))}>
+                        <span className="admin-switch-knob" aria-hidden="true" />
+                      </button>
+                    </li>
+                  );
+                })}
+            </ul>
+          </div>
+        ))}
       </section>
 
       <section className="admin-block">

@@ -223,3 +223,8 @@ html.reduce-motion .admin-switch-knob { transition: none; }
 .admin-claim-card h2 { margin: 0; color: var(--text); font-size: 18px; }
 .admin-claim-card p { margin: 0; }
 .admin-claim-card input { padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text); font: 15px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+
+.admin-app { margin-top: 18px; }
+.admin-app-title { margin: 0 0 6px; font-size: 14px; font-weight: 700; color: var(--text); }
+.admin-matrix thead th.is-sub { font-weight: 500; color: var(--text-muted, inherit); }
+.admin-feature-list li.is-sub { padding-left: 14px; }

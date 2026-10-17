@@ -23,15 +23,15 @@
 
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { ObjectId } from "mongodb";
-import { FEATURE_IDS } from "./features.js";
+import { FEATURE_IDS, FEATURE_SET, childrenOf, effectiveFeatures } from "./features.js";
 import { createOAuthStore } from "../oauth/oauth.store.js";
 
 export const ADMIN_ROLE = "admin";
 export const MEMBER_ROLE = "member";
 
 const BUILT_IN = [
-  { _id: ADMIN_ROLE, name: "Admin", description: "Everything, including the admin area.", features: FEATURE_IDS },
-  { _id: MEMBER_ROLE, name: "Member", description: "Everything except the admin area.", features: FEATURE_IDS.filter((f) => f !== "admin") },
+  { _id: ADMIN_ROLE, name: "Admin", description: "Everything, including the admin area.", features: FEATURE_IDS, featureSet: FEATURE_SET },
+  { _id: MEMBER_ROLE, name: "Member", description: "Everything except the admin area.", features: FEATURE_IDS.filter((f) => f !== "admin"), featureSet: FEATURE_SET },
 ];
 
 /** Continuum's owner: always an admin, through GitHub sign-in (a verified address) only. */
@@ -50,6 +50,11 @@ export async function ensureAccess(db) {
   const now = new Date();
   for (const r of BUILT_IN) {
     await roles.updateOne({ _id: r._id }, { $setOnInsert: { ...r, builtIn: true, createdAt: now, updatedAt: now } }, { upsert: true });
+  }
+  // Roles saved before the per-app features: each app they could open keeps everything it allowed (its new sub-features on), once
+  for (const r of await roles.find({ featureSet: { $ne: FEATURE_SET } }).toArray()) {
+    const features = [...new Set([...(r.features ?? []), ...(r.features ?? []).flatMap(childrenOf)])];
+    await roles.updateOne({ _id: r._id, featureSet: r.featureSet ?? { $exists: false } }, { $set: { features, featureSet: FEATURE_SET, updatedAt: now } });
   }
   await db.collection("settings").updateOne({ _id: "access" }, { $setOnInsert: { defaultRoleId: MEMBER_ROLE, updatedAt: now } }, { upsert: true });
   await db.collection("users").createIndex({ roleId: 1 }, { name: "roleId" });
@@ -131,10 +136,10 @@ export async function roleForNewUser(db) {
   return (await db.collection("roles").findOne({ _id: id }, { projection: { _id: 1 } })) ? id : MEMBER_ROLE;
 }
 
-/** A role's features: only known ones; admin always has them all. */
+/** A role's features: only known ones, each app's sub-features only with the app on; admin always has them all. */
 export function roleFeatures(role) {
   if (role?._id === ADMIN_ROLE) return [...FEATURE_IDS];
-  return FEATURE_IDS.filter((f) => role?.features?.includes(f));
+  return effectiveFeatures(role?.features ?? []);
 }
 
 /** A user's session version: what their sign-in tokens must carry (tv). */

@@ -84,9 +84,13 @@ export function AdminProvider({ children }) {
         await Promise.all([loadUsers(), loadRoles()]);
         return u;
       },
-      /** Switches one feature of a role on or off. */
+      /**
+       * Switches one feature of a role on or off. Turning an app on gives all
+       * of its features (switch off what isn't wanted); off, they all stop.
+       */
       async toggleFeature(role, feature, on) {
-        const next = on ? [...new Set([...role.features, feature])] : role.features.filter((f) => f !== feature);
+        const children = features.filter((f) => f.parent === feature).map((f) => f.id);
+        const next = on ? [...new Set([...role.features, feature, ...children])] : role.features.filter((f) => f !== feature && !children.includes(f));
         setRoles((rs) => rs.map((r) => (r.id === role.id ? { ...r, features: next } : r))); // at once; put right on failure
         try {
           await adminApi.updateRole(role.id, { features: next });

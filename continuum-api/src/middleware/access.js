@@ -54,6 +54,22 @@ export function requireFeature(...features) {
 
 const READS = new Set(["GET", "HEAD", "OPTIONS"]);
 
+/**
+ * An app's sub-features by request: the first rule whose method and path
+ * match says which feature is needed (paths relative to where it's mounted).
+ * Anything else needs only the app's opening feature (checked before).
+ * A rule: [methods ("*" any, "write": not a read), path pattern, feature].
+ */
+export function requireFeatureFor(rules) {
+  return (req, res, next) => {
+    for (const [methods, pattern, feature] of rules) {
+      const methodOk = methods === "*" || (methods === "write" ? !READS.has(req.method) : methods.split(",").includes(req.method));
+      if (methodOk && pattern.test(req.path)) return req.access?.features.includes(feature) ? next() : refuse(res, feature);
+    }
+    next();
+  };
+}
+
 /** Reading needs any of `read`, changing anything needs any of `write`. */
 export function requireFeatureByMethod({ read, write }) {
   return (req, res, next) => {

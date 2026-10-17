@@ -9,7 +9,7 @@
 import { ObjectId } from "mongodb";
 import { AppError } from "../errors/AppError.js";
 import { ADMIN_ROLE, MEMBER_ROLE, clearAccessCache, countAdmins, isOwner, roleFeatures, signOutEverywhere } from "../access/access.js";
-import { FEATURES, FEATURE_IDS } from "../access/features.js";
+import { APPS, FEATURES, FEATURE_IDS } from "../access/features.js";
 
 const PAGE = 50;
 const oid = (id, what = "user") => {
@@ -79,7 +79,8 @@ export function createAdminService(db) {
   }
 
   return {
-    features: () => FEATURES,
+    /** Every feature, with the app it belongs to (and, for an app's sub-features, the feature that opens it). */
+    features: () => FEATURES.map((f) => ({ ...f, appLabel: APPS.find((a) => a.id === f.app)?.label ?? f.app })),
 
     /**
      * Users, newest first (or by last seen): search by email or GitHub name,

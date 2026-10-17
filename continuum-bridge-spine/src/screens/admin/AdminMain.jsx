@@ -135,6 +135,14 @@ function Switch({ on, disabled, label, onChange }) {
 
 function Roles() {
   const { roles, features, toggleFeature, select, selected, createRole } = useAdmin();
+  // One table per app joined to Continuum, its features in order (the one that opens it first)
+  const apps = [];
+  for (const f of features) {
+    const id = f.app ?? "console";
+    let a = apps.find((x) => x.id === id);
+    if (!a) apps.push((a = { id, label: f.appLabel ?? "Continuum Console", features: [] }));
+    a.features.push(f);
+  }
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
@@ -156,7 +164,7 @@ function Roles() {
     <section aria-label="Roles">
       <header className="admin-head">
         <h2>Roles</h2>
-        <span className="admin-muted">Each feature is a switch: off, people with that role see "No feature access".</span>
+        <span className="admin-muted">Each feature is a switch, app by app: off, people with that role see "No feature access". An app's own features need the app switched on.</span>
         <button type="button" className="admin-btn is-primary" onClick={() => setAdding((a) => !a)}>＋ New role</button>
       </header>
       {adding && (
@@ -167,43 +175,55 @@ function Roles() {
           {error && <span className="admin-field-error" role="alert">{error}</span>}
         </form>
       )}
-      <div className="admin-table-wrap">
-        <table className="admin-table admin-matrix">
-          <thead>
-            <tr>
-              <th>Role</th>
-              {features.map((f) => (
-                <th key={f.id} title={f.description}>{f.label}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {roles.map((r) => (
-              <tr key={r.id} className={selected?.kind === "role" && selected.id === r.id ? "is-selected" : ""}>
-                <th scope="row">
-                  <button type="button" className="admin-role-name" onClick={() => select("role", r.id)}>
-                    {r.name}
-                    <span className="admin-muted">
-                      {r.users} {r.users === 1 ? "user" : "users"}
-                      {r.isDefault && " · default"}
-                    </span>
-                  </button>
-                </th>
-                {features.map((f) => (
-                  <td key={f.id}>
-                    <Switch
-                      on={r.features.includes(f.id)}
-                      disabled={r.locked}
-                      label={`${f.label} for ${r.name}: ${r.features.includes(f.id) ? "on" : "off"}${r.locked ? " (Admin always has everything)" : ""}`}
-                      onChange={(on) => toggleFeature(r, f.id, on)}
-                    />
-                  </td>
+      {apps.map((app) => (
+        <section key={app.id} className="admin-app" aria-label={app.label}>
+          <h3 className="admin-app-title">{app.label}</h3>
+          <div className="admin-table-wrap">
+            <table className="admin-table admin-matrix">
+              <thead>
+                <tr>
+                  <th>Role</th>
+                  {app.features.map((f) => (
+                    <th key={f.id} title={f.description} className={f.parent ? "is-sub" : ""}>
+                      {f.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {roles.map((r) => (
+                  <tr key={r.id} className={selected?.kind === "role" && selected.id === r.id ? "is-selected" : ""}>
+                    <th scope="row">
+                      <button type="button" className="admin-role-name" onClick={() => select("role", r.id)}>
+                        {r.name}
+                        <span className="admin-muted">
+                          {r.users} {r.users === 1 ? "user" : "users"}
+                          {r.isDefault && " · default"}
+                        </span>
+                      </button>
+                    </th>
+                    {app.features.map((f) => {
+                      const on = r.features.includes(f.id);
+                      // An app's own features need the app on first
+                      const appOff = f.parent && !r.features.includes(f.parent);
+                      return (
+                        <td key={f.id}>
+                          <Switch
+                            on={on}
+                            disabled={r.locked || appOff}
+                            label={`${f.label} (${app.label}) for ${r.name}: ${on ? "on" : "off"}${r.locked ? " (Admin always has everything)" : appOff ? ` (switch on ${featureName(features, f.parent)} first)` : ""}`}
+                            onChange={(v) => toggleFeature(r, f.id, v)}
+                          />
+                        </td>
+                      );
+                    })}
+                  </tr>
                 ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ))}
     </section>
   );
 }

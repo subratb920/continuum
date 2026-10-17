@@ -6,7 +6,8 @@ import { errorMiddleware } from "./middleware/error.middleware.js";
 import projectRoutes from "./routes/project.routes.js";
 import executionRoutes from "./routes/execution.routes.js";
 import bridgeRoutes from "./routes/bridge.routes.js";
-import { authed, requireFeature, requireFeatureByMethod, uses } from "./middleware/access.js";
+import { authed, requireFeature, requireFeatureByMethod, uses, requireFeatureFor } from "./middleware/access.js";
+import { AGENTS_RULES, DATA_RULES } from "./access/rules.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import githubRoutes from "./auth/github.routes.js";
 import oauthRoutes from "./oauth/oauth.routes.js";
@@ -58,8 +59,8 @@ app.use("/me", authed, meRoutes); // you: your access, and your preferences (the
 app.use("/workspaces", authed, requireFeature("workspaces"), uses("workspaces"), createWorkspacesRouter()); // development servers per project (continuum-workspaces)
 app.use("/admin", authed, requireFeature("admin"), createAdminRouter()); // users, roles, sign-ins (admins only)
 app.use("/service", createServiceRouter()); // read-only data for continuum-brain (its service token only)
-app.use("/brain", streamToken, authed, requireFeature("agents"), uses("agents"), createBrainRouter()); // the Agents screen, relayed to continuum-brain
-if (dataEngine) app.use("/data", dataEngine.router({ auth: [...authed, requireFeature("data"), uses("data")] })); // datasets: sources, versions, pipelines (continuum-data)
+app.use("/brain", streamToken, authed, requireFeature("agents"), requireFeatureFor(AGENTS_RULES), uses("agents"), createBrainRouter()); // the Agents screen, relayed to continuum-brain
+if (dataEngine) app.use("/data", dataEngine.router({ auth: [...authed, requireFeature("data"), requireFeatureFor(DATA_RULES), uses("data")] })); // datasets: sources, versions, pipelines (continuum-data)
 
 // ❗ MUST BE LAST
 app.use(errorMiddleware);

@@ -19,6 +19,7 @@ import { recordLogin } from "../access/activity.js";
 import { usage } from "../middleware/access.js";
 import { getOAuthConfig } from "./oauth.config.js";
 import { isValidChallenge, publicJwk, randomToken, safeEqual, sha256, signJwt, verifyPkce } from "./oauth.crypto.js";
+import { featuresOfApp } from "../access/features.js";
 import { createOAuthStore } from "./oauth.store.js";
 
 const router = express.Router();
@@ -47,7 +48,7 @@ function clientIsValid(cfg, body) {
   return idOk && secretOk;
 }
 
-async function issueTokens(cfg, store, user, familyId) {
+async function issueTokens(cfg, store, user, familyId, features = []) {
   const now = Math.floor(Date.now() / 1000);
   const accessToken = signJwt(
     {
@@ -56,6 +57,8 @@ async function issueTokens(cfg, store, user, familyId) {
       sub: String(user._id),
       email: user.email,
       tenant: `u:${user._id}`,
+      // What this person may do in Continuum Deploy (their role's Deploy features, as of now)
+      features,
       iat: now,
       exp: now + cfg.accessTtlSeconds,
       jti: randomToken(16),
@@ -115,9 +118,11 @@ router.post("/authorize", requireConfig, authed, requireFeature("deploy"), async
 
 // --- Token: server-to-server from continuum-deploy-api ---------------------------
 /** May this user use Continuum Deploy now (deploy feature on, account not disabled)? */
-async function deployAllowed(db, userId) {
+/** The person's Continuum Deploy features, or null when they may not use Deploy (off, or disabled). */
+async function deployFeatures(db, userId) {
   const access = await accessFor(db, userId);
-  return !!access && !access.disabled && access.features.includes("deploy");
+  if (!access || access.disabled || !access.features.includes("deploy")) return null;
+  return featuresOfApp("deploy", access.features);
 }
 
 router.post("/token", requireConfig, async (req, res) => {
@@ -147,12 +152,13 @@ router.post("/token", requireConfig, async (req, res) => {
 
     const user = await users.findOne({ _id: new ObjectId(String(doc.userId)) });
     if (!user) return oauthError(res, 400, "invalid_grant", "User no longer exists.");
-    if (!(await deployAllowed(db, user._id))) return oauthError(res, 400, "invalid_grant", "No feature access: Deploy isn't switched on for this account's role.");
+    const features = await deployFeatures(db, user._id);
+    if (!features) return oauthError(res, 400, "invalid_grant", "No feature access: Deploy isn't switched on for this account's role.");
 
     const familyId = randomToken(16);
     await store.linkCodeToFamily(code, familyId);
     req.log.info({ userId: String(user._id) }, "SSO tokens issued");
-    return res.json(await issueTokens(cfg, store, user, familyId));
+    return res.json(await issueTokens(cfg, store, user, familyId, features));
   }
 
   if (body.grant_type === "refresh_token") {
@@ -165,9 +171,11 @@ router.post("/token", requireConfig, async (req, res) => {
     const user = await users.findOne({ _id: new ObjectId(String(result.doc.userId)) });
     if (!user) return oauthError(res, 400, "invalid_grant", "User no longer exists.");
     // Deploy switched off (or the account disabled) since: no more tokens, so Deploy signs out
-    if (!(await deployAllowed(db, user._id))) return oauthError(res, 400, "invalid_grant", "No feature access: Deploy isn't switched on for this account's role.");
+    const features = await deployFeatures(db, user._id);
+    if (!features) return oauthError(res, 400, "invalid_grant", "No feature access: Deploy isn't switched on for this account's role.");
     usage.used(user._id, "deploy"); // still using Deploy
-    return res.json(await issueTokens(cfg, store, user, result.doc.familyId));
+    // A role changed since: the new features ride on the new token (within the access token's lifetime)
+    return res.json(await issueTokens(cfg, store, user, result.doc.familyId, features));
   }
 
   return oauthError(res, 400, "unsupported_grant_type", "Unsupported grant type.");

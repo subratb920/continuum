@@ -6,8 +6,9 @@ import { ObjectId } from "mongodb";
 // The middleware reads the server's settings when it loads
 Object.assign(process.env, { NODE_ENV: "test", LOG_LEVEL: "silent", PORT: "0", MONGO_URI: "mongodb://x", DB_NAME: "t", JWT_SECRET: "s".repeat(32), CLIENT_ORIGIN: "http://x" });
 const { accessFor, clearAccessCache, ensureAccess, roleForNewUser, ADMIN_ROLE, MEMBER_ROLE } = await import("../src/access/access.js");
-const { FEATURE_IDS } = await import("../src/access/features.js");
-const { requireFeature, requireFeatureByMethod, withAccess } = await import("../src/middleware/access.js");
+const { FEATURE_IDS, FEATURES, effectiveFeatures } = await import("../src/access/features.js");
+const { requireFeature, requireFeatureByMethod, requireFeatureFor, withAccess } = await import("../src/middleware/access.js");
+const { AGENTS_RULES, DATA_RULES } = await import("../src/access/rules.js");
 
 /** Collections in memory: enough for findOne / updateOne(upsert) / createIndex by _id. */
 function fakeDb() {
@@ -18,6 +19,11 @@ function fakeDb() {
       cols.set(name, {
         docs,
         findOne: async (q) => docs.get(String(q._id)) ?? null,
+        // Enough of a query for the role upgrade: { field: value } and { field: { $ne: value } }
+        find: (q = {}) => ({
+          toArray: async () =>
+            [...docs.values()].filter((d) => Object.entries(q).every(([k, v]) => (v && typeof v === "object" && "$ne" in v ? d[k] !== v.$ne : d[k] === v))),
+        }),
         updateOne: async (q, u, o) => {
           const k = String(q._id);
           if (!docs.has(k) && o?.upsert) docs.set(k, { _id: q._id, ...(u.$setOnInsert ?? {}) });
@@ -119,7 +125,7 @@ test("access: a feature switched off answers 403 No feature access; reading and 
     assert.equal(refused.status, 403);
     const body = await refused.json();
     assert.deepEqual([body.code, body.feature], ["NO_FEATURE_ACCESS", "agents"]);
-    assert.match(body.error, /^No feature access: Agents isn't switched on for your role/);
+    assert.match(body.error, /^No feature access: Brain agents isn't switched on for your role/);
     assert.equal((await call("GET", "/brain", "member")).status, 200);
 
     assert.equal((await call("GET", "/projects", "viewer")).status, 200, "the dashboard reads projects");
@@ -137,4 +143,48 @@ test("access: a feature switched off answers 403 No feature access; reading and 
   } finally {
     server.close();
   }
+});
+
+test("access: features come app by app; an app's sub-features count only while the app is on", () => {
+  assert.deepEqual([...new Set(FEATURES.map((f) => f.app))], ["console", "agents", "data", "deploy"]);
+  for (const f of FEATURES.filter((x) => x.parent)) assert.equal(FEATURES.find((x) => x.id === f.parent)?.app, f.app, `${f.id}'s parent opens its app`);
+  assert.deepEqual(effectiveFeatures(["deploy_run", "data", "data_recipes", "nonsense"]), ["data", "data_recipes"], "deploy_run without deploy is off");
+});
+
+test("access: roles saved before the per-app features keep everything each app allowed (its new sub-features on), once", async () => {
+  clearAccessCache();
+  const db = fakeDb();
+  await db.collection("roles").updateOne({ _id: "member" }, { $setOnInsert: { name: "Member", features: ["interval", "dashboard", "agents", "data", "workspaces", "create", "import_github", "publish", "deploy"] } }, { upsert: true });
+  await db.collection("roles").updateOne({ _id: "viewer" }, { $setOnInsert: { name: "Viewer", features: ["dashboard", "data"] } }, { upsert: true });
+  await ensureAccess(db);
+  const roles = db.collection("roles").docs;
+  assert.deepEqual(roles.get("viewer").features.sort(), ["dashboard", "data", "data_credentials", "data_publish", "data_recipes", "data_sources"].sort());
+  assert.equal(roles.get("viewer").featureSet, 2);
+  assert.deepEqual(roles.get("member").features.sort(), FEATURE_IDS.filter((f) => f !== "admin").sort());
+  // An admin switches one off afterwards: it stays off
+  roles.get("viewer").features = ["dashboard", "data"];
+  await ensureAccess(db);
+  assert.deepEqual(roles.get("viewer").features, ["dashboard", "data"]);
+});
+
+test("access: Agents and Data refuse what a role switched off, request by request", async () => {
+  const run = (rules, features, method, path) => {
+    let passed = false;
+    let refused = null;
+    const res = { status: () => ({ json: (b) => (refused = b) }) };
+    requireFeatureFor(rules)({ method, path, access: { features } }, res, () => (passed = true));
+    return passed ? "ok" : refused.feature;
+  };
+  const viewer = ["agents", "data"];
+  assert.equal(run(AGENTS_RULES, viewer, "GET", "/agents"), "ok", "seeing needs only the app");
+  assert.equal(run(AGENTS_RULES, viewer, "POST", "/agents"), "agents_run");
+  assert.equal(run(AGENTS_RULES, viewer, "POST", "/agents/a1/push"), "agents_push");
+  assert.equal(run(AGENTS_RULES, viewer, "DELETE", "/agents/a1"), "agents_manage");
+  assert.equal(run(AGENTS_RULES, viewer, "PUT", "/settings"), "agents_settings");
+  assert.equal(run(AGENTS_RULES, [...viewer, "agents_run"], "POST", "/agents/a1/reply"), "ok");
+  assert.equal(run(DATA_RULES, viewer, "GET", "/datasets"), "ok");
+  assert.equal(run(DATA_RULES, viewer, "POST", "/sources"), "data_sources");
+  assert.equal(run(DATA_RULES, viewer, "GET", "/credentials"), "data_credentials", "saved logins aren't even listed");
+  assert.equal(run(DATA_RULES, viewer, "POST", "/runs/r1/retry"), "data_recipes");
+  assert.equal(run(DATA_RULES, viewer, "GET", "/versions/v1/exports/csv/download"), "data_publish");
 });
