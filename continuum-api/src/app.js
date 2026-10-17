@@ -7,7 +7,7 @@ import projectRoutes from "./routes/project.routes.js";
 import executionRoutes from "./routes/execution.routes.js";
 import bridgeRoutes from "./routes/bridge.routes.js";
 import { authed, requireFeature, requireFeatureByMethod, uses, requireFeatureFor } from "./middleware/access.js";
-import { AGENTS_RULES, DATA_RULES } from "./access/rules.js";
+import { AGENTS_RULES, CREATE_RULES, DATA_RULES, WORKSPACES_RULES } from "./access/rules.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import githubRoutes from "./auth/github.routes.js";
 import oauthRoutes from "./oauth/oauth.routes.js";
@@ -54,9 +54,9 @@ app.use("/bridges", authed, projectsAccess, uses("interval"), bridgeRoutes);
 app.use("/support", authed, supportRoutes); // Contact us: callback requests (always)
 // New Project wizard: catalogue and generated projects; its GitHub checks (your account, a free name) also serve "Put on GitHub"
 const createAccess = (req, res, next) => (req.path.startsWith("/github") ? requireFeature("create", "publish") : requireFeature("create"))(req, res, next);
-app.use("/create", authed, createAccess, uses("create"), createRoutes);
+app.use("/create", authed, createAccess, requireFeatureFor(CREATE_RULES), uses("create"), createRoutes);
 app.use("/me", authed, meRoutes); // you: your access, and your preferences (theme), shared with Continuum Deploy
-app.use("/workspaces", authed, requireFeature("workspaces"), uses("workspaces"), createWorkspacesRouter()); // development servers per project (continuum-workspaces)
+app.use("/workspaces", authed, requireFeature("workspaces"), requireFeatureFor(WORKSPACES_RULES), uses("workspaces"), createWorkspacesRouter()); // development servers per project (continuum-workspaces)
 app.use("/admin", authed, requireFeature("admin"), createAdminRouter()); // users, roles, sign-ins (admins only)
 app.use("/service", createServiceRouter()); // read-only data for continuum-brain (its service token only)
 app.use("/brain", streamToken, authed, requireFeature("agents"), requireFeatureFor(AGENTS_RULES), uses("agents"), createBrainRouter()); // the Agents screen, relayed to continuum-brain

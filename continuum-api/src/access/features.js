@@ -10,7 +10,9 @@
 // the admin area; only users whose role has it (in the database) are admins.
 
 export const APPS = [
-  { id: "console", label: "Continuum Console", description: "Projects, intervals, the dashboard, workspaces and the admin area" },
+  { id: "console", label: "Continuum Console", description: "Projects, intervals, the dashboard and the admin area" },
+  { id: "create", label: "Continuum Create", description: "The New Project wizard, and projects to and from GitHub" },
+  { id: "workspaces", label: "Continuum Workspaces", description: "Development servers for your projects (continuum-workspaces)" },
   { id: "agents", label: "Brain agents", description: "Your brain and its workers (continuum-brain)" },
   { id: "data", label: "Continuum Data", description: "Datasets, recipes and runs (continuum-data)" },
   { id: "deploy", label: "Continuum Deploy", description: "Deploying projects to Railway and Google Cloud" },
@@ -20,11 +22,17 @@ export const FEATURES = [
   // Continuum Console
   { id: "interval", app: "console", label: "Interval Setup", description: "Projects, intervals and the Bridge Spine" },
   { id: "dashboard", app: "console", label: "Dashboard", description: "Your own dashboard of projects and intervals" },
-  { id: "create", app: "console", label: "Create project", description: "The New Project wizard" },
-  { id: "import_github", app: "console", label: "Import from GitHub", description: "Importing your GitHub repositories" },
-  { id: "publish", app: "console", label: "Put on GitHub", description: "Publishing a project to GitHub" },
-  { id: "workspaces", app: "console", label: "Workspaces", description: "Development servers for your projects" },
   { id: "admin", app: "console", label: "Admin", description: "Users, roles and sign-ins" },
+  // Continuum Create (importing and publishing stand on their own: the wizard isn't needed for them)
+  { id: "create", app: "create", label: "Open Create", description: "The New Project wizard: its catalogue and previews" },
+  { id: "create_generate", app: "create", parent: "create", since: 3, label: "Make projects", description: "Generate a new project from the wizard" },
+  { id: "import_github", app: "create", label: "Import from GitHub", description: "Importing your GitHub repositories" },
+  { id: "publish", app: "create", label: "Put on GitHub", description: "Publishing a project to GitHub" },
+  // Continuum Workspaces
+  { id: "workspaces", app: "workspaces", label: "Open Workspaces", description: "See your development servers" },
+  { id: "workspaces_create", app: "workspaces", parent: "workspaces", since: 3, label: "New workspaces", description: "Make a development server for a project" },
+  { id: "workspaces_start", app: "workspaces", parent: "workspaces", since: 3, label: "Start and open", description: "Start a workspace and open it" },
+  { id: "workspaces_manage", app: "workspaces", parent: "workspaces", since: 3, label: "Stop and delete", description: "Stop workspaces and delete them (with their files)" },
   // Brain agents
   { id: "agents", app: "agents", label: "Open Agents", description: "See the brain, its workers and what they did" },
   { id: "agents_run", app: "agents", parent: "agents", label: "Run agents", description: "Start agents, message the brain, answer their questions and approvals" },
@@ -54,10 +62,10 @@ export const FEATURE_IDS = FEATURES.map((f) => f.id);
  * The feature set's version: roles saved before it gain the features added
  * since (each one its app's opening feature already gave), once.
  */
-export const FEATURE_SET = 2;
+export const FEATURE_SET = 3;
 
-/** Sub-features of each feature that opens an app (agents → agents_run…). */
-export const childrenOf = (id) => FEATURES.filter((f) => f.parent === id).map((f) => f.id);
+/** Sub-features of each feature that opens an app (agents → agents_run…), optionally only those added after a feature set. */
+export const childrenOf = (id, after = 0) => FEATURES.filter((f) => f.parent === id && (f.since ?? 2) > after).map((f) => f.id);
 
 /** Only known features, each sub-feature only with its app's opening feature, in catalogue order. */
 export function effectiveFeatures(list = []) {
@@ -73,7 +81,7 @@ export function effectiveFeatures(list = []) {
 export const featureLabel = (id) => {
   const f = FEATURES.find((x) => x.id === id);
   if (!f) return id;
-  return !f.parent && f.app !== "console" ? (APPS.find((a) => a.id === f.app)?.label ?? f.label) : f.label;
+  return f.id === f.app ? (APPS.find((a) => a.id === f.app)?.label ?? f.label) : f.label;
 };
 
 /** Features of one app joined to Continuum (Continuum Deploy reads its own from the sign-in). */

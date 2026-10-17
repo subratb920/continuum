@@ -51,9 +51,10 @@ export async function ensureAccess(db) {
   for (const r of BUILT_IN) {
     await roles.updateOne({ _id: r._id }, { $setOnInsert: { ...r, builtIn: true, createdAt: now, updatedAt: now } }, { upsert: true });
   }
-  // Roles saved before the per-app features: each app they could open keeps everything it allowed (its new sub-features on), once
+  // Roles saved before an app got features of its own: each app they could open keeps everything it allowed (its new sub-features on), once
   for (const r of await roles.find({ featureSet: { $ne: FEATURE_SET } }).toArray()) {
-    const features = [...new Set([...(r.features ?? []), ...(r.features ?? []).flatMap(childrenOf)])];
+    const before = r.featureSet ?? 1;
+    const features = [...new Set([...(r.features ?? []), ...(r.features ?? []).flatMap((f) => childrenOf(f, before))])];
     await roles.updateOne({ _id: r._id, featureSet: r.featureSet ?? { $exists: false } }, { $set: { features, featureSet: FEATURE_SET, updatedAt: now } });
   }
   await db.collection("settings").updateOne({ _id: "access" }, { $setOnInsert: { defaultRoleId: MEMBER_ROLE, updatedAt: now } }, { upsert: true });
