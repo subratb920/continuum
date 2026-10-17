@@ -509,7 +509,7 @@
   background: var(--surface);
   font-size: 12px;
 }
-.model-settings-summary { display: flex; align-items: flex-start; gap: 8px; }
+.model-settings-summary { display: flex; align-items: center; gap: 8px; }
 .model-settings-summary dl {
   flex: 1;
   min-width: 0;
@@ -524,8 +524,30 @@
 .model-settings-form label { display: flex; flex-direction: column; gap: 3px; color: var(--text-muted); font-weight: 600; }
 .model-settings-error { margin: 0; color: var(--danger-text); font-size: 12px; overflow-wrap: anywhere; }
 .model-settings-warning { margin: 0; color: var(--warning-text); font-size: 12px; }
-.model-asleep { font-family: inherit; color: var(--text-faint); }
-.model-settings-summary .brain-link:disabled { color: var(--text-faint); cursor: not-allowed; }
+/* Change the model: a small square icon button */
+.model-change {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
+}
+.model-change:hover:not(:disabled) { background: var(--hover); color: var(--brand); border-color: var(--brand); }
+.model-change:hover:not(:disabled) svg { transform: rotate(180deg); }
+.model-change svg { transition: transform 0.3s ease; }
+.model-change:active:not(:disabled) { transform: scale(0.94); }
+.model-change:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.model-change:disabled { opacity: 0.45; cursor: not-allowed; }
+@media (hover: none) { .model-change { width: 40px; height: 40px; } }
+html.reduce-motion .model-change,
+html.reduce-motion .model-change svg { transition: none; }
 .model-select {
   width: 100%;
   min-width: 0;

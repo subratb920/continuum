@@ -100,7 +100,9 @@ export default function ModelSettings({ models }) {
 
   const unset = (list?.providers ?? []).filter((p) => !p.setUp).map((p) => PROVIDER_LABEL[p.provider] ?? p.provider);
   const broken = (list?.providers ?? []).filter((p) => p.setUp && p.error);
-  const asleep = (t) => <span className="model-asleep">{t}</span>;
+  // Shown only when there's something to say: an agent awake, a model in use
+  const workersOn = modelsOf(workers);
+  const runningOn = modelsOf(up.filter((a) => a.state !== "queued"));
 
   return (
     <section className="model-settings" aria-label="Model">
@@ -108,16 +110,38 @@ export default function ModelSettings({ models }) {
         <dl>
           <dt>Model</dt>
           <dd className="brain-mono" title="The one model your brain and every worker run on">{model ?? "…"}</dd>
-          <dt>Brain</dt>
-          <dd className="brain-mono" title="What your brain runs on now">{core ? runningModel(core) : asleep(`asleep · starts on ${model ?? "…"}`)}</dd>
-          <dt>Workers</dt>
-          <dd className="brain-mono" title="What your workers run on now">{modelsOf(workers) ?? asleep(`none awake · start on ${model ?? "…"}`)}</dd>
-          <dt>Running</dt>
-          <dd className="brain-mono" title="Every model in use now">{modelsOf(up.filter((a) => a.state !== "queued")) ?? asleep("nothing running")}</dd>
+          {core && (
+            <>
+              <dt>Brain</dt>
+              <dd className="brain-mono" title="What your brain runs on now">{runningModel(core)}</dd>
+            </>
+          )}
+          {workersOn && (
+            <>
+              <dt>Workers</dt>
+              <dd className="brain-mono" title="What your workers run on now">{workersOn}</dd>
+            </>
+          )}
+          {runningOn && (
+            <>
+              <dt>Running</dt>
+              <dd className="brain-mono" title="Every model in use now">{runningOn}</dd>
+            </>
+          )}
         </dl>
         {!open && (
-          <button type="button" className="brain-link" onClick={begin} disabled={!!lockedWhy} title={lockedWhy ?? "Change the model every agent runs on"}>
-            Change
+          <button
+            type="button"
+            className="model-change"
+            onClick={begin}
+            disabled={!!lockedWhy}
+            aria-label="Change the model"
+            title={lockedWhy ?? "Change the model every agent runs on"}
+          >
+            {/* Two arrows trading places: swap the model */}
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+              <path d="M2.5 5.5h9M9 2.5l3 3-3 3M13.5 10.5h-9M7 7.5l-3 3 3 3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
         )}
       </div>
