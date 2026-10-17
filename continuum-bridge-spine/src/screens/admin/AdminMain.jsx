@@ -88,7 +88,7 @@ function Users() {
                   </button>
                 </td>
                 <td>
-                  <span className={`admin-pill${u.role.id === "admin" ? " is-admin" : ""}`}>{u.role.name}</span>
+                  <span className={`admin-pill${u.role.id === "admin" ? " is-admin" : ""}`}>{u.owner ? "Owner" : u.role.name}</span>
                 </td>
                 <td title={u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleString() : ""}>{since(u.lastSeenAt)}</td>
                 <td className="admin-muted">{deviceText(u.lastDevice) || "—"}</td>

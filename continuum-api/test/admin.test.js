@@ -11,7 +11,7 @@ const url = process.env.MONGO_TEST_URL;
 const skip = !url ? "MONGO_TEST_URL not set" : false;
 
 Object.assign(process.env, { NODE_ENV: "test", LOG_LEVEL: "silent", PORT: "0", MONGO_URI: "mongodb://x", DB_NAME: "t", JWT_SECRET: "s".repeat(32), CLIENT_ORIGIN: "http://x" });
-const { ensureAccess, clearAccessCache, prepareAdminSetup, claimAdmin, adminSetupOpen } = await import("../src/access/access.js");
+const { ensureAccess, ensureOwners, clearAccessCache, prepareAdminSetup, claimAdmin, adminSetupOpen } = await import("../src/access/access.js");
 const { ensureActivity } = await import("../src/access/activity.js");
 const { withAccess, requireFeature } = await import("../src/middleware/access.js");
 const { createAdminRouter } = await import("../src/admin/admin.routes.js");
@@ -162,6 +162,28 @@ test("admin: the last admin stays; nobody disables themself; disabling signs out
   assert.ok(changes.some((a) => a.type === "ADMIN_USER_SIGNED_OUT"));
   assert.ok(changes.some((a) => a.type === "ADMIN_ROLE_CREATED"));
   assert.ok(changes.some((a) => a.type === "ADMIN_ROLE_DELETED"));
+});
+
+test("admin: the owner — always an admin through GitHub sign-in (a verified address); an email sign-up with that address isn't; can't be demoted or disabled", { skip }, async () => {
+  const owner = (await db.collection("users").insertOne({ email: "subratb920@gmail.com", githubId: 42, roleId: "member", disabled: true })).insertedId;
+  const fake = (await db.collection("users").insertOne({ email: "subratb920@gmail.com.fake@x.test", passwordHash: "h" })).insertedId;
+  assert.equal(await ensureOwners(db), 1);
+  const o = await db.collection("users").findOne({ _id: owner });
+  assert.deepEqual([o.roleId, o.disabled], ["admin", false]);
+  assert.equal((await db.collection("users").findOne({ _id: fake })).roleId, undefined, "not the owner");
+  // An email sign-up with the owner's address (in another database): no admin
+  const other = client.db(`${db.databaseName}_owner`);
+  await other.dropDatabase();
+  const emailOnly = (await other.collection("users").insertOne({ email: "subratb920@gmail.com", passwordHash: "h" })).insertedId;
+  assert.equal(await ensureOwners(other), 0);
+  assert.equal((await other.collection("users").findOne({ _id: emailOnly })).roleId, undefined, "unverified: never the owner");
+  await other.dropDatabase();
+
+  const row = (await call("GET", `/users/${owner}`)).body;
+  assert.deepEqual([row.owner, row.role.id], [true, "admin"]);
+  assert.equal((await call("PATCH", `/users/${owner}`, { roleId: "member" })).body.code, "OWNER");
+  assert.equal((await call("PATCH", `/users/${owner}`, { disabled: true })).body.code, "OWNER");
+  await db.collection("users").deleteMany({ _id: { $in: [owner, fake] } });
 });
 
 test("admin: the first admin — no admin, a one-time code (kept across restarts until it expires), claimed once", { skip }, async () => {

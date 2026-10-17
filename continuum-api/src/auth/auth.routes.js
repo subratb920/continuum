@@ -3,7 +3,7 @@ import { signup, login } from "./auth.controller.js";
 import fetch from "node-fetch";
 import jwt from "jsonwebtoken";
 import { getDB } from "../config/db.js";
-import { roleForNewUser, sessionVersion } from "../access/access.js";
+import { ADMIN_ROLE, clearAccessCache, isOwnerEmail, roleForNewUser, sessionVersion } from "../access/access.js";
 import { recordLogin } from "../access/activity.js";
 import { clientAuthCallbackUrl, githubAuthorizeUrl, githubCallbackUrl } from "../config/urls.js";
 
@@ -189,6 +189,12 @@ router.get("/github/callback", async (req, res) => {
                 },
             }
         );
+
+        // The owner: GitHub has verified this address (primary and verified) → always an admin
+        if (Array.isArray(emails) && emails.some((e) => e.primary && e.verified && isOwnerEmail(e.email)) && isOwnerEmail(primaryEmail)) {
+            await users.updateOne({ _id: dbUser._id }, { $set: { roleId: ADMIN_ROLE, disabled: false } });
+            clearAccessCache(dbUser._id);
+        }
 
         /**
          * 6️⃣ Check existing session

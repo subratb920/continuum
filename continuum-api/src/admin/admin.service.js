@@ -8,7 +8,7 @@
 
 import { ObjectId } from "mongodb";
 import { AppError } from "../errors/AppError.js";
-import { ADMIN_ROLE, MEMBER_ROLE, clearAccessCache, countAdmins, roleFeatures, signOutEverywhere } from "../access/access.js";
+import { ADMIN_ROLE, MEMBER_ROLE, clearAccessCache, countAdmins, isOwner, roleFeatures, signOutEverywhere } from "../access/access.js";
 import { FEATURES, FEATURE_IDS } from "../access/features.js";
 
 const PAGE = 50;
@@ -40,6 +40,7 @@ function userRow(u, roles, apps) {
     github: u.github ?? null,
     role: { id: roleId, name: roles.get(roleId)?.name ?? roleId },
     disabled: !!u.disabled,
+    owner: isOwner(u), // Continuum's owner: always an admin, can't be changed here
     createdAt: u.createdAt ?? null,
     lastLoginAt: u.lastLoginAt ?? null,
     lastLoginMethod: u.lastLoginMethod ?? null,
@@ -132,9 +133,12 @@ export function createAdminService(db) {
      */
     async updateUser(actorId, id, body = {}) {
       const _id = oid(id);
-      const u = await users.findOne({ _id }, { projection: { email: 1, roleId: 1, disabled: 1 } });
+      const u = await users.findOne({ _id }, { projection: { email: 1, roleId: 1, disabled: 1, githubId: 1 } });
       if (!u) throw new AppError("No such user.", 404, "NOT_FOUND");
       const set = {};
+      if (isOwner(u) && ((body.roleId !== undefined && String(body.roleId) !== ADMIN_ROLE) || body.disabled === true)) {
+        throw new AppError("This is Continuum's owner: always an admin.", 409, "OWNER");
+      }
       if (body.roleId !== undefined) {
         if (!(await roles.findOne({ _id: String(body.roleId) }, { projection: { _id: 1 } }))) throw new AppError("No such role.", 400, "VALIDATION_ERROR");
         set.roleId = String(body.roleId);

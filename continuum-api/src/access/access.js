@@ -6,10 +6,13 @@
 // are members. A new user gets the default role (settings "access").
 //
 // Admins are only ever users whose role is admin, in this database: nothing
-// outside it (no setting, no cloud) says who they are. The first one claims
-// it with a one-time setup code that this API writes to its own log while
-// there's no admin (claimAdmin); after that, admins make admins. The last
-// admin can't be removed (admin.service.js).
+// outside it (no setting, no cloud) says who they are. The owner (OWNER_EMAILS,
+// here in the code) is always one: their account signed in with GitHub, which
+// has verified the address (an email sign-up isn't verified, so it never
+// makes an owner). Without any admin, the first one claims it with a one-time
+// setup code that this API writes to its own log (claimAdmin); after that,
+// admins make admins. The owner and the last admin can't be removed
+// (admin.service.js).
 //
 // Sessions: each user has a session version (users.tokenVersion); every
 // sign-in token carries it (tv). Signing someone out everywhere raises it,
@@ -31,6 +34,12 @@ const BUILT_IN = [
   { _id: MEMBER_ROLE, name: "Member", description: "Everything except the admin area.", features: FEATURE_IDS.filter((f) => f !== "admin") },
 ];
 
+/** Continuum's owner: always an admin, through GitHub sign-in (a verified address) only. */
+export const OWNER_EMAILS = ["subratb920@gmail.com"];
+export const isOwnerEmail = (email) => OWNER_EMAILS.includes(String(email ?? "").trim().toLowerCase());
+/** Is this account the owner (signed in with GitHub, with the owner's address)? */
+export const isOwner = (user) => !!user?.githubId && isOwnerEmail(user.email);
+
 const CACHE_MS = 60_000;
 const SETUP_HOURS = 24;
 const cache = new Map(); // userId → { at, access }
@@ -45,6 +54,19 @@ export async function ensureAccess(db) {
   await db.collection("settings").updateOne({ _id: "access" }, { $setOnInsert: { defaultRoleId: MEMBER_ROLE, updatedAt: now } }, { upsert: true });
   await db.collection("users").createIndex({ roleId: 1 }, { name: "roleId" });
   await db.collection("admin_audit").createIndex({ at: -1 }, { name: "at" }); // what admins changed
+}
+
+/**
+ * The owner's account (signed in with GitHub) is an admin, enabled: on every
+ * start, and at each GitHub sign-in (auth.routes.js). Returns how many changed.
+ */
+export async function ensureOwners(db) {
+  const res = await db.collection("users").updateMany(
+    { email: { $in: OWNER_EMAILS }, githubId: { $exists: true }, $or: [{ roleId: { $ne: ADMIN_ROLE } }, { disabled: true }] },
+    { $set: { roleId: ADMIN_ROLE, disabled: false, updatedAt: new Date() } }
+  );
+  if (res.modifiedCount) clearAccessCache();
+  return res.modifiedCount;
 }
 
 /** Admins who can sign in (admin role, not disabled). */

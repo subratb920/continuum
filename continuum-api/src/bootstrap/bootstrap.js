@@ -1,7 +1,7 @@
 import { ensureCollections } from "./ensureCollections.js";
 import { ensureIndexes } from "./ensureIndexes.js";
 import { validateInvariants } from "./validateInvariants.js";
-import { ensureAccess, prepareAdminSetup } from "../access/access.js";
+import { ensureAccess, ensureOwners, prepareAdminSetup } from "../access/access.js";
 import { ensureActivity } from "../access/activity.js";
 import { withSystemContext } from "../logging/childLogger.js";
 
@@ -15,6 +15,8 @@ export async function bootstrapSystem(db) {
   const invResult = await validateInvariants(db);
   await ensureAccess(db); // the built-in roles (admin, member) and the default role for new users
   await ensureActivity(db); // sign-ins and app use (kept LOGIN_HISTORY_DAYS)
+  // The owner (signed in with GitHub) is always an admin
+  if (await ensureOwners(db)) log.info("Owner account made admin");
   // No admin yet: a one-time setup code, in this log only (claimed on the Admin page)
   const setup = await prepareAdminSetup(db);
   if (setup?.existing) {

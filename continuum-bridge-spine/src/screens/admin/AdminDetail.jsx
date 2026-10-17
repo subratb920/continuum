@@ -93,11 +93,15 @@ function UserDetail({ id }) {
 
       <section className="admin-block">
         <h4>Role</h4>
-        <select value={user.role.id} disabled={busy} onChange={(e) => change({ roleId: e.target.value })} aria-label="Role">
-          {roles.map((r) => (
-            <option key={r.id} value={r.id}>{r.name}</option>
-          ))}
-        </select>
+        {user.owner ? (
+          <p className="admin-muted">Admin: Continuum's owner, always an admin.</p>
+        ) : (
+          <select value={user.role.id} disabled={busy} onChange={(e) => change({ roleId: e.target.value })} aria-label="Role">
+            {roles.map((r) => (
+              <option key={r.id} value={r.id}>{r.name}</option>
+            ))}
+          </select>
+        )}
       </section>
 
       <section className="admin-block">
@@ -105,7 +109,7 @@ function UserDetail({ id }) {
         {user.disabled ? (
           <button type="button" className="admin-btn is-primary" disabled={busy} onClick={() => change({ disabled: false })}>Enable account</button>
         ) : (
-          <button type="button" className="admin-btn is-danger" disabled={busy || me} title={me ? "You can't disable your own account" : "They're signed out everywhere and can't use Continuum or Deploy until enabled"} onClick={() => change({ disabled: true })}>
+          <button type="button" className="admin-btn is-danger" disabled={busy || me || user.owner} title={me ? "You can't disable your own account" : user.owner ? "Continuum's owner can't be disabled" : "They're signed out everywhere and can't use Continuum or Deploy until enabled"} onClick={() => change({ disabled: true })}>
             Disable account
           </button>
         )}
