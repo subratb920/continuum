@@ -351,11 +351,13 @@
 
 /* ---------- Inspector (right) ---------- */
 
+/* Exactly the pane's height: each tab scrolls inside it (the pane itself doesn't) */
 .agent-inspector {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
   font-size: 13px;
   color: var(--text-2);
 }
@@ -395,7 +397,7 @@
   text-align: center;
 }
 
-.inspector-body { display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; }
+.inspector-body { display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; overflow-y: auto; }
 
 .inspector-agent {
   display: flex;
@@ -597,13 +599,38 @@ html.reduce-motion .model-change svg { transition: none; }
   color: var(--text);
 }
 
-.chat-log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; overflow-y: auto; }
+/* Chat: one bordered box; the messages scroll inside it, the input stays at its foot */
+.inspector-body.chat {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-subtle);
+}
+.chat-log {
+  list-style: none;
+  margin: 0;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 .chat-msg { display: flex; flex-direction: column; gap: 2px; max-width: 90%; animation: agent-row-in 0.3s ease-out; }
 .chat-msg.from-you { align-self: flex-end; align-items: flex-end; }
 .chat-bubble { padding: 7px 10px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); color: var(--text); }
 .chat-msg.from-you .chat-bubble { background: var(--selected); border-color: var(--accent-border); }
 .chat-msg.from-core .chat-bubble { border-left: 3px solid var(--agent-core); }
-.chat-input { position: sticky; bottom: 0; padding-top: 8px; background: var(--pane); }
+.chat-input {
+  flex: none;
+  padding: 8px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 10px 10px;
+  background: var(--surface);
+}
 
 /* ---------- Motion ---------- */
 
