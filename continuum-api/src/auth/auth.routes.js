@@ -4,6 +4,7 @@ import fetch from "node-fetch";
 import jwt from "jsonwebtoken";
 import { getDB } from "../config/db.js";
 import { roleForNewUser } from "../access/access.js";
+import { recordLogin } from "../access/activity.js";
 import { clientAuthCallbackUrl, githubAuthorizeUrl, githubCallbackUrl } from "../config/urls.js";
 
 const router = Router();
@@ -183,6 +184,8 @@ router.get("/github/callback", async (req, res) => {
             {
                 $set: {
                     githubAccessToken: access_token,
+                    // Their GitHub profile (for the admin's view, and a name to show)
+                    github: { login: githubUser.login ?? null, name: githubUser.name ?? null, avatarUrl: githubUser.avatar_url ?? null },
                 },
             }
         );
@@ -198,6 +201,7 @@ router.get("/github/callback", async (req, res) => {
             try {
                 jwt.verify(existingSession.token, JWT_SECRET);
 
+                await recordLogin(db, { userId: dbUser._id, email: primaryEmail, method: "github", req }).catch(() => {});
                 return res.redirect(clientAuthCallbackUrl(existingSession.token));
             } catch {
                 // expired → continue
@@ -234,6 +238,7 @@ router.get("/github/callback", async (req, res) => {
         /**
          * 9️⃣ Redirect to frontend
          */
+        await recordLogin(db, { userId: dbUser._id, email: primaryEmail, method: "github", req }).catch(() => {});
         res.redirect(clientAuthCallbackUrl(token));
 
     } catch (err) {

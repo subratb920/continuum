@@ -4,6 +4,7 @@ import { assertProject } from "./utils/assertions";
 
 import { useAuth } from "./state/authStore";
 import NoAccess from "./components/NoAccess";
+import { useAppOpened } from "./state/useAppOpened";
 import AuthGate from "./auth/AuthGate";
 import SsoAuthorize from "./pages/SsoAuthorize";
 
@@ -86,6 +87,7 @@ export default function App() {
   // Projects and intervals can be read with Interval Setup or the Dashboard switched on
   const projectsOpen = can("interval") || can("dashboard");
   const { pathname, state: locationState } = useLocation();
+  useAppOpened(pathname); // which apps people open (the admin's view)
   const navigate = useNavigate();
 
   const [projects, setProjects] = useState([]);

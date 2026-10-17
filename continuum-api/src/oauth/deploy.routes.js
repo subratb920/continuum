@@ -24,6 +24,7 @@
 import { Router } from "express";
 import { getDB } from "../config/db.js";
 import { accessFor } from "../access/access.js";
+import { usage } from "../middleware/access.js";
 import { getOAuthConfig } from "./oauth.config.js";
 import { randomToken, signJwt, verifyJwt } from "./oauth.crypto.js";
 import { byFolder, detectDatabases, filesToRead } from "./detect-databases.js";
@@ -51,6 +52,7 @@ async function requireDeployToken(req, res, next) {
     const access = await accessFor(getDB(), req.deployUser.id);
     if (!access || access.disabled) return res.status(403).json({ error: "This account is disabled. Ask your admin.", code: "ACCOUNT_DISABLED" });
     if (!access.features.includes("deploy")) return res.status(403).json({ error: "No feature access: Deploy isn't switched on for your role. Ask your admin.", code: "NO_FEATURE_ACCESS", feature: "deploy" });
+    usage.used(req.deployUser.id, "deploy");
   } catch (err) {
     return next(err);
   }

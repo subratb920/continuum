@@ -2,6 +2,8 @@ import express from "express";
 import { getDB } from "../config/db.js";
 import { readTheme, setTheme } from "../services/appearance.js";
 import { FEATURES } from "../access/features.js";
+import { attachClient } from "../access/activity.js";
+import { usage } from "../middleware/access.js";
 
 const router = express.Router();
 
@@ -23,6 +25,19 @@ router.get("/", (req, res) => {
 });
 
 // The signed-in user's preferences kept with their account (shared with Continuum Deploy)
+// After a sign-in, the browser says what it is (screen, time zone, language…): added to that sign-in
+router.post("/session", async (req, res) => {
+  const added = await attachClient(getDB(), req.user.id, req.body ?? {});
+  res.json({ added });
+});
+
+// The screen says which app you opened (a screen like the Dashboard asks nothing of its own): counted as use
+router.post("/open", (req, res) => {
+  const app = req.body?.app;
+  if (FEATURES.some((f) => f.id === app) && req.access.features.includes(app)) usage.used(req.user.id, app);
+  res.status(204).end();
+});
+
 router.get("/preferences", async (req, res) => {
   res.json(await readTheme(getDB(), req.user.id));
 });

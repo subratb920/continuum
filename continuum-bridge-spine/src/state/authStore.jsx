@@ -5,6 +5,29 @@ const TOKEN_KEY = "continuum_token";
 
 const AuthContext = createContext(null);
 
+/**
+ * What this browser is, sent once after a sign-in (added to that sign-in, for
+ * the admin's view): platform, screen, time zone, language, touch, memory, cores.
+ */
+function sendDeviceDetails(token) {
+  const n = navigator;
+  const body = {
+    platform: n.userAgentData?.platform || n.platform || "",
+    screen: `${screen.width}×${screen.height}@${window.devicePixelRatio || 1}x`,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "",
+    language: n.language || "",
+    touch: (n.maxTouchPoints ?? 0) > 0,
+    ...(n.deviceMemory ? { memory: n.deviceMemory } : {}),
+    ...(n.hardwareConcurrency ? { cores: n.hardwareConcurrency } : {}),
+  };
+  fetch(`${import.meta.env.VITE_API_BASE_URL}/me/session`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+    keepalive: true,
+  }).catch(() => {});
+}
+
 export function AuthProvider({ children }) {
   const [status, setStatus] = useState("checking"); // checking | authenticated | unauthenticated
   const [user, setUser] = useState(null);
@@ -52,6 +75,7 @@ export function AuthProvider({ children }) {
 
   function login(token) {
     localStorage.setItem(TOKEN_KEY, token);
+    sendDeviceDetails(token);
 
     const decoded = jwtDecode(token);
     setUser({

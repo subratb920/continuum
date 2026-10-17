@@ -15,6 +15,8 @@ import { getDB } from "../config/db.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { authed, requireFeature } from "../middleware/access.js";
 import { accessFor } from "../access/access.js";
+import { recordLogin } from "../access/activity.js";
+import { usage } from "../middleware/access.js";
 import { getOAuthConfig } from "./oauth.config.js";
 import { isValidChallenge, publicJwk, randomToken, safeEqual, sha256, signJwt, verifyPkce } from "./oauth.crypto.js";
 import { createOAuthStore } from "./oauth.store.js";
@@ -101,6 +103,9 @@ router.post("/authorize", requireConfig, authed, requireFeature("deploy"), async
   });
 
   req.log.info({ userId: req.user.id, clientId: cfg.clientId }, "SSO code issued");
+  // Signing in to Continuum Deploy, from this browser (the token exchange that follows comes from Deploy's server)
+  await recordLogin(getDB(), { userId: req.user.id, email: req.access.email, method: "deploy", req }).catch(() => {});
+  usage.used(req.user.id, "deploy");
 
   const target = new URL(redirect_uri);
   target.searchParams.set("code", code);
@@ -161,6 +166,7 @@ router.post("/token", requireConfig, async (req, res) => {
     if (!user) return oauthError(res, 400, "invalid_grant", "User no longer exists.");
     // Deploy switched off (or the account disabled) since: no more tokens, so Deploy signs out
     if (!(await deployAllowed(db, user._id))) return oauthError(res, 400, "invalid_grant", "No feature access: Deploy isn't switched on for this account's role.");
+    usage.used(user._id, "deploy"); // still using Deploy
     return res.json(await issueTokens(cfg, store, user, result.doc.familyId));
   }
 

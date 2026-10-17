@@ -2,6 +2,7 @@ import { ensureCollections } from "./ensureCollections.js";
 import { ensureIndexes } from "./ensureIndexes.js";
 import { validateInvariants } from "./validateInvariants.js";
 import { ensureAccess } from "../access/access.js";
+import { ensureActivity } from "../access/activity.js";
 import { withSystemContext } from "../logging/childLogger.js";
 
 export async function bootstrapSystem(db) {
@@ -13,6 +14,7 @@ export async function bootstrapSystem(db) {
   const idxResult = await ensureIndexes(db);
   const invResult = await validateInvariants(db);
   await ensureAccess(db); // the built-in roles (admin, member) and the default role for new users
+  await ensureActivity(db); // sign-ins and app use (kept LOGIN_HISTORY_DAYS)
 
   const didWork =
     colResult.created > 0 ||

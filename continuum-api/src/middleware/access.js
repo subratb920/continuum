@@ -5,8 +5,18 @@
 
 import { getDB } from "../config/db.js";
 import { accessFor } from "../access/access.js";
+import { createUsageTracker } from "../access/activity.js";
 import { featureLabel } from "../access/features.js";
 import { requireAuth } from "./requireAuth.js";
+
+/** App use and last seen, written once a minute (access/activity.js). */
+export const usage = createUsageTracker(() => getDB());
+
+/** Counts this request as use of an app (a feature), for the admin's view. */
+export const uses = (app) => (req, _res, next) => {
+  usage.used(req.user?.id, app);
+  next();
+};
 
 /** Loads req.access; a disabled or deleted account gets nothing. */
 export function withAccess(opts = {}) {
@@ -17,6 +27,7 @@ export function withAccess(opts = {}) {
       if (!access) return res.status(401).json({ error: "This account no longer exists.", code: "NO_ACCOUNT" });
       if (access.disabled) return res.status(403).json({ error: "This account is disabled. Ask your admin.", code: "ACCOUNT_DISABLED" });
       req.access = access;
+      if (!opts.db) usage.sawUser(req.user.id); // last seen (not in tests with their own database)
       next();
     } catch (err) {
       next(err);
