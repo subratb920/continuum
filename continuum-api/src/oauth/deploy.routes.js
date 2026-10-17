@@ -1,8 +1,9 @@
 // src/oauth/deploy.routes.js
 //
-// Read-only data for continuum-deploy, called server-to-server with the access
-// token Continuum issued to it at sign-in (EdDSA, audience continuum-deploy).
-// Never accepts Continuum's own session tokens, and never changes anything.
+// Data for continuum-deploy, called server-to-server with the access token
+// Continuum issued to it at sign-in (EdDSA, audience continuum-deploy). Never
+// accepts Continuum's own session tokens. Read-only, except one file:
+// continuum.deploy.json, written when the user edits an app's setup in Deploy.
 //   GET /deploy/projects            the signed-in user's projects (id, name, GitHub repo)
 //   GET /deploy/projects/:id/scan   app folders in that project's repository at the branch's
 //                                   latest commit (reported as commit), and its
@@ -13,6 +14,9 @@
 //                                   Dockerfile, and a signed one-hour download address
 //   GET /deploy/archives/:token     that commit's source (tar.gz), streamed from GitHub
 //                                   with the user's sign-in; only with a valid address
+//   PUT /deploy/projects/:id/manifest  writes continuum.deploy.json on a branch (a commit
+//                                   with the user's GitHub sign-in): Deploy's "Setup" edits.
+//                                   Never the repository's default branch, main or master.
 //   GET /deploy/me/appearance       the user's colour theme (Deploy follows Continuum's)
 //   POST /deploy/support/callbacks  "Request a callback" from Deploy's Contact us (same
 //                                   requests and daily limit as Continuum's own)
@@ -95,9 +99,11 @@ const MANIFEST = "continuum.deploy.json";
 const INFRA = "continuum.infra.json";
 const MAX_DEPTH = 2; // root, a/, a/b/
 
-async function github(token, path) {
+async function github(token, path, { method = "GET", body } = {}) {
   const res = await fetch(`https://api.github.com${path}`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "User-Agent": "continuum-api" },
+    method,
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "User-Agent": "continuum-api", ...(body ? { "Content-Type": "application/json" } : {}) },
+    ...(body ? { body: JSON.stringify(body) } : {}),
   });
   return { status: res.status, body: res.status === 204 ? null : await res.json().catch(() => null) };
 }
@@ -231,6 +237,60 @@ async function projectWithGitHub(req, res, projectId) {
   if (!user?.githubAccessToken) return void res.status(409).json({ error: "Sign in to Continuum with GitHub so Continuum can read this repository." });
   return { project, repo, token: user.githubAccessToken };
 }
+
+/**
+ * Deploy's "Setup" edits: continuum.deploy.json written on the deployed
+ * branch as one commit. Body: { branch, content (the whole file, JSON text),
+ * message, baseCommit (the commit Deploy read the file at: refused with 409 when
+ * the file changed since, so nobody's edit is lost) }. Only that file, never
+ * the default branch, main or master.
+ */
+const PROTECTED_BRANCHES = new Set(["main", "master"]);
+router.put("/projects/:id/manifest", requireDeployToken, async (req, res) => {
+  const found = await projectWithGitHub(req, res, req.params.id);
+  if (!found) return;
+  const { repo, token } = found;
+  const { branch, content, message, baseCommit } = req.body ?? {};
+  if (typeof branch !== "string" || !/^[A-Za-z0-9._/-]{1,100}$/.test(branch)) return res.status(400).json({ error: "Which branch to write to is missing." });
+  if (typeof content !== "string" || content.length > 64 * 1024) return res.status(400).json({ error: `${MANIFEST} must be text of at most 64 KB.` });
+  try {
+    const parsed = JSON.parse(content);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("not an object");
+  } catch {
+    return res.status(400).json({ error: `${MANIFEST} must be a JSON object.` });
+  }
+  const info = await github(token, `/repos/${repo}`);
+  if (info.status === 401) return res.status(409).json({ error: "Continuum's GitHub access has expired. Sign in to Continuum with GitHub again." });
+  if (info.status !== 200) return res.status(502).json({ error: `GitHub couldn't show ${repo} (HTTP ${info.status}).` });
+  if (PROTECTED_BRANCHES.has(branch) || branch === info.body.default_branch) {
+    return res.status(409).json({ error: `Continuum Deploy doesn't write to ${branch} (the repository's main branch). Change ${MANIFEST} there yourself, or deploy from another branch.` });
+  }
+  const ref = branch.split("/").map(encodeURIComponent).join("/");
+  // The file as it is on the branch now (its sha is needed to replace it), and the branch's latest commit
+  const [file, head] = await Promise.all([github(token, `/repos/${repo}/contents/${MANIFEST}?ref=${ref}`), github(token, `/repos/${repo}/git/ref/heads/${ref}`)]);
+  if (head.status === 404) return res.status(404).json({ error: `Branch ${branch} wasn't found in ${repo}.` });
+  if (file.status !== 200 && file.status !== 404) return res.status(502).json({ error: `GitHub couldn't read ${MANIFEST} (HTTP ${file.status}).` });
+  if (typeof baseCommit === "string" && head.body?.object?.sha && head.body.object.sha !== baseCommit) {
+    const changed = await github(token, `/repos/${repo}/compare/${baseCommit}...${head.body.object.sha}`);
+    if (changed.status !== 200 || (changed.body?.files ?? []).some((f) => f.filename === MANIFEST)) {
+      return res.status(409).json({ error: `${MANIFEST} changed on ${branch} since it was read. Reload the page and make the change again.`, code: "MANIFEST_CHANGED" });
+    }
+  }
+  const put = await github(token, `/repos/${repo}/contents/${MANIFEST}`, {
+    method: "PUT",
+    body: {
+      message: typeof message === "string" && message.trim() ? message.trim().slice(0, 200) : `${MANIFEST}: changed in Continuum Deploy`,
+      content: Buffer.from(content.endsWith("\n") ? content : `${content}\n`, "utf8").toString("base64"),
+      branch,
+      ...(file.status === 200 && file.body?.sha ? { sha: file.body.sha } : {}),
+    },
+  });
+  if (put.status === 409 || put.status === 422) return res.status(409).json({ error: `${MANIFEST} changed on ${branch} meanwhile. Reload the page and make the change again.`, code: "MANIFEST_CHANGED" });
+  if (put.status === 403 || put.status === 404) return res.status(403).json({ error: `Your GitHub account can't write to ${repo} (HTTP ${put.status}).` });
+  if (put.status !== 200 && put.status !== 201) return res.status(502).json({ error: `GitHub didn't save ${MANIFEST} (HTTP ${put.status}).` });
+  req.log.info({ userId: req.deployUser.id, repo, branch, commit: put.body?.commit?.sha }, "continuum.deploy.json written for Deploy");
+  res.json({ commit: put.body?.commit?.sha ?? null, branch });
+});
 
 router.post("/projects/:id/source", requireDeployToken, async (req, res) => {
   const found = await projectWithGitHub(req, res, req.params.id);

@@ -14,7 +14,16 @@
       ],
       "clusterAccess": [
         "pods"
-      ]
+      ],
+      "port": 8080,
+      "scale": {
+        "min": 1,
+        "max": 2,
+        "cpu": 0.25,
+        "memory": "512Mi",
+        "targetCpu": 70,
+        "autoMemoryMax": "2Gi"
+      }
     },
     {
       "name": "continuum-bridge-spine",
@@ -27,8 +36,10 @@
         "max": 2,
         "cpu": 0.25,
         "memory": "1Gi",
-        "targetCpu": 70
-      }
+        "targetCpu": 70,
+        "autoMemoryMax": "2Gi"
+      },
+      "port": 8080
     }
   ]
 }
