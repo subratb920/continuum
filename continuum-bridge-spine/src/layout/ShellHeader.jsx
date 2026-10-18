@@ -1,8 +1,8 @@
 import { LockMark } from "../components/NoAccess";
 import BrandMark from "../components/BrandMark";
 // The wordmark's typeface (bundled with the app, latin only, two weights)
-import "@fontsource/sora/latin-400.css";
-import "@fontsource/sora/latin-600.css";
+import "@fontsource/outfit/latin-400.css";
+import "@fontsource/outfit/latin-500.css";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/authStore";
@@ -211,7 +211,7 @@ export default function ShellHeader({ selectedProject = null }) {
         <Link to="/" className="shell-title" aria-label="Continuum Console, home">
           <BrandMark size={22} />
           <span className="shell-wordmark">
-            <span className="shell-wordmark-name">Continuum</span>
+            <span className="shell-wordmark-name">continuum</span>
             <span className="shell-wordmark-app">Console</span>
           </span>
         </Link>
