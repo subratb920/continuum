@@ -7,7 +7,7 @@ import { clock } from "./agentDisplay";
 import "./brain.css";
 
 /**
- * The Chat screen: talking to Continuum Brain, the console's middle column
+ * The Chat screen: talking to the brain, in the console's middle column
  * (phones: the whole screen under the tabs). What you send shows at once
  * ("Sending…") and stays until the brain's own record of it arrives; if it
  * can't be sent (the brain is starting, the connection is down) you see why,
@@ -15,25 +15,25 @@ import "./brain.css";
  * away, on the Agents screen.
  */
 /**
- * Where the brain stands, in plain words with a colour: { tone, label, hint }.
- * It sleeps until a message wakes it, so "stopped" reads as resting, not broken.
+ * Where the brain stands: its state in the usual words (Stopped is Stopped),
+ * a colour, and what happens next: { tone, label, hint, pulse? }.
  */
 function brainStatus(core, connected) {
-  if (connected === false) return { tone: "amber", label: "Reconnecting", hint: "messages show once it's back" };
+  if (connected === false) return { tone: "amber", label: "Reconnecting", hint: "Messages show once the connection is back." };
   switch (core?.state) {
     case "queued":
     case "starting":
-      return { tone: "amber", label: "Starting up", pulse: true, hint: "a minute the first time" };
+      return { tone: "amber", label: "Starting", pulse: true, hint: "Takes about a minute the first time." };
     case "working":
-      return { tone: "violet", label: "Working", pulse: true };
+      return { tone: "violet", label: "Working", pulse: true, hint: "Replies appear here as it goes." };
     case "idle":
-      return { tone: "green", label: "Ready" };
+      return { tone: "green", label: "Ready", hint: "Send a message to give it work." };
     case "stopping":
-      return { tone: "grey", label: "Pausing" };
+      return { tone: "grey", label: "Stopping", stop: true, hint: "It can be started again with a message." };
     case "failed":
-      return { tone: "red", label: "Hit a problem", hint: "send a message to start it again" };
+      return { tone: "red", label: "Failed", hint: "Send a message to start it again." };
     default:
-      return { tone: "grey", label: "Resting", hint: "your next message starts it" };
+      return { tone: "grey", label: "Stopped", stop: true, hint: "Sending a message starts it." };
   }
 }
 
@@ -76,7 +76,7 @@ export default function BrainChat() {
     try {
       await say(words);
     } catch (err) {
-      const why = err.code === "BRAIN_BUSY" || err.status === 409 ? err.message || "Continuum Brain is starting; send it again when it's ready." : err.message || "It couldn't be sent.";
+      const why = err.code === "BRAIN_BUSY" || err.status === 409 ? err.message || "The brain is starting; send it again when it's ready." : err.message || "It couldn't be sent.";
       setOutbox((o) => o.map((x) => (x.id === id ? { ...x, error: why } : x)));
     }
   }
@@ -89,25 +89,19 @@ export default function BrainChat() {
   }
 
   return (
-    <section className="brain-chat" aria-label="Chat with Continuum Brain">
+    <section className="brain-chat" aria-label="Chat with the brain">
       <div className="brain-chat-top">
-        <span className="brain-chat-mark" aria-hidden="true">
-          ✦
+        <span className={`brain-chat-pill is-${status.tone}${status.pulse ? " is-pulsing" : ""}${status.stop ? " is-stopped" : ""}`} role="status">
+          <span className="brain-chat-dot" aria-hidden="true" />
+          <span className="brain-chat-what">Brain</span>
+          {status.label}
         </span>
-        <span className="brain-chat-name">
-          <span className="brain-chat-title">Continuum Brain</span>
-          <span className="brain-chat-sub">Plans your work and hands it to workers</span>
-        </span>
+        <span className="brain-chat-hint">{status.hint}</span>
         {pending.length > 0 && (
           <button type="button" className="brain-link brain-chat-waiting" onClick={() => navigate("/brain", { state: { inspectorTab: "approvals" } })}>
             {pending.length} waiting on you · Open Agents ›
           </button>
         )}
-        <span className={`brain-chat-pill is-${status.tone}${status.pulse ? " is-pulsing" : ""}`} role="status" title={status.hint}>
-          <span className="brain-chat-dot" aria-hidden="true" />
-          {status.label}
-          {status.hint && <span className="brain-chat-hint"> · {status.hint}</span>}
-        </span>
       </div>
 
       <ol className="chat-log brain-chat-log" ref={log}>
@@ -132,7 +126,7 @@ export default function BrainChat() {
             )}
           </li>
         ))}
-        {!messages.length && !waiting.length && <li className="brain-empty">Ask Continuum Brain for something: it plans the work and hands it to workers.</li>}
+        {!messages.length && !waiting.length && <li className="brain-empty">Ask the brain for something: it plans the work and hands it to workers.</li>}
       </ol>
 
       <form className="chat-input brain-chat-input" onSubmit={submit}>
@@ -148,9 +142,9 @@ export default function BrainChat() {
               submit();
             }
           }}
-          placeholder={!mayRun ? "Your role can read this chat but not send to it" : !replay.live ? "Replaying — go live to send" : BRAIN_IS_MOCK && !core ? "Waking the brain…" : "Message Continuum Brain…"}
+          placeholder={!mayRun ? "Your role can read this chat but not send to it" : !replay.live ? "Replaying — go live to send" : BRAIN_IS_MOCK && !core ? "Waking the brain…" : "Message the brain…"}
           disabled={off}
-          aria-label="Message Continuum Brain"
+          aria-label="Message the brain"
         />
         <button type="submit" className="brain-btn is-primary" disabled={off || !text.trim()}>
           Send

@@ -854,52 +854,39 @@ button.goal-agent:hover { background: rgb(var(--c-rgb, var(--agent-off-rgb)) / 0
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
+  gap: 8px 14px;
   padding: 12px var(--chat-right) 12px var(--chat-left);
   border-bottom: 1px solid var(--border);
-  /* A touch of the brain's colour, and a soft shadow over the conversation */
-  background: color-mix(in srgb, var(--agent-core) 7%, var(--surface));
+  background: var(--surface);
+  /* A soft shadow sets it above the conversation */
   box-shadow: 0 6px 14px -10px rgb(var(--shadow-rgb) / 0.55);
 }
-.brain-chat-mark {
-  flex: none;
-  display: inline-grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  color: #fff;
-  font-size: 16px;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--agent-core) 80%, #fff) 0%, var(--agent-core) 60%, color-mix(in srgb, var(--agent-core) 70%, #000) 100%);
-  box-shadow: 0 2px 6px rgb(var(--shadow-rgb) / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.25);
-}
-.brain-chat-name { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
-.brain-chat-title { font-weight: 600; font-size: 15px; color: var(--text); }
-.brain-chat-sub { font-size: 12px; color: var(--text-muted); }
-/* Where it stands: a pill with a coloured dot (pulsing while it starts or works) */
+/* The brain's state: a coloured pill (pulsing while it starts or works), then what happens next */
 .brain-chat-pill {
   --tone: var(--text-muted);
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
+  gap: 8px;
+  padding: 6px 14px 6px 12px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--text-2);
-  background: color-mix(in srgb, var(--tone) 14%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--tone) 35%, transparent);
+  color: var(--text);
+  background: color-mix(in srgb, var(--tone) 18%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--tone) 45%, transparent);
 }
 .brain-chat-pill.is-green { --tone: var(--success); }
 .brain-chat-pill.is-amber { --tone: var(--warning); }
 .brain-chat-pill.is-red { --tone: var(--danger); }
 .brain-chat-pill.is-violet { --tone: var(--agent-core); }
-.brain-chat-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--tone); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 22%, transparent); }
+.brain-chat-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--tone); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 25%, transparent); }
 .brain-chat-pill.is-pulsing .brain-chat-dot { animation: agent-blink 1.4s ease-in-out infinite; }
-.brain-chat-hint { font-weight: 400; color: var(--text-muted); }
-.brain-chat-waiting { margin-left: auto; font-size: 13px; }
-.brain-chat-waiting + .brain-chat-pill { margin-left: 0; }
+/* Stopped: the stop symbol (a square), in the text's own colour */
+.brain-chat-pill.is-stopped { --tone: var(--text-2); }
+.brain-chat-pill.is-stopped .brain-chat-dot { border-radius: 2px; box-shadow: none; }
+.brain-chat-what { font-weight: 400; color: var(--text-muted); }
+.brain-chat-hint { font-size: 14px; color: var(--text-2); }
+.brain-chat-waiting { margin-left: auto; font-size: 14px; }
 .brain-chat .chat-status { padding: 6px var(--chat-right) 6px var(--chat-left); }
 .brain-chat-log {
   padding: 20px var(--chat-right) 20px var(--chat-left);
@@ -964,6 +951,5 @@ button.goal-agent:hover { background: rgb(var(--c-rgb, var(--agent-off-rgb)) / 0
   .brain-chat-input { padding: 10px calc(12px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left)); }
   .brain-chat-input textarea { font-size: 16px; } /* 16px: phones don't zoom in on focus */
   .brain-chat-waiting { order: 3; margin-left: 0; }
-  .brain-chat-sub, .brain-chat-hint { display: none; }
-  .brain-chat-pill { margin-left: auto; }
+  .brain-chat-hint { flex-basis: 100%; font-size: 13px; }
 }
