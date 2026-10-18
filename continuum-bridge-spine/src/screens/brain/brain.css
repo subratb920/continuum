@@ -833,7 +833,10 @@ button.goal-agent:hover { background: rgb(var(--c-rgb, var(--agent-off-rgb)) / 0
 }
 
 /* ---------- Chat screen: the whole width under the header ---------- */
+/* The conversation and its input sit in one centred column (no border), narrower than the screen */
 .brain-chat {
+  --chat-col: 860px;
+  --chat-side: max(24px, calc((100% - var(--chat-col)) / 2));
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -847,20 +850,20 @@ button.goal-agent:hover { background: rgb(var(--c-rgb, var(--agent-off-rgb)) / 0
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 12px;
-  padding: 10px 24px;
+  padding: 10px var(--chat-side);
   border-bottom: 1px solid var(--border);
   background: var(--surface);
 }
 .brain-chat-title { font-weight: 600; color: var(--text); }
 .brain-chat-state { font-size: 12px; color: var(--text-muted); }
 .brain-chat-waiting { margin-left: auto; font-size: 13px; }
-.brain-chat .chat-status { padding: 6px 24px; }
+.brain-chat .chat-status { padding: 6px var(--chat-side); }
 .brain-chat-log {
-  padding: 20px 24px;
+  padding: 20px var(--chat-side);
   gap: 12px;
 }
 /* Long answers read as text, not one stretched line */
-.brain-chat .chat-msg { max-width: min(72%, 900px); }
+.brain-chat .chat-msg { max-width: 80%; }
 .brain-chat .chat-bubble {
   padding: 10px 14px;
   line-height: 1.5;
@@ -868,31 +871,48 @@ button.goal-agent:hover { background: rgb(var(--c-rgb, var(--agent-off-rgb)) / 0
   overflow-wrap: anywhere;
 }
 .brain-chat .brain-empty { margin: auto; text-align: center; }
+/* The input row: the box and Send the same height, side by side, aligned at the foot as the box grows */
 .brain-chat-input {
+  display: flex;
   align-items: flex-end;
   gap: 10px;
-  padding: 12px 24px;
+  margin: 0;
+  padding: 12px var(--chat-side) 16px;
+  border: none;
   border-radius: 0;
+  background: transparent;
 }
 .brain-chat-input textarea {
   flex: 1;
   min-width: 0;
-  min-height: 42px;
+  box-sizing: border-box;
+  height: 44px;
+  min-height: 44px;
   max-height: 40vh;
-  resize: vertical;
+  margin: 0;
+  resize: none;
+  overflow-y: auto;
   font: inherit;
   font-size: 14px;
-  line-height: 1.4;
-  padding: 10px 12px;
+  line-height: 22px;
+  padding: 10px 14px;
   border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--surface);
   color: var(--text);
 }
-.brain-chat-input .brain-btn { min-height: 42px; padding: 0 18px; }
+.brain-chat-input .brain-btn {
+  flex: none;
+  box-sizing: border-box;
+  height: 44px;
+  margin: 0;
+  padding: 0 20px;
+  border-radius: 10px;
+}
 
 /* Phones: the full width, the input clear of the bottom edge */
 @media (max-width: 899px) {
+  .brain-chat { --chat-side: 12px; }
   .brain-chat-top,
   .brain-chat .chat-status { padding-left: calc(12px + env(safe-area-inset-left)); padding-right: calc(12px + env(safe-area-inset-right)); }
   .brain-chat-log { padding: 14px calc(12px + env(safe-area-inset-right)) 14px calc(12px + env(safe-area-inset-left)); }

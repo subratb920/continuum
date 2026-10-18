@@ -22,6 +22,7 @@ export default function BrainChat() {
   const [text, setText] = useState("");
   const [outbox, setOutbox] = useState([]); // [{ id, text, at, error? }]
   const log = useRef(null);
+  const box = useRef(null);
   const messages = brain ? brain.events.filter((e) => brain.coreIds.has(e.agentId) && (e.kind === "user" || e.kind === "text")) : [];
   // Sent, not yet heard back: the brain's record of the same words since it was sent replaces it
   const waiting = outbox.filter((o) => o.error || !messages.some((m) => m.kind === "user" && m.text === o.text && Date.parse(m.at) >= o.at - 60_000));
@@ -31,6 +32,14 @@ export default function BrainChat() {
   useEffect(() => {
     if (log.current) log.current.scrollTop = log.current.scrollHeight;
   }, [messages.length, waiting.length]);
+
+  // The input grows with what's typed (its CSS caps it), and is one line again once sent
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.max(44, el.scrollHeight + 2)}px`;
+  }, [text]);
 
   if (!brain) return null;
   const { core, say, replay, connected, pending } = brain;
@@ -98,6 +107,7 @@ export default function BrainChat() {
 
       <form className="chat-input brain-chat-input" onSubmit={submit}>
         <textarea
+          ref={box}
           value={text}
           rows={1}
           onChange={(e) => setText(e.target.value)}
