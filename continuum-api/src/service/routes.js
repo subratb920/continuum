@@ -55,7 +55,7 @@ export function bridgeView(b) {
     index: b.index,
     status: b.status,
     // kind: "human" (a person's, timed) or "agent" (the brain works its goals; no duration)
-    interval: { kind: kindOf(b), mode: b.interval?.mode ?? null, minutes: b.interval?.duration ?? null, startedAt: b.interval?.startedAt ?? null, endedAt: b.interval?.endedAt ?? null },
+    interval: { kind: kindOf(b), mode: b.interval?.mode ?? null, minutes: b.interval?.duration ?? null, startedAt: b.interval?.startedAt ?? null, endedAt: b.interval?.endedAt ?? null, workFrom: b.interval?.workFrom ?? "github" },
     // Goal ids as the UI gives them (utils/normalizeBridge.js): their own, or g1, g2… by position
     goals: (b.sessionGoals ?? []).map((g, i) => ({
       id: String(g.id ?? `g${i + 1}`),

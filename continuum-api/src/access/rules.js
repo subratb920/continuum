@@ -13,6 +13,7 @@ export const AGENTS_RULES = [
   ["POST", /^\/agents\/[^/]+\/reply$/, "agents_run"],
   ["POST", /^\/core\/messages$/, "agents_run"],
   ["POST", /^\/core\/agent-interval$/, "agents_run"],
+  ["POST", /^\/projects\/[^/]+\/snapshot$/, "agents_run"],
   ["PUT", /^\/settings$/, "agents_settings"],
 ];
 

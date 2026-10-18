@@ -10,6 +10,8 @@ export function normalizeBridge(raw) {
       // human: a person's, timed (every bridge from before); agent: Continuum Brain works its goals
       kind: raw.interval?.kind === "agent" ? "agent" : "human",
       endedBy: raw.interval?.endedBy ?? null,
+      // An agent interval works in your folder ("device", sent from your computer) or in GitHub
+      workFrom: raw.interval?.workFrom ?? null,
       mode: raw.interval?.mode ?? "execution",
       duration: raw.interval?.duration ?? 0,
       startedAt: raw.interval?.startedAt ?? null,

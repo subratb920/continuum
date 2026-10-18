@@ -19,6 +19,8 @@
 //                                           answered already: 200 with alreadyAnswered
 //   POST   /brain/core/messages {text}      a message to your brain
 //   POST   /brain/core/agent-interval {bridgeId}  an agent interval started: your brain works its goals
+//   POST   /brain/projects/:id/snapshot     your project folder (.tar.gz, from your computer): workers of
+//                                           an interval that works in your folder start from it
 //   GET    /brain/models   GET|PUT /brain/settings {model}   the one model all your agents run on
 
 import express from "express";
@@ -216,6 +218,21 @@ export function createBrainRouter(opts = {}) {
 
   router.post("/core/messages", async (req, res) => {
     res.status(202).json(toAgent(await brain(req, "POST", "/brain/messages", { text: req.body?.text })));
+  });
+
+  router.post("/projects/:id/snapshot", express.raw({ type: "application/gzip", limit: "60mb" }), async (req, res) => {
+    const projectId = String(req.params.id);
+    if (!ID.test(projectId)) throw new AppError("No such project.", 404, "NOT_FOUND");
+    if (!Buffer.isBuffer(req.body) || !req.body.length) throw new AppError("Send the folder as a .tar.gz.", 400, "VALIDATION_ERROR");
+    let r;
+    try {
+      r = await client.send(uid(req), `/projects/${projectId}/snapshots`, req.body);
+    } catch (e) {
+      if (e instanceof BrainUnavailableError) throw new AppError(e.message, 503, "BRAIN_UNAVAILABLE");
+      throw e;
+    }
+    if (r.status >= 400) throw new AppError(r.data?.error?.message ?? "The brain couldn't take the folder.", r.status, r.data?.error?.code ?? "BRAIN_ERROR");
+    res.status(201).json(r.data);
   });
 
   router.post("/core/agent-interval", async (req, res) => {

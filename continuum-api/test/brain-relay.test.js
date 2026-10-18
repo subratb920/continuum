@@ -27,6 +27,11 @@ function fakeBrain() {
       if (path === "/agents" && body?.projectId === "nope") return { status: 404, data: { error: { code: "NOT_FOUND", message: "No such project." } } };
       return { status: 200, data: agent };
     },
+    send: async (userId, path, bytes) => {
+      calls.push(`${userId} SEND ${path} ${bytes.length} bytes`);
+      if (path.startsWith(`/projects/${"e".repeat(24)}`)) return { status: 404, data: { error: { code: "NOT_FOUND", message: "No such project." } } };
+      return { status: 201, data: { id: "s".repeat(24), files: 3, bytes: bytes.length } };
+    },
     stream: async (_u, query) => {
       calls.push(`stream ${new URLSearchParams(query)}`);
       const body = new ReadableStream({
@@ -167,4 +172,18 @@ test("brain relay: what waits on you, however old; answering twice is harmless; 
   assert.ok(b.calls.includes("stream after=42"));
   s.close();
   t.close();
+});
+
+test("brain relay: your project folder (.tar.gz from your computer) goes to the brain as it is; refusals pass on", async () => {
+  const b = fakeBrain();
+  const s = await serve(b);
+  const gz = new Uint8Array([0x1f, 0x8b, 8, 0, 1, 2, 3]);
+  const up = await fetch(`${s.base}/projects/${"d".repeat(24)}/snapshot`, { method: "POST", headers: { "Content-Type": "application/gzip" }, body: gz });
+  assert.equal(up.status, 201);
+  assert.deepEqual(await up.json(), { id: "s".repeat(24), files: 3, bytes: gz.length });
+  assert.equal(b.calls.at(-1), `${"1".repeat(24)} SEND /projects/${"d".repeat(24)}/snapshots ${gz.length} bytes`);
+  assert.equal((await fetch(`${s.base}/projects/${"e".repeat(24)}/snapshot`, { method: "POST", headers: { "Content-Type": "application/gzip" }, body: gz })).status, 404);
+  assert.equal((await fetch(`${s.base}/projects/nope/snapshot`, { method: "POST", headers: { "Content-Type": "application/gzip" }, body: gz })).status, 404);
+  assert.equal((await fetch(`${s.base}/projects/${"d".repeat(24)}/snapshot`, { method: "POST", headers: { "Content-Type": "application/gzip" }, body: new Uint8Array() })).status, 400);
+  s.close();
 });

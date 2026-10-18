@@ -28,7 +28,8 @@ export const WRITE_TOOLS = ["write", "edit", "patch", "multiedit", "apply_patch"
  * click, so the browser may ask for access again (it forgets after a restart).
  */
 export async function copyToLocal(agent, client, { ask = false } = {}) {
-  if (!localFoldersAvailable() || !client.changes || !agent.repo) return;
+  // A clone of GitHub or a copy of your folder: either way its changes come back into your folder
+  if (!localFoldersAvailable() || !client.changes || !(agent.repo || agent.source === "device")) return;
   const id = agent._id;
   const folder = await savedFolder(folderKey(agent));
   if (!folder) return set(id, { status: "needs-folder" });

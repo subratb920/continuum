@@ -71,6 +71,8 @@ export function createBridgeService(db) {
         kind: interval?.kind === "agent" ? "agent" : "human",
         mode: interval?.mode,
         duration: interval?.kind === "agent" ? null : interval?.duration,
+        // An agent interval works in the user's folder (sent from their computer) or in GitHub (a phone)
+        ...(interval?.kind === "agent" ? { workFrom: interval?.workFrom === "device" ? "device" : "github" } : {}),
         startedAt: new Date(),
         endedAt: null
       },

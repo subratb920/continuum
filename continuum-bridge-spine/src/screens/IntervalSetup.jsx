@@ -1,5 +1,7 @@
-import React, { useState } from "react";
-import { startInterval } from "../api";
+import React, { useEffect, useState } from "react";
+import { startInterval, uploadFolderSnapshot } from "../api";
+import { folderAccess, localFoldersAvailable, pickFolder, savedFolder } from "../brain/localFolder";
+import { snapshotOf } from "../utils/folderSnapshot";
 import { prepareIntervalAlerts } from "../utils/intervalAlerts";
 import DurationPicker from "../components/DurationPicker";
 import { useAuth } from "../state/authStore";
@@ -22,6 +24,36 @@ export default function IntervalSetup({
   const brain = useBrain();
   const brainOffered = Boolean(brain) && can("agents_run");
   const byBrain = brainOffered && who === "brain";
+
+  // Where the brain's workers work: your folder on this computer (Chrome/Edge), or GitHub (a phone)
+  const onComputer = localFoldersAvailable();
+  const hasRepo = Boolean(selectedProject?.githubRepoUrl || selectedProject?.fullName);
+  const [workIn, setWorkIn] = useState(onComputer ? "device" : "github");
+  const [folder, setFolder] = useState(null);
+  const [sending, setSending] = useState("");
+  const [startError, setStartError] = useState("");
+  const projectId = selectedProject?._id;
+  useEffect(() => {
+    if (!onComputer || !projectId) return undefined;
+    let live = true;
+    savedFolder(projectId).then((h) => live && setFolder(h ?? null));
+    return () => {
+      live = false;
+    };
+  }, [onComputer, projectId]);
+  const inFolder = byBrain && onComputer && workIn === "device";
+  // What stops a brain interval from starting: no folder picked, or (a phone) no GitHub repository
+  const blockedBy = !byBrain ? "" : inFolder && !folder ? "Pick your project folder for the workers." : !inFolder && !hasRepo ? "This project isn't on GitHub: start it from a computer to work in your folder, or put it on GitHub first." : "";
+
+  async function chooseFolder() {
+    setStartError("");
+    try {
+      const h = await pickFolder(projectId, selectedProject?.name);
+      if (h) setFolder(h);
+    } catch (err) {
+      setStartError(err.message);
+    }
+  }
 
   /* --------------------------------------------------
      Execution Gate
@@ -57,7 +89,24 @@ export default function IntervalSetup({
      Start Interval
   -------------------------------------------------- */
   async function handleStartInterval() {
-    if (!isExecutable || goals.length === 0) return;
+    if (!isExecutable || goals.length === 0 || blockedBy || sending) return;
+    setStartError("");
+
+    // Your folder: access asked for during the click (the browser forgets it after a restart), then read and sent
+    if (inFolder) {
+      try {
+        if ((await folderAccess(folder, true)) !== "granted") throw new Error(`Continuum needs access to ${folder.name} to send it to the workers.`);
+        setSending("Reading your folder…");
+        const snap = await snapshotOf(folder);
+        setSending(`Sending your folder (${snap.files} files)…`);
+        await uploadFolderSnapshot(activeProject._id, snap.blob);
+      } catch (err) {
+        setStartError(err.message === "UNAUTHORIZED" ? "Your session has ended: sign in again." : err.message);
+        setSending("");
+        return;
+      }
+      setSending("");
+    }
 
     // Must run during the click: browsers only allow the notification
     // prompt and audio after a user action (a timed interval's end)
@@ -68,6 +117,7 @@ export default function IntervalSetup({
       mode,
       duration,
       kind: byBrain ? "agent" : "human",
+      workFrom: inFolder ? "device" : "github",
       ticketUrl,
       sessionGoals: goals.map((g) => ({
         id: g.id,
@@ -205,6 +255,44 @@ export default function IntervalSetup({
           )}
         </section>
 
+        {/* Where the brain's workers work: your folder (a computer) or GitHub (a phone) */}
+        {byBrain && (
+          <section className="interval-section">
+            <h3>Works in</h3>
+            {onComputer ? (
+              <div className="interval-who" role="radiogroup" aria-label="Where the workers work">
+                <label className={`interval-who-option${workIn === "device" ? " is-on" : ""}`}>
+                  <input type="radio" name="workIn" checked={workIn === "device"} onChange={() => setWorkIn("device")} />
+                  <span className="interval-who-title">💻 Your folder</span>
+                  <span className="interval-who-line">
+                    {folder ? (
+                      <>
+                        📁 {folder.name} ·{" "}
+                        <button type="button" className="interval-link" onClick={chooseFolder}>
+                          Change
+                        </button>
+                      </>
+                    ) : (
+                      <button type="button" className="interval-link" onClick={chooseFolder}>
+                        Pick your project folder
+                      </button>
+                    )}
+                    <br />
+                    Workers start from it; the changes you allow come back into it.
+                  </span>
+                </label>
+                <label className={`interval-who-option${workIn === "github" ? " is-on" : ""}${hasRepo ? "" : " is-off"}`}>
+                  <input type="radio" name="workIn" checked={workIn === "github"} disabled={!hasRepo} onChange={() => setWorkIn("github")} />
+                  <span className="interval-who-title">GitHub</span>
+                  <span className="interval-who-line">{hasRepo ? "Workers start from the project's GitHub repository." : "This project isn't on GitHub."}</span>
+                </label>
+              </div>
+            ) : (
+              <p className="hint">{hasRepo ? "GitHub: on a phone, workers start from the project's GitHub repository." : "This project isn't on GitHub: start it from a computer to work in your folder."}</p>
+            )}
+          </section>
+        )}
+
         {/* Interval Duration (a timed interval only: the brain ends its own) */}
         {!byBrain && (
         <section className="interval-section">
@@ -234,13 +322,17 @@ export default function IntervalSetup({
         </p>
       )}
 
+      {blockedBy && isExecutable && goals.length > 0 && <p className="hint warning">{blockedBy}</p>}
+      {startError && <p className="hint warning">{startError}</p>}
+      {sending && <p className="hint">{sending}</p>}
+
       <button
         type="button"
         className="primary"
         onClick={handleStartInterval}
-        disabled={!isExecutable || goals.length === 0}
+        disabled={!isExecutable || goals.length === 0 || Boolean(blockedBy) || Boolean(sending)}
       >
-        {byBrain ? "Start the brain on these goals" : "Start Interval"}
+        {sending ? "Sending your folder…" : byBrain ? "Start the brain on these goals" : "Start Interval"}
       </button>
     </div>
   );

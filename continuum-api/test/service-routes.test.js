@@ -126,6 +126,7 @@ test("service routes: the brain works an agent interval's bridge — tasks, work
   // Plan: goal 1 in two tasks
   const planned = await (await s.send("PUT", `${B}/goals/g1/tasks`, { tasks: [{ id: "1.1", text: "Validate format in the form" }, { id: "1.2", text: "Server-side check" }] })).json();
   assert.equal(planned.interval.kind, "agent");
+  assert.equal(planned.interval.workFrom, "github", "an agent interval works in GitHub unless it started from the user's folder");
   assert.deepEqual(planned.goals[0].tasks.map((t) => [t.id, t.state, t.agentId]), [["1.1", "planned", null], ["1.2", "planned", null]]);
   assert.equal((await s.send("PUT", `${B}/goals/g1/tasks`, { tasks: [] })).status, 400, "at least one task");
   assert.equal((await s.send("PUT", `${B}/goals/nope/tasks`, { tasks: [{ text: "x" }] })).status, 404);

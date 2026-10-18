@@ -31,7 +31,7 @@ export default function BridgeHistoryModal({ bridge, onClose }) {
         <section className="modal-body">
           <p className="modal-meta">
             {agent
-              ? `${bridge.interval.mode} · worked by Continuum Brain · ${bridge.interval.endedBy === "person" ? "stopped by you" : bridge.status === "draft" ? "in progress" : "ended by the brain"}`
+              ? `${bridge.interval.mode} · worked by Continuum Brain${bridge.interval.workFrom === "device" ? " in your folder" : bridge.interval.workFrom === "github" ? " on GitHub" : ""} · ${bridge.interval.endedBy === "person" ? "stopped by you" : bridge.status === "draft" ? "in progress" : "ended by the brain"}`
               : `${bridge.interval.mode} · Interval duration ${formatDuration(bridge.interval.duration)}`}
           </p>
 

@@ -50,10 +50,13 @@ export default function WorkerWork({ agent }) {
     };
   }, [agent._id, running, changes, changeKey]);
 
-  if (BRAIN_IS_MOCK || agent.kind !== "worker" || !agent.repo || !changes) return null;
+  // A clone of GitHub, or a copy of your folder (source "device": no Push without a repository)
+  const fromFolder = agent.source === "device";
+  if (BRAIN_IS_MOCK || agent.kind !== "worker" || !(agent.repo || fromFolder) || !changes) return null;
+  const projectName = agent.repo ? agent.repo.split("/")[1] : "this project";
 
   async function pick() {
-    const h = await pickFolder(folderKey(agent), agent.repo).catch((err) => (setPushError(err.message), null));
+    const h = await pickFolder(folderKey(agent), projectName).catch((err) => (setPushError(err.message), null));
     if (h) {
       setFolder(h);
       if (running) copyToLocal(agent, { ask: true });
@@ -79,7 +82,7 @@ export default function WorkerWork({ agent }) {
           <span className="worker-work-label">Your folder</span>
           {!folder ? (
             <button type="button" className="brain-btn" onClick={pick}>
-              Pick your folder for {agent.repo.split("/")[1]}
+              Pick your folder for {projectName}
             </button>
           ) : copy?.status === "needs-access" ? (
             <button type="button" className="brain-btn" onClick={() => copyToLocal(agent, { ask: true })}>
@@ -139,7 +142,9 @@ export default function WorkerWork({ agent }) {
         </p>
       )}
 
-      {replay.live && running && n > 0 && !pushedSinceChange && !later && (
+      {fromFolder && running && n > 0 && <p className="brain-hint">It works in a copy of your folder: the changes you allow come back into it.{agent.repo ? " You can also push them to GitHub." : ""}</p>}
+
+      {agent.repo && replay.live && running && n > 0 && !pushedSinceChange && !later && (
         <div className="ask-card kind-push">
           <p className="ask-card-text">
             Push {n} {n === 1 ? "change" : "changes"} to GitHub? They go on its own branch <span className="brain-mono">{agent.branch}</span> in {agent.repo} (never main); then you can open a pull request.

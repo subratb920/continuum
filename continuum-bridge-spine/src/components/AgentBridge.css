@@ -58,3 +58,4 @@
   .agent-task.is-working .agent-task-mark { animation: none; }
 }
 .agent-bridge-handover { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 12px; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--border-strong); font-size: 13px; color: var(--text-2); }
+.agent-bridge-where { font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-2); }

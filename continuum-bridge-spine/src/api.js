@@ -69,12 +69,13 @@ export async function startInterval({
   mode,
   duration,
   kind = "human", // "agent": Continuum Brain works the goals (no duration)
+  workFrom = "github", // an agent interval: "device" (your folder, sent from this computer) or "github"
   sessionGoals,
   ticketUrl,
 }) {
   return request("POST", "/bridges/start", {
     projectId,
-    interval: kind === "agent" ? { kind, mode } : { mode, duration },
+    interval: kind === "agent" ? { kind, mode, workFrom } : { mode, duration },
     sessionGoals,
     ticketUrl,
   });
@@ -267,6 +268,24 @@ export async function putProjectOnGithub(projectId, { name, isPrivate }, archive
   if (res.status === 401) throw new Error("UNAUTHORIZED");
   const data = await res.json().catch(() => null);
   if (!res.ok) throw Object.assign(new Error(data?.error || "The project couldn't be put on GitHub."), { field: data?.field ?? null });
+  return data;
+}
+
+/**
+ * Your project folder (a .tar.gz Blob from this computer) for the brain:
+ * workers of an interval that works in your folder start from it.
+ * → { id, files, bytes, createdAt }
+ */
+export async function uploadFolderSnapshot(projectId, archive) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(`${API_BASE}/brain/projects/${projectId}/snapshot`, {
+    method: "POST",
+    headers: { "Content-Type": "application/gzip", ...(token && { Authorization: `Bearer ${token}` }) },
+    body: archive,
+  });
+  if (res.status === 401) throw new Error("UNAUTHORIZED");
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(data?.error || "Your folder couldn't be sent to the brain.");
   return data;
 }
 

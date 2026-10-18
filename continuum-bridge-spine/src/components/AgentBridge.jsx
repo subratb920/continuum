@@ -191,6 +191,9 @@ export default function AgentBridge({ bridge, onEnded, docked = false }) {
             <span className="agent-bridge-clock" title="Since the interval started">
               {elapsed}
             </span>
+            <span className="agent-bridge-where" title="Where its workers work">
+              {current.interval?.workFrom === "device" ? "💻 your folder" : "GitHub"}
+            </span>
             <span className="agent-bridge-settled">
               {settled} of {goals.length} settled
             </span>

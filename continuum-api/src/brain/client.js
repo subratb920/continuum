@@ -21,6 +21,18 @@ export function brainClient(baseUrl, token, fetchImpl = fetch) {
     return { status: res.status, data };
   }
 
+  /** { status, data } of a file sent as is (a project folder's .tar.gz): longer to send than a JSON call. */
+  async function send(userId, path, bytes, contentType = "application/gzip", timeoutMs = 120_000) {
+    let res;
+    try {
+      res = await fetchImpl(`${base}${path}`, { method: "POST", headers: { ...headers(userId, false), "Content-Type": contentType }, body: bytes, signal: AbortSignal.timeout(timeoutMs) });
+    } catch {
+      throw new BrainUnavailableError("The brain isn't reachable right now. Try again in a moment.");
+    }
+    const data = await res.json().catch(() => ({}));
+    return { status: res.status, data };
+  }
+
   /** The user's live events (server-sent events), until `signal` aborts. */
   async function stream(userId, query, signal) {
     try {
@@ -30,5 +42,5 @@ export function brainClient(baseUrl, token, fetchImpl = fetch) {
     }
   }
 
-  return { call, stream };
+  return { call, send, stream };
 }
