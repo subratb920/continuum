@@ -200,8 +200,12 @@ body .shell-header {
 
 /* ---------- Phones ---------- */
 @media (max-width: 599px) {
-  body .shell-title {
+  body .shell-wordmark-name {
     font-size: 15px;
+  }
+  /* Phones: the mark and the name; "Console" goes */
+  body .shell-wordmark-app {
+    display: none;
   }
   body .menu-dropdown {
     max-width: calc(100vw - 24px);

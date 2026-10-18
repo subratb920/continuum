@@ -1,4 +1,5 @@
 import { LockMark } from "../components/NoAccess";
+import BrandMark from "../components/BrandMark";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/authStore";
@@ -204,8 +205,12 @@ export default function ShellHeader({ selectedProject = null }) {
             </div>
           )}
         </div>
-        <Link to="/" className="shell-title">
-          Continuum Console
+        <Link to="/" className="shell-title" aria-label="Continuum Console, home">
+          <BrandMark size={22} />
+          <span className="shell-wordmark">
+            <span className="shell-wordmark-name">Continuum</span>
+            <span className="shell-wordmark-app">Console</span>
+          </span>
         </Link>
       </div>
 
