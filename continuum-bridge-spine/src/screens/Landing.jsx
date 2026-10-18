@@ -11,7 +11,7 @@ import "./Landing.css";
 
 /**
  * The public page (/ before sign-in): what Continuum is and does, calmly.
- * A hero with the mark breathing over a slow aurora, the power of continuum
+ * A hero over a slow aurora, the power of continuum
  * gliding by, then one section per feature in its own soft colour, each
  * easing in as it scrolls into view. Sign in is always at hand (/signin).
  */
@@ -65,9 +65,6 @@ export default function Landing() {
           <span className="aurora-c" />
         </div>
         <div className="landing-hero-inner">
-          <div className="landing-mark" aria-hidden="true">
-            <BrandMark size={72} />
-          </div>
           <h1 className="landing-title">Keep your work moving, calmly.</h1>
           <p className="landing-sub">Plan in focused intervals, hand the coding to AI that asks before it acts, prepare your data and ship to your own cloud. Continuum remembers where you left off.</p>
           <div className="landing-ctas">

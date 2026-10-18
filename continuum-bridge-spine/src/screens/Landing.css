@@ -49,7 +49,7 @@
 .landing-btn.is-quiet { background: transparent; color: var(--text); border-color: var(--border-strong); box-shadow: none; }
 .landing-btn.is-small { min-height: 36px; padding: 0 16px; font-size: 14px; }
 
-/* ---------- Hero: the mark breathing over a slow aurora ---------- */
+/* ---------- Hero: over a slow aurora ---------- */
 .landing-hero { position: relative; overflow: hidden; padding: 72px 20px 56px; text-align: center; }
 .landing-aurora { position: absolute; inset: -20% -10% auto; height: 140%; pointer-events: none; filter: blur(60px); opacity: 0.55; }
 .landing-aurora span { position: absolute; border-radius: 50%; }
@@ -62,9 +62,6 @@
   66% { transform: translate(-5%, -3%) scale(0.95); }
 }
 .landing-hero-inner { position: relative; max-width: 760px; margin: 0 auto; }
-.landing-mark { display: inline-block; margin-bottom: 18px; animation: mark-breathe 7s ease-in-out infinite; }
-.landing-mark .brand-mark { filter: drop-shadow(0 0 18px rgb(56 189 248 / 0.35)) drop-shadow(0 0 18px rgb(249 115 22 / 0.25)); }
-@keyframes mark-breathe { 50% { transform: translateY(-4px) scale(1.03); } }
 .landing-title { margin: 0; font-family: "Outfit", system-ui, sans-serif; font-weight: 500; font-size: clamp(32px, 5.4vw, 54px); line-height: 1.08; letter-spacing: -0.015em; }
 .landing-sub { max-width: 620px; margin: 18px auto 0; font-size: clamp(15px, 1.9vw, 18px); line-height: 1.6; color: var(--text-2); }
 .landing-ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 28px; }
@@ -124,6 +121,6 @@
 /* Less motion: everything still and shown at once */
 @media (prefers-reduced-motion: reduce) {
   .landing { scroll-behavior: auto; }
-  .landing-aurora span, .landing-mark { animation: none; }
+  .landing-aurora span { animation: none; }
   .reveal { opacity: 1; transform: none; transition: none; }
 }
