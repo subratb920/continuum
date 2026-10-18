@@ -15,8 +15,8 @@
 //   GET /deploy/archives/:token     that commit's source (tar.gz), streamed from GitHub
 //                                   with the user's sign-in; only with a valid address
 //   PUT /deploy/projects/:id/manifest  writes continuum.deploy.json on a branch (a commit
-//                                   with the user's GitHub sign-in): Deploy's "Setup" edits.
-//                                   Never the repository's default branch, main or master.
+//                                   with the user's GitHub sign-in): Deploy's "Setup" edits,
+//                                   on the branch the project deploys from (main included).
 //   GET /deploy/me/appearance       the user's colour theme (Deploy follows Continuum's)
 //   POST /deploy/support/callbacks  "Request a callback" from Deploy's Contact us (same
 //                                   requests and daily limit as Continuum's own)
@@ -266,10 +266,9 @@ async function projectWithGitHub(req, res, projectId) {
  * Deploy's "Setup" edits: continuum.deploy.json written on the deployed
  * branch as one commit. Body: { branch, content (the whole file, JSON text),
  * message, baseCommit (the commit Deploy read the file at: refused with 409 when
- * the file changed since, so nobody's edit is lost) }. Only that file, never
- * the default branch, main or master.
+ * the file changed since, so nobody's edit is lost) }. Only that file, on the
+ * branch the project deploys from (main included).
  */
-const PROTECTED_BRANCHES = new Set(["main", "master"]);
 router.put("/projects/:id/manifest", requireDeployToken, async (req, res) => {
   const found = await projectWithGitHub(req, res, req.params.id);
   if (!found) return;
@@ -286,9 +285,6 @@ router.put("/projects/:id/manifest", requireDeployToken, async (req, res) => {
   const info = await github(token, `/repos/${repo}`);
   if (info.status === 401) return res.status(409).json({ error: "Continuum's GitHub access has expired. Sign in to Continuum with GitHub again." });
   if (info.status !== 200) return res.status(502).json({ error: `GitHub couldn't show ${repo} (HTTP ${info.status}).` });
-  if (PROTECTED_BRANCHES.has(branch) || branch === info.body.default_branch) {
-    return res.status(409).json({ error: `Continuum Deploy doesn't write to ${branch} (the repository's main branch). Change ${MANIFEST} there yourself, or deploy from another branch.` });
-  }
   const ref = branch.split("/").map(encodeURIComponent).join("/");
   // The file as it is on the branch now (its sha is needed to replace it), and the branch's latest commit
   const [file, head] = await Promise.all([github(token, `/repos/${repo}/contents/${MANIFEST}?ref=${ref}`), github(token, `/repos/${repo}/git/ref/heads/${ref}`)]);
