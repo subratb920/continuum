@@ -34,7 +34,8 @@ export default function PhoneNav() {
           <PhoneTab key={s.id} screen={s} current={s === screen} onClick={() => go(s)} />
         ))}
       </nav>
-      {panels.enabled && screen && <PartsBar screen={screen} panels={panels} />}
+      {/* A full-width screen (Chat) has no parts: only the tabs above it */}
+      {panels.enabled && screen && !(screen.full && !panels.panel) && <PartsBar screen={screen} panels={panels} />}
     </div>
   );
 }

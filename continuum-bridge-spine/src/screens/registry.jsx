@@ -4,6 +4,7 @@ import { usePendingCount } from "../brain/brainContext";
 import AgentRoster from "./brain/AgentRoster";
 import AgentStage from "./brain/AgentStage";
 import AgentInspector from "./brain/AgentInspector";
+import BrainChat from "./brain/BrainChat";
 import { DataProvider } from "../data/DataProvider";
 import { useBuildingCount } from "../data/dataContext";
 import { DATA_ENABLED } from "../data/dataApi";
@@ -29,6 +30,8 @@ import AdminDetail from "./admin/AdminDetail";
  *   useBadge(): a count beside the switcher button (a hook, called on every render)
  *   feature: what your role must have switched on (access/features); off, the
  *     screen shows "No feature access" (and the switcher a lock)
+ *   full: the screen's middle takes the whole width (no side panes; phones
+ *     show only the screen tabs above it)
  *
  * ctx comes from App: { intervalCenter, dashboardCenter, navigate }
  */
@@ -78,6 +81,20 @@ export const SCREENS = [
         },
       ]
     : []),
+  // Chat with your brain: a screen of its own, the whole width (its state is the Agents screen's BrainProvider)
+  {
+    id: "chat",
+    feature: "agents",
+    path: "/chat",
+    label: "Chat",
+    icon: "💬",
+    switcher: true,
+    full: true,
+    left: { label: "Chat", icon: "💬" },
+    center: { label: "Chat", icon: "💬" },
+    right: { label: "Chat", icon: "💬" },
+    slots: () => ({ center: <BrainChat /> }),
+  },
   {
     id: "dashboard",
     feature: "dashboard",

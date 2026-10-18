@@ -53,7 +53,7 @@ import {
 
 // Last page on reopen (see App): only these pages are remembered
 const LAST_PATH_KEY = "continuum_last_path";
-const RESTORABLE_PATHS = ["/", "/console", "/brain", "/data", "/dashboard", "/admin", "/help"];
+const RESTORABLE_PATHS = ["/", "/console", "/brain", "/data", "/chat", "/dashboard", "/admin", "/help"];
 
 function readLastPath() {
   try {
@@ -345,8 +345,8 @@ export default function App() {
   const draftModal = activeBridge && (
     <BridgeDraftModal
       bridge={activeBridge}
-      // Agents screen: a panel in the corner, so the agents stay in view
-      docked={pathname === "/brain"}
+      // Agents and Chat: a panel in the corner, so the agents and the chat stay in view
+      docked={pathname === "/brain" || pathname === "/chat"}
       onUpdate={handleUpdateActiveBridge}
       onSignIn={logout}
       onStop={(bridge) => {
@@ -650,6 +650,7 @@ export default function App() {
         onDeleteProject={(project) => (setProjectForAction(project), setShowDeleteProject(true))}
         leftPane={slots.left ?? null}
         rightPane={slots.right ?? null}
+        full={Boolean(screen.full)}
         leftLabel={screen.left.label}
         rightLabel={screen.right.label}
       >

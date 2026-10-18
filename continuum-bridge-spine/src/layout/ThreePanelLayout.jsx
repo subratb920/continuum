@@ -47,6 +47,7 @@ export default function ThreePanelLayout({
   rightPane = null, // another right pane instead of the Bridge Spine (e.g. the Agents screen's inspector)
   leftLabel = "Projects",
   rightLabel = "Bridge Spine",
+  full = false, // the middle only, the whole width (the Chat screen): no side panes, no swipes
   children,
 }) {
   const { panel, open, close } = usePanels();
@@ -105,6 +106,15 @@ export default function ThreePanelLayout({
   // Small screens: the parts not showing are off to the side; keyboards and screen readers skip them
   const away = (n) => (narrow && moving && n !== pos ? true : undefined);
   const classes = ["app", panel && `app-view-${panel}`].filter(Boolean).join(" ");
+  if (full) {
+    return (
+      <div className="app app-full">
+        <main className="center">
+          {panel === "create" ? <CreatePane selectedProject={selectedProject} /> : panel === "deploy" ? <DeployPane selectedProject={selectedProject} /> : children}
+        </main>
+      </div>
+    );
+  }
   return (
     <div className={classes} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
       <aside className="left" aria-label={leftLabel} id="console-projects" inert={away(0)}>

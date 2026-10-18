@@ -159,6 +159,12 @@ body .shell-header {
     padding: 16px calc(16px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
     background: var(--page);
   }
+  /* A full-width screen (Chat): the middle alone, never slid aside */
+  body .app.app-full > .center {
+    transform: none;
+    padding: 0;
+    overflow: hidden;
+  }
   /* While a finger moves them, they follow it exactly (no easing) */
   body .parts-dragging .app > .left,
   body .parts-dragging .app > .center,
