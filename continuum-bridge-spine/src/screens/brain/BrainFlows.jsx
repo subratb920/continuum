@@ -73,6 +73,7 @@ export default function BrainFlows() {
 
       <section className="guide-unit">
         <h3 className="guide-head">Workers</h3>
+        <div className="guide-workers">
         <ul className="guide-sizes">
           {SIZES.map(([name, spec, note]) => (
             <li key={name} className="guide-size">
@@ -91,6 +92,7 @@ export default function BrainFlows() {
           ))}
         </dl>
         <p className="guide-foot">All run on the brain's one model (Agents › Models).</p>
+        </div>
       </section>
     </div>
   );

@@ -1,15 +1,22 @@
 /* The Chat screen's side panes (BrainGuide left, BrainFlows right): a few
    small sections on the pane's own shade, quiet colours, one loop each */
 
+/* The cards fill the pane's height, sharing it; each one's content spreads
+   evenly inside it, and the pictures scale with the room they get */
 .guide {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  box-sizing: border-box;
+  min-height: 100%;
   font-size: 13px;
   color: var(--text-2);
 }
 
 .guide-unit {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
   padding: 10px 12px 12px;
   border-radius: 10px;
   background: var(--surface-subtle);
@@ -26,7 +33,7 @@
 }
 
 /* ---------- Right now ---------- */
-.guide-stats { margin: 0; display: grid; gap: 2px; }
+.guide-stats { flex: 1; margin: 0; display: flex; flex-direction: column; justify-content: space-evenly; gap: 2px; }
 .guide-stat {
   display: flex;
   align-items: center;
@@ -50,7 +57,7 @@
 .guide-meter span.is-on { background: var(--agent-core); }
 
 /* ---------- The loop ---------- */
-.loop { display: block; width: 100%; height: auto; max-height: 140px; }
+.loop { display: block; flex: 1 1 0; width: 100%; min-height: 120px; max-height: 240px; }
 .loop-link { fill: none; stroke: var(--border-strong); stroke-width: 1.5; }
 .loop-link.is-flow { stroke-dasharray: 3 4; animation: agent-flow 0.8s linear infinite; }
 .loop-link.is-ask { stroke: color-mix(in srgb, var(--warning) 55%, transparent); stroke-dasharray: 2 4; }
@@ -79,6 +86,7 @@
   padding: 0;
   display: grid;
   gap: 4px;
+  flex: none;
 }
 /* Each step lights up in its quarter of the loop */
 .guide-steps li {
@@ -108,7 +116,7 @@
 }
 
 /* ---------- Model building (Continuum Data's pipeline) ---------- */
-.pipe { display: block; width: 100%; height: auto; }
+.pipe { display: block; flex: 1 1 0; width: 100%; min-height: 104px; max-height: 220px; }
 .pipe-track { fill: none; stroke: var(--border-strong); stroke-width: 1.5; }
 .pipe-track.is-lane { stroke-dasharray: 2 3; }
 .pipe-track.is-next { stroke-dasharray: 3 3; animation: agent-flow 0.9s linear infinite; }
@@ -140,17 +148,17 @@
 .guide-head-row .guide-head { margin: 0; }
 
 /* ---------- Try a flow ---------- */
-.flows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.flows { flex: 1; list-style: none; margin: 0; padding: 0; display: grid; grid-auto-rows: 1fr; gap: 8px; }
 .flow {
   display: grid;
-  grid-template-columns: 64px 1fr;
+  grid-template-columns: minmax(52px, 26%) 1fr;
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
   border-radius: 8px;
   background: var(--surface);
 }
-.mini { display: block; width: 64px; height: 30px; }
+.mini { display: block; width: 100%; height: auto; max-height: 48px; }
 .mini-core { fill: color-mix(in srgb, var(--agent-core) 30%, var(--surface)); stroke: var(--agent-core); stroke-width: 1.5; }
 .mini-worker { fill: color-mix(in srgb, var(--agent-core) 12%, var(--surface)); stroke: color-mix(in srgb, var(--agent-core) 60%, transparent); stroke-width: 1.5; }
 .mini-worker.is-late { animation: mini-late 4s ease-in-out infinite; }
@@ -181,15 +189,16 @@
 
 /* ---------- Workers ---------- */
 .guide-sizes { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.guide-workers { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; gap: 8px; }
 .guide-size { display: flex; align-items: baseline; gap: 8px; padding: 5px 8px; border-radius: 6px; background: var(--surface); }
 .guide-size-name { font-weight: 600; color: var(--text); min-width: 66px; }
 .guide-size-spec { font-size: 12px; color: var(--text-muted); }
 .guide-size-note { margin-left: auto; font-size: 11px; color: var(--agent-core); }
-.guide-limits { margin: 10px 0 0; display: grid; gap: 5px; }
+.guide-limits { margin: 0; display: grid; gap: 5px; }
 .guide-limits div { display: grid; grid-template-columns: 74px 1fr; gap: 8px; align-items: baseline; }
 .guide-limits dt { font-weight: 600; color: var(--text); }
 .guide-limits dd { margin: 0; font-size: 12px; color: var(--text-muted); }
-.guide-foot { margin: 10px 0 0; font-size: 12px; color: var(--text-muted); }
+.guide-foot { margin: 0; font-size: 12px; color: var(--text-muted); }
 
 /* Less motion asked for: the pictures stand still, every step shows plainly */
 @media (prefers-reduced-motion: reduce) {
