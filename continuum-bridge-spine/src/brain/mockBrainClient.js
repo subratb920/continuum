@@ -304,5 +304,18 @@ export function createMockBrainClient({ speed = 1 } = {}) {
       event(id, "user", text);
       coreSays(`Noted: "${text}". I'll fold it into the plan for the next worker.`);
     },
+
+    /** An agent interval started (as brain-api): the brain takes its goals, a worker each (the demo can't write the bridge). */
+    async startAgentInterval(bridgeId) {
+      const id = coreId();
+      if (!id) return;
+      const goals = interval?.bridgeId === bridgeId ? interval.goals : [];
+      event(id, "user", `[Continuum] Run the agent interval (${goals.length} goal${goals.length === 1 ? "" : "s"}).`, { from: "continuum" });
+      for (const [i, g] of goals.slice(0, 3).entries()) {
+        event(id, "tool", `spawn_agent "${g.text}"`, { tool: "spawn_agent", target: g.text });
+        startWorker(g.text, { goal: { bridgeId, goalId: g.id, text: g.text }, script: SCRIPTS[i % SCRIPTS.length] });
+        await sleep(1800);
+      }
+    },
   };
 }

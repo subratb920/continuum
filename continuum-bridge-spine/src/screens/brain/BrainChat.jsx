@@ -5,6 +5,7 @@ import { BRAIN_IS_MOCK } from "../../brain/brainClient";
 import { useAuth } from "../../state/authStore";
 import { clock } from "./agentDisplay";
 import { CHAT_DRAFT_EVENT } from "./BrainFlows";
+import { brainStatus } from "./brainStatus";
 import "./brain.css";
 
 /**
@@ -15,29 +16,6 @@ import "./brain.css";
  * and can send it again. Questions and approvals waiting on you are one click
  * away, on the Agents screen.
  */
-/**
- * Where the brain stands: its state in the usual words (Stopped is Stopped),
- * a colour, and what happens next: { tone, label, hint, pulse? }.
- */
-function brainStatus(core, connected) {
-  if (connected === false) return { tone: "amber", label: "Reconnecting", hint: "Messages show once the connection is back." };
-  switch (core?.state) {
-    case "queued":
-    case "starting":
-      return { tone: "amber", label: "Starting", pulse: true, hint: "Takes about a minute the first time." };
-    case "working":
-      return { tone: "violet", label: "Working", pulse: true, hint: "Replies appear here as it goes." };
-    case "idle":
-      return { tone: "green", label: "Ready", hint: "Send a message to give it work." };
-    case "stopping":
-      return { tone: "grey", label: "Stopping", stop: true, hint: "It can be started again with a message." };
-    case "failed":
-      return { tone: "red", label: "Failed", hint: "Send a message to start it again." };
-    default:
-      return { tone: "grey", label: "Stopped", stop: true, hint: "Sending a message starts it." };
-  }
-}
-
 export default function BrainChat() {
   const brain = useBrain();
   const { can, access } = useAuth();
@@ -118,12 +96,19 @@ export default function BrainChat() {
       </div>
 
       <ol className="chat-log brain-chat-log" ref={log}>
-        {messages.map((m) => (
+        {messages.map((m) =>
+          // A note from Continuum to the brain (an agent interval started, a worker finished): a quiet line, not yours
+          m.data?.from === "continuum" ? (
+            <li key={m._id} className="chat-system">
+              {m.text.replace(/^\[Continuum\]\s*/, "")}
+            </li>
+          ) : (
           <li key={m._id} className={`chat-msg ${m.kind === "user" ? "from-you" : "from-core"}`}>
             <span className="chat-bubble">{m.text}</span>
             <time className="event-time">{clock(m.at)}</time>
           </li>
-        ))}
+          ),
+        )}
         {waiting.map((o) => (
           <li key={o.id} className={`chat-msg from-you${o.error ? " failed" : " sending"}`}>
             <span className="chat-bubble">{o.text}</span>

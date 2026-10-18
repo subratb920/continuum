@@ -2,6 +2,7 @@ import { ObjectId } from "mongodb";
 import crypto from "crypto";
 import { BRIDGE_COLLECTION } from "../models/bridge.model.js";
 import { withSystemContext } from "../logging/childLogger.js";
+import { finish, kindOf } from "./agentBridge.js";
 
 export function createBridgeService(db) {
   const log = withSystemContext("bridge");
@@ -66,8 +67,10 @@ export function createBridgeService(db) {
       status: "draft",
       ticketUrl,
       interval: {
+        // human: a person's, timed; agent: the brain works the goals and ends it (no duration)
+        kind: interval?.kind === "agent" ? "agent" : "human",
         mode: interval?.mode,
-        duration: interval?.duration,
+        duration: interval?.kind === "agent" ? null : interval?.duration,
         startedAt: new Date(),
         endedAt: null
       },
@@ -134,6 +137,17 @@ export function createBridgeService(db) {
 
   async function updateBridge(bridgeId, updates) {
     const bid = new ObjectId(bridgeId);
+
+    // An agent interval's goals are the brain's (service routes): the person can only
+    // stop it, which saves it as it stands, with who worked on what
+    const current = await bridgeCol.findOne({ _id: bid }, { projection: { interval: 1, status: 1, sessionGoals: 1 } });
+    if (current && kindOf(current) === "agent") {
+      const set = { updatedAt: new Date() };
+      if (updates.ticketUrl) set.ticketUrl = updates.ticketUrl;
+      if (updates.status === "finalized" && current.status === "draft") Object.assign(set, finish(current, { by: "person", agentNames: updates.agentNames ?? {} }));
+      await bridgeCol.updateOne({ _id: bid }, { $set: set });
+      return;
+    }
 
     const updateDoc = {
       updatedAt: new Date(),

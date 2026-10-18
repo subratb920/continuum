@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { assertProject } from "./utils/assertions";
 
@@ -25,6 +25,7 @@ import LegalPage from "./legal/LegalPage";
 import EmptyConsole from "./components/EmptyConsole";
 import PhoneCard from "./components/PhoneCard";
 
+import AgentBridge from "./components/AgentBridge";
 import BridgeDraftModal from "./components/BridgeDraftModal";
 import BridgeHistoryModal from "./components/BridgeHistoryModal";
 import ActivateProjectModal from "./components/ActivateProjectModal";
@@ -344,7 +345,7 @@ export default function App() {
   // The brain plans from the running interval's goals (its workers link back to them)
   useEffect(() => {
     setRunningInterval(
-      activeBridge ? { bridgeId: activeBridge._id, goals: activeBridge.sessionGoals.map(({ id, text }) => ({ id, text })) } : null
+      activeBridge ? { bridgeId: activeBridge._id, kind: activeBridge.interval?.kind ?? "human", goals: activeBridge.sessionGoals.map(({ id, text }) => ({ id, text })) } : null
     );
   }, [activeBridge]);
 
@@ -353,7 +354,14 @@ export default function App() {
      signed-in page so it stays open for the whole interval
      ========================================================= */
 
-  const draftModal = activeBridge && (
+  // An agent interval (Continuum Brain works it) has its own window: no timer, the brain's tasks and verdicts
+  const endAgentInterval = useCallback(() => {
+    setActiveBridge(null);
+    setBridgeRevision((r) => r + 1);
+  }, []);
+  const draftModal = activeBridge && (activeBridge.interval?.kind === "agent" ? (
+    <AgentBridge bridge={activeBridge} docked={pathname === "/brain" || pathname === "/chat"} onEnded={endAgentInterval} />
+  ) : (
     <BridgeDraftModal
       bridge={activeBridge}
       // Agents and Chat: a panel in the corner, so the agents and the chat stay in view
@@ -391,7 +399,7 @@ export default function App() {
         setBridgeRevision(r => r + 1);
       }}
     />
-  );
+  ));
 
   /* =========================================================
      🔒 AUTH GATES

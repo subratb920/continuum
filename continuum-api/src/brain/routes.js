@@ -18,6 +18,7 @@
 //                                           a permission (approve | always | deny, with a note) or a question;
 //                                           answered already: 200 with alreadyAnswered
 //   POST   /brain/core/messages {text}      a message to your brain
+//   POST   /brain/core/agent-interval {bridgeId}  an agent interval started: your brain works its goals
 //   GET    /brain/models   GET|PUT /brain/settings {model}   the one model all your agents run on
 
 import express from "express";
@@ -215,6 +216,12 @@ export function createBrainRouter(opts = {}) {
 
   router.post("/core/messages", async (req, res) => {
     res.status(202).json(toAgent(await brain(req, "POST", "/brain/messages", { text: req.body?.text })));
+  });
+
+  router.post("/core/agent-interval", async (req, res) => {
+    const bridgeId = String(req.body?.bridgeId ?? "");
+    if (!ID.test(bridgeId)) throw new AppError("bridgeId must be a bridge ID.", 400, "VALIDATION_ERROR");
+    res.status(202).json(toAgent(await brain(req, "POST", "/brain/agent-interval", { bridgeId })));
   });
 
   router.get("/models", async (req, res) => res.json(await brain(req, "GET", "/models")));

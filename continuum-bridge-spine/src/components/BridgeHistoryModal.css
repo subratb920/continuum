@@ -170,3 +170,7 @@
 .ticket-badge:hover {
   background: var(--accent-ring);
 }
+.history-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.history-agent-goal { align-items: flex-start; }
+.history-agent-goal .goal-text { display: flex; flex-direction: column; gap: 4px; }
+.history-verdict-note { display: block; margin: 4px 0 0; }

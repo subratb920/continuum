@@ -1,0 +1,60 @@
+/* The agent bridge: the brain works the goals; no timer, tasks nested under each goal */
+.agent-bridge .modal-header h2 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* Agent or human bridge: the same mark wherever a bridge is shown */
+.bridge-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.bridge-kind.is-agent { color: var(--text); background: color-mix(in srgb, var(--agent-core) 22%, var(--surface)); border: 1px solid color-mix(in srgb, var(--agent-core) 55%, transparent); }
+.bridge-kind.is-human { color: var(--text-2); background: color-mix(in srgb, #d4b07a 16%, var(--surface)); border: 1px solid color-mix(in srgb, #d4b07a 45%, transparent); }
+
+.agent-bridge-status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.agent-bridge-clock { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); }
+.agent-bridge-settled { margin-left: auto; font-size: 13px; color: var(--text-muted); }
+
+.agent-goals { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.agent-goal {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+}
+.agent-goal.is-completed { border-color: color-mix(in srgb, var(--success) 50%, transparent); }
+.agent-goal.is-incomplete { border-color: color-mix(in srgb, var(--warning) 50%, transparent); }
+.agent-goal-head { display: flex; align-items: baseline; gap: 8px; }
+.agent-goal-n { flex: none; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font-size: 11px; font-weight: 600; background: var(--surface); color: var(--text-2); }
+.agent-goal-text { flex: 1; min-width: 0; font-weight: 600; color: var(--text); }
+.agent-goal-count { flex: none; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.agent-verdict { flex: none; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; }
+.agent-verdict.is-completed { color: var(--success-text); background: color-mix(in srgb, var(--success) 15%, transparent); }
+.agent-verdict.is-incomplete { color: var(--warning-text); background: color-mix(in srgb, var(--warning) 15%, transparent); }
+.agent-verdict-note { margin: 6px 0 0 28px; font-size: 12px; color: var(--text-muted); }
+
+/* A goal's tasks: a small tree under it */
+.agent-tasks { list-style: none; margin: 8px 0 0 9px; padding: 0 0 0 16px; border-left: 1px solid var(--border-strong); display: grid; gap: 4px; }
+.agent-task { display: grid; grid-template-columns: 16px 1fr auto; align-items: baseline; gap: 6px; font-size: 13px; color: var(--text-2); }
+.agent-task-mark { text-align: center; font-weight: 700; color: var(--text-muted); }
+.agent-task.is-done .agent-task-mark { color: var(--success); }
+.agent-task.is-working .agent-task-mark { color: var(--agent-core); animation: agent-blink 1.4s ease-in-out infinite; }
+.agent-task.is-failed .agent-task-mark { color: var(--danger); }
+.agent-task-text { min-width: 0; }
+.agent-task-worker { font: inherit; font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); cursor: pointer; white-space: nowrap; }
+.agent-task-worker.is-none { cursor: default; color: var(--text-muted); }
+
+.agent-bridge-foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.agent-bridge-confirm { flex: 1 1 100%; font-size: 13px; color: var(--text-2); }
+.agent-bridge-btn { font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); cursor: pointer; }
+.agent-bridge-btn.is-stop { color: var(--danger-text); border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-task.is-working .agent-task-mark { animation: none; }
+}
+.agent-bridge-handover { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 12px; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--border-strong); font-size: 13px; color: var(--text-2); }

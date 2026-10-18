@@ -1,14 +1,19 @@
 // src/service/routes.js
 //
-// Read-only data for continuum-brain, server to server (never public), always
-// for one user: Authorization: Bearer CONTINUUM_SERVICE_TOKEN and
-// X-Continuum-User. The brain reads Continuum only through these, never from
-// Continuum's database. Nothing here changes anything.
+// Data for continuum-brain, server to server (never public), always for one
+// user: Authorization: Bearer CONTINUUM_SERVICE_TOKEN and X-Continuum-User.
+// The brain reads Continuum only through these, never from Continuum's
+// database. It changes only one thing: the bridge of an agent interval (the
+// brain works its goals; services/agentBridge.js holds the rules).
 //   GET /service/projects               the user's projects (id, name, GitHub repo, bridges)
 //   GET /service/projects/:id           one of them
 //   GET /service/projects/:id/bridges   its bridges, oldest first (interval and goals)
 //   GET /service/bridges/:id            one bridge (and its project), if its project is the user's
 //   GET /service/interval               the active project and its current bridge, if any
+//   PUT   /service/bridges/:id/goals/:goalId/tasks          { tasks: [{ id?, text }] } a goal broken into tasks
+//   PATCH /service/bridges/:id/goals/:goalId/tasks/:taskId  { agentId?, state?, note? } a task's worker and state
+//   POST  /service/bridges/:id/goals/:goalId/verdict        { verdict: completed|incomplete, note } after review
+//   POST  /service/bridges/:id/finish                       every goal has its verdict: the interval ends, saved
 //   GET /service/github                 the user's GitHub sign-in and name for commits:
 //                                       only while one of their agents starts (sealed by
 //                                       the brain until it has cloned, then dropped)
@@ -22,6 +27,7 @@ import { BRIDGE_COLLECTION } from "../models/bridge.model.js";
 import { EXECUTION_COLLECTION } from "../models/execution.model.js";
 import { githubTokenOf } from "../create/github.js";
 import { repoOf } from "../workspaces/routes.js";
+import { AgentBridgeError, finish, giveVerdict, kindOf, planGoal, updateTask } from "../services/agentBridge.js";
 
 /** The same value, compared in constant time (so the token can't be guessed byte by byte). */
 export function sameSecret(given, expected) {
@@ -48,9 +54,16 @@ export function bridgeView(b) {
     name: b.bridgeName ?? b.name ?? `bridge-${b.index ?? "?"}`,
     index: b.index,
     status: b.status,
-    interval: { mode: b.interval?.mode ?? null, minutes: b.interval?.duration ?? null, startedAt: b.interval?.startedAt ?? null },
+    // kind: "human" (a person's, timed) or "agent" (the brain works its goals; no duration)
+    interval: { kind: kindOf(b), mode: b.interval?.mode ?? null, minutes: b.interval?.duration ?? null, startedAt: b.interval?.startedAt ?? null, endedAt: b.interval?.endedAt ?? null },
     // Goal ids as the UI gives them (utils/normalizeBridge.js): their own, or g1, g2… by position
-    goals: (b.sessionGoals ?? []).map((g, i) => ({ id: String(g.id ?? `g${i + 1}`), text: g.text, status: g.status ?? null })),
+    goals: (b.sessionGoals ?? []).map((g, i) => ({
+      id: String(g.id ?? `g${i + 1}`),
+      text: g.text,
+      status: g.status ?? null,
+      tasks: (g.tasks ?? []).map((t) => ({ id: t.id, text: t.text, agentId: t.agentId ?? null, state: t.state, note: t.note ?? null })),
+      verification: g.verification ?? null,
+    })),
     ticketUrl: b.ticketUrl ?? null,
     createdAt: b.createdAt ?? null,
   };
@@ -97,12 +110,41 @@ export function createServiceRouter(opts = {}) {
   });
 
   router.get("/bridges/:id", async (req, res) => {
-    if (!/^[a-f0-9]{24}$/.test(req.params.id)) return res.status(404).json({ error: "No such bridge." });
-    const bridge = await db().collection(BRIDGE_COLLECTION).findOne({ _id: new ObjectId(req.params.id) });
-    const project = bridge ? await db().collection(PROJECT_COLLECTION).findOne({ _id: bridge.projectId, userId: req.serviceUser }, { projection: { _id: 1 } }) : null;
-    if (!project) return res.status(404).json({ error: "No such bridge." });
-    res.json({ ...bridgeView(bridge), projectId: String(project._id) });
+    const bridge = await ownBridge(req.params.id, req.serviceUser);
+    if (!bridge) return res.status(404).json({ error: "No such bridge." });
+    res.json({ ...bridgeView(bridge), projectId: String(bridge.projectId) });
   });
+
+  /** The user's bridge (its project is theirs), or null. */
+  async function ownBridge(id, user) {
+    if (!/^[a-f0-9]{24}$/.test(id)) return null;
+    const bridge = await db().collection(BRIDGE_COLLECTION).findOne({ _id: new ObjectId(id) });
+    const project = bridge ? await db().collection(PROJECT_COLLECTION).findOne({ _id: bridge.projectId, userId: user }, { projection: { _id: 1 } }) : null;
+    return project ? bridge : null;
+  }
+
+  /** Changes an agent interval's bridge by one of agentBridge.js's rules, and answers with it as the brain sees it. */
+  const change = (rule) => async (req, res) => {
+    const bridge = await ownBridge(req.params.id, req.serviceUser);
+    if (!bridge) return res.status(404).json({ error: "No such bridge." });
+    let set;
+    try {
+      set = rule(bridge, req.body ?? {}, req.params);
+    } catch (err) {
+      if (err instanceof AgentBridgeError) return res.status(err.status).json({ error: err.message });
+      throw err;
+    }
+    // Only while it's still the running draft (another change may have ended it)
+    const done = await db().collection(BRIDGE_COLLECTION).updateOne({ _id: bridge._id, status: "draft" }, { $set: set });
+    if (!done.matchedCount) return res.status(409).json({ error: "This interval has already ended." });
+    const after = await db().collection(BRIDGE_COLLECTION).findOne({ _id: bridge._id });
+    res.json({ ...bridgeView(after), projectId: String(after.projectId) });
+  };
+
+  router.put("/bridges/:id/goals/:goalId/tasks", change((b, body, p) => planGoal(b, p.goalId, body.tasks)));
+  router.patch("/bridges/:id/goals/:goalId/tasks/:taskId", change((b, body, p) => updateTask(b, p.goalId, p.taskId, body)));
+  router.post("/bridges/:id/goals/:goalId/verdict", change((b, body, p) => giveVerdict(b, p.goalId, body)));
+  router.post("/bridges/:id/finish", change((b, body) => finish(b, { by: "brain", agentNames: body.agentNames ?? {} })));
 
   router.get("/interval", async (req, res) => {
     const state = await db().collection(EXECUTION_COLLECTION).findOne({ userId: req.serviceUser });

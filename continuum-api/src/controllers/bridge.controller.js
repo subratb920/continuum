@@ -19,6 +19,11 @@ export async function startBridge(req, res) {
     "Starting bridge"
   );
 
+  // An agent interval (the brain works the goals) needs the role's "Run agents"
+  if (interval?.kind === "agent" && !req.access?.features?.includes("agents_run")) {
+    return res.status(403).json({ error: "No feature access: Run agents isn't switched on for your role. Ask your admin.", code: "NO_FEATURE_ACCESS", feature: "agents_run" });
+  }
+
   // 🔒 Enforce execution law FIRST
   await executionService.assertCanStartBridge(
     req.user.id,

@@ -68,12 +68,13 @@ export async function startInterval({
   projectId,
   mode,
   duration,
+  kind = "human", // "agent": Continuum Brain works the goals (no duration)
   sessionGoals,
   ticketUrl,
 }) {
   return request("POST", "/bridges/start", {
     projectId,
-    interval: { mode, duration },
+    interval: kind === "agent" ? { kind, mode } : { mode, duration },
     sessionGoals,
     ticketUrl,
   });

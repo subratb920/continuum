@@ -1,4 +1,5 @@
 import "./BridgeHistoryModal.css";
+import "./AgentBridge.css"; // the Agent / Human mark and an agent bridge's tasks
 import GoalAgents from "../screens/brain/GoalAgents";
 import { formatClock, formatDateTime, formatDuration } from "../utils/time";
 import { extractTicketKey } from "../utils/ticket";
@@ -12,7 +13,7 @@ export default function BridgeHistoryModal({ bridge, onClose }) {
       ? [bridge.sessionGoals]
       : [];
 
-  console.log("Goals data:", bridge.sessionGoals);
+  const agent = bridge.interval?.kind === "agent";
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -21,12 +22,17 @@ export default function BridgeHistoryModal({ bridge, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <header className="modal-header">
-          <h2>{bridge.name}</h2>
+          <h2 className="history-title">
+            {agent ? <span className="bridge-kind is-agent">✦ Agent bridge</span> : <span className="bridge-kind is-human">Human bridge</span>}
+            {bridge.name}
+          </h2>
         </header>
 
         <section className="modal-body">
           <p className="modal-meta">
-            {bridge.interval.mode} · Interval duration {formatDuration(bridge.interval.duration)}
+            {agent
+              ? `${bridge.interval.mode} · worked by Continuum Brain · ${bridge.interval.endedBy === "person" ? "stopped by you" : bridge.status === "draft" ? "in progress" : "ended by the brain"}`
+              : `${bridge.interval.mode} · Interval duration ${formatDuration(bridge.interval.duration)}`}
           </p>
 
           {bridge.ticketUrl && (
@@ -64,14 +70,30 @@ export default function BridgeHistoryModal({ bridge, onClose }) {
                     : g.status?.status ?? "untouched";
 
                 return (
-                  <li key={g.id ?? `${index}-${text}`}>
+                  <li key={g.id ?? `${index}-${text}`} className={agent ? "history-agent-goal" : undefined}>
                     <span className="goal-text">
                       {text}
                       {/* The agents that worked on it, as recorded when the interval was saved */}
-                      <GoalAgents agents={g.agents} />
+                      {!g.tasks?.length && <GoalAgents agents={g.agents} />}
+                      {/* An agent bridge: the brain's tasks for the goal and who did them, then its verdict */}
+                      {g.tasks?.length > 0 && (
+                        <ul className="agent-tasks">
+                          {g.tasks.map((t) => {
+                            const who = g.agents?.find((a) => a.agentId === t.agentId)?.name ?? (t.agentId ? `worker ${t.agentId.slice(-4)}` : null);
+                            return (
+                              <li key={t.id} className={`agent-task is-${t.state}`} title={t.note ?? undefined}>
+                                <span className="agent-task-mark" aria-hidden="true">{{ done: "✓", working: "●", planned: "○", failed: "✕" }[t.state]}</span>
+                                <span className="agent-task-text">{t.text}</span>
+                                <span className="agent-task-worker is-none">{who ?? "not started"}</span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                      {g.verification?.note && <span className="agent-verdict-note history-verdict-note">The brain: {g.verification.note}</span>}
                     </span>
                     <span className={`goal-status ${status}`}>
-                      {status}
+                      {g.verification?.verdict === "completed" ? "✓ verified" : status}
                     </span>
                   </li>
                 );

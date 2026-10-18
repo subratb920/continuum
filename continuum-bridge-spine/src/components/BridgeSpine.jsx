@@ -6,6 +6,7 @@ import { formatDuration, formatTimeOfDay } from "../utils/time";
 import { usePreferences } from "../utils/preferences";
 
 import "./BridgeSpine.css";
+import "./AgentBridge.css"; // the Agent / Human bridge mark
 
 const MODE_LABEL = { execution: "Execution", decision: "Decision", continuity: "Continuity", alignment: "Alignment" };
 
@@ -35,6 +36,8 @@ export default function BridgeSpine({
   onSelectBridge,
 }) {
   const [retry, setRetry] = useState(0);
+  // All bridges, or only the human (timed) or agent (the brain's) ones
+  const [kind, setKind] = useState("all");
   // The last answer: which project it is for, its bridges, or that it failed
   const [result, setResult] = useState({ projectId: null, bridges: [], failed: false });
 
@@ -82,9 +85,11 @@ export default function BridgeSpine({
   /* =========================================================
      📐 Newest first; the one in progress on top; grouped by day
      ========================================================= */
+  const shown = useMemo(() => (kind === "all" ? bridges : bridges.filter((b) => b.interval.kind === kind)), [bridges, kind]);
+  const hasAgent = bridges.some((b) => b.interval.kind === "agent");
   const groups = useMemo(() => {
-    const inProgress = bridges.filter((b) => b.status === "draft");
-    const done = bridges
+    const inProgress = shown.filter((b) => b.status === "draft");
+    const done = shown
       .filter((b) => b.status !== "draft")
       .sort((a, b) => new Date(startOfBridge(b)) - new Date(startOfBridge(a)) || (b.index ?? 0) - (a.index ?? 0));
     const out = [];
@@ -95,7 +100,7 @@ export default function BridgeSpine({
       else out.push({ label, bridges: [b] });
     }
     return out;
-  }, [bridges]);
+  }, [shown]);
 
   const tryAgain = useCallback(() => setRetry((n) => n + 1), []);
 
@@ -107,6 +112,16 @@ export default function BridgeSpine({
           {bridges.length > 0 && <span className="bridge-count">{bridges.length}</span>}
         </h2>
         {selectedProject && <div className="bridge-spine-project" title={selectedProject.name}>{selectedProject.name}</div>}
+        {/* Human (timed) or agent (the brain's) bridges: shown once there's an agent one */}
+        {hasAgent && (
+          <div className="bridge-kind-filter" role="radiogroup" aria-label="Which bridges">
+            {[["all", "All"], ["human", "Human"], ["agent", "✦ Agent"]].map(([k, label]) => (
+              <button key={k} type="button" role="radio" aria-checked={kind === k} className={`bridge-kind-chip${kind === k ? " is-on" : ""}`} onClick={() => setKind(k)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {!selectedProject && <p className="bridge-empty">Choose a project to see its bridges.</p>}
@@ -121,6 +136,9 @@ export default function BridgeSpine({
       )}
       {selectedProject && state === "ready" && bridges.length === 0 && (
         <p className="bridge-empty">No intervals yet — start one from Interval Setup.</p>
+      )}
+      {selectedProject && state === "ready" && bridges.length > 0 && shown.length === 0 && (
+        <p className="bridge-empty">No {kind} bridges yet.</p>
       )}
 
       {state === "ready" && groups.length > 0 && (
@@ -156,6 +174,11 @@ function BridgeCard({ bridge, isActive, onSelect }) {
         <button type="button" className="bridge-open" onClick={onSelect} aria-current={isActive ? "true" : undefined} title={`Open ${bridge.name}`}>
           <span className="bridge-top">
             <span className="bridge-name">{bridge.name}</span>
+            {bridge.interval.kind === "agent" ? (
+              <span className="bridge-kind is-agent" title="Agent bridge: Continuum Brain worked its goals">✦ Agent</span>
+            ) : (
+              <span className="bridge-kind is-human" title="Human bridge: a timed interval you worked">Human</span>
+            )}
             {MODE_LABEL[mode] && <span className={`bridge-mode mode-${mode}`}>{MODE_LABEL[mode]}</span>}
           </span>
 

@@ -286,6 +286,8 @@ export function BrainProvider({ children }) {
       playReplay: (play) => dispatch({ type: "replay", replay: { playing: play, ...(play && state.replay.at == null && first != null && { at: first }) } }),
       setReplaySpeed: (s) => dispatch({ type: "replay", replay: { speed: s } }),
       spawn: (task, opts) => client.spawn(task, opts),
+      /** An agent interval started: the brain is given its goals and works them to the end. */
+      startAgentInterval: (bridgeId) => client.startAgentInterval?.(bridgeId),
       stop: (id) => client.stop(id),
       // brain-api has no retry yet: then a new worker gets the same task
       retry: (id) => (client.retry ? client.retry(id) : client.spawn(state.agents[id].task, { repo: state.agents[id].repo, goal: state.agents[id].goal })),

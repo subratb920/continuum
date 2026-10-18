@@ -7,6 +7,9 @@ export function normalizeBridge(raw) {
     index: raw.index ?? 0,
 
     interval: {
+      // human: a person's, timed (every bridge from before); agent: Continuum Brain works its goals
+      kind: raw.interval?.kind === "agent" ? "agent" : "human",
+      endedBy: raw.interval?.endedBy ?? null,
       mode: raw.interval?.mode ?? "execution",
       duration: raw.interval?.duration ?? 0,
       startedAt: raw.interval?.startedAt ?? null,
@@ -20,6 +23,9 @@ export function normalizeBridge(raw) {
           status: g.status ?? "untouched",
           // The agents that worked on it (recorded when the interval stops or is saved)
           ...(Array.isArray(g.agents) && g.agents.length ? { agents: g.agents } : {}),
+          // Agent intervals: the brain's tasks for the goal, and its verdict after reviewing the work
+          ...(Array.isArray(g.tasks) && g.tasks.length ? { tasks: g.tasks.map((t) => ({ id: String(t.id), text: t.text ?? "", agentId: t.agentId ?? null, state: t.state ?? "planned", note: t.note ?? null })) } : {}),
+          ...(g.verification ? { verification: { verdict: g.verification.verdict, note: g.verification.note ?? null, at: g.verification.at ?? null } } : {}),
         }))
       : [],
 

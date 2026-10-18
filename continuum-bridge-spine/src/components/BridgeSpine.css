@@ -360,3 +360,9 @@
     height: 36px;
   }
 }
+
+/* Which bridges: all, human (timed) or agent (the brain's) */
+.bridge-kind-filter { display: flex; gap: 4px; margin-top: 8px; }
+.bridge-kind-chip { font: inherit; font-size: 11px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; }
+.bridge-kind-chip.is-on { color: var(--text); background: var(--surface); border-color: var(--border-strong); }
+.bridge-top .bridge-kind { font-size: 10px; padding: 1px 7px; }

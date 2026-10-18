@@ -252,3 +252,20 @@ button.primary:disabled {
   color: var(--text-muted);
   margin-top: 4px;
 }
+/* Who works this interval: two choices side by side */
+.interval-who { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.interval-who-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  align-items: baseline;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+}
+.interval-who-option.is-on { border-color: color-mix(in srgb, var(--agent-core, #7c3aed) 60%, transparent); background: color-mix(in srgb, var(--agent-core, #7c3aed) 8%, var(--surface)); }
+.interval-who-option input { grid-row: span 2; margin: 0; }
+.interval-who-title { font-weight: 600; color: var(--text); }
+.interval-who-line { font-size: 13px; color: var(--text-muted); line-height: 1.45; }

@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { startInterval } from "../api";
 import { prepareIntervalAlerts } from "../utils/intervalAlerts";
 import DurationPicker from "../components/DurationPicker";
+import { useAuth } from "../state/authStore";
+import { useBrain } from "../brain/brainContext";
 import "./IntervalSetup.css";
 
 export default function IntervalSetup({
@@ -14,6 +16,12 @@ export default function IntervalSetup({
   const [goals, setGoals] = useState([]);
   const [mode, setMode] = useState("Execution");
   const [duration, setDuration] = useState(30);
+  // Who works it: "me" (timed, today's interval) or "brain" (Continuum Brain works the goals; no duration)
+  const [who, setWho] = useState("me");
+  const { can } = useAuth();
+  const brain = useBrain();
+  const brainOffered = Boolean(brain) && can("agents_run");
+  const byBrain = brainOffered && who === "brain";
 
   /* --------------------------------------------------
      Execution Gate
@@ -52,13 +60,14 @@ export default function IntervalSetup({
     if (!isExecutable || goals.length === 0) return;
 
     // Must run during the click: browsers only allow the notification
-    // prompt and audio after a user action
-    prepareIntervalAlerts();
+    // prompt and audio after a user action (a timed interval's end)
+    if (!byBrain) prepareIntervalAlerts();
 
     const bridge = await startInterval({
       projectId: activeProject._id,
       mode,
       duration,
+      kind: byBrain ? "agent" : "human",
       ticketUrl,
       sessionGoals: goals.map((g) => ({
         id: g.id,
@@ -66,6 +75,9 @@ export default function IntervalSetup({
         status: g.status,
       })),
     });
+
+    // The brain is given its goals (if it can't take them now, the agent bridge offers to hand them over again)
+    if (byBrain) await brain.startAgentInterval(String(bridge._id)).catch(() => null);
 
     setGoals([]);
     setGoalInput("");
@@ -125,6 +137,25 @@ export default function IntervalSetup({
           ))}
         </section>
 
+        {/* Who works this interval: you (timed) or Continuum Brain (it plans, assigns, reviews and ends it) */}
+        {brainOffered && (
+          <section className="interval-section">
+            <h3>Who works this interval?</h3>
+            <div className="interval-who" role="radiogroup" aria-label="Who works this interval">
+              <label className={`interval-who-option${who === "me" ? " is-on" : ""}`}>
+                <input type="radio" name="who" checked={who === "me"} onChange={() => setWho("me")} />
+                <span className="interval-who-title">Me</span>
+                <span className="interval-who-line">A timed interval: you work the goals and record what happened.</span>
+              </label>
+              <label className={`interval-who-option${who === "brain" ? " is-on" : ""}`}>
+                <input type="radio" name="who" checked={who === "brain"} onChange={() => setWho("brain")} />
+                <span className="interval-who-title">✦ Continuum Brain</span>
+                <span className="interval-who-line">The brain splits the goals into tasks, gives them to workers, reviews the work, marks each goal and ends the interval itself. No timer.</span>
+              </label>
+            </div>
+          </section>
+        )}
+
         <section className="interval-section">
           <h3>Ticket / Story Link</h3>
 
@@ -174,7 +205,8 @@ export default function IntervalSetup({
           )}
         </section>
 
-        {/* Interval Duration */}
+        {/* Interval Duration (a timed interval only: the brain ends its own) */}
+        {!byBrain && (
         <section className="interval-section">
           <h3>Interval Duration</h3>
           <DurationPicker
@@ -187,6 +219,7 @@ export default function IntervalSetup({
             disabled={!isExecutable}
           />
         </section>
+        )}
       </fieldset>
 
       {!isExecutable && selectedProject && (
@@ -207,7 +240,7 @@ export default function IntervalSetup({
         onClick={handleStartInterval}
         disabled={!isExecutable || goals.length === 0}
       >
-        Start Interval
+        {byBrain ? "Start the brain on these goals" : "Start Interval"}
       </button>
     </div>
   );
