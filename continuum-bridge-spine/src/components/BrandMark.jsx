@@ -33,9 +33,8 @@ export default function BrandMark({ size = 26, title }) {
         strokeWidth="3.4"
         strokeLinejoin="round"
       />
-      {/* The bridge above it, and its star */}
+      {/* The bridge's arc above it, and its star */}
       <path d="M15.5 9 Q 24 3.6 32.5 9" fill="none" stroke={`url(#${id}-gold)`} strokeWidth="1.3" strokeLinecap="round" />
-      <path d="M19.5 6.6 V 9 M24 5.1 V 8.2 M28.5 6.6 V 9" stroke="#f59e0b" strokeWidth="0.9" strokeLinecap="round" />
       <circle cx="24" cy="2.6" r="2.6" fill={`url(#${id}-glow)`} />
       <path d="M24 0.4 L 24.5 2.1 L 26.2 2.6 L 24.5 3.1 L 24 4.8 L 23.5 3.1 L 21.8 2.6 L 23.5 2.1 Z" fill="#fde68a" />
     </svg>
