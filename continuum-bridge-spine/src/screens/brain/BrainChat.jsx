@@ -90,6 +90,8 @@ export default function BrainChat() {
 
   return (
     <section className="brain-chat" aria-label="Chat with the brain">
+      {/* The middle pane's place, framed by the side panes' shade as on every other screen */}
+      <div className="brain-chat-panel">
       <div className="brain-chat-top">
         <span className={`brain-chat-pill is-${status.tone}${status.pulse ? " is-pulsing" : ""}${status.stop ? " is-stopped" : ""}`} role="status">
           <span className="brain-chat-dot" aria-hidden="true" />
@@ -150,6 +152,7 @@ export default function BrainChat() {
           Send
         </button>
       </form>
+      </div>
     </section>
   );
 }
