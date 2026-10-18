@@ -31,23 +31,25 @@
 /* Buttons: rounded squares in the wordmark's CONSOLE amber, lit from the top left */
 .landing-btn {
   --amber: color-mix(in srgb, #f59e0b 55%, var(--text-muted));
+  /* Toned down: the amber settled toward the page, so it reads warm, not bright */
+  --amber-soft: color-mix(in srgb, var(--amber) 72%, var(--page));
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 44px;
   padding: 0 22px;
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--amber) 70%, #fff 30%);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--amber) 82%, #fff) 0%, var(--amber) 45%, color-mix(in srgb, var(--amber) 78%, #000) 100%);
+  border: 1px solid color-mix(in srgb, var(--amber-soft) 80%, #fff 20%);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--amber-soft) 92%, #fff) 0%, var(--amber-soft) 45%, color-mix(in srgb, var(--amber-soft) 80%, #000) 100%);
   color: #1c1405;
   font-weight: 600;
   font-size: 15px;
   text-decoration: none;
-  box-shadow: 0 10px 24px -14px color-mix(in srgb, var(--amber) 90%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.25);
+  box-shadow: 0 8px 20px -14px color-mix(in srgb, var(--amber) 55%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.15);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 .landing-btn:hover,
-.landing-btn:focus-visible { transform: translateY(-1px); box-shadow: 0 14px 28px -14px var(--amber), inset 0 1px 0 rgb(255 255 255 / 0.3); }
+.landing-btn:focus-visible { transform: translateY(-1px); box-shadow: 0 12px 24px -14px color-mix(in srgb, var(--amber) 75%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.2); }
 .landing-btn.is-quiet { background: transparent; color: var(--text); border-color: color-mix(in srgb, var(--amber) 45%, var(--border-strong)); box-shadow: none; }
 .landing-btn.is-quiet:hover,
 .landing-btn.is-quiet:focus-visible { border-color: var(--amber); color: color-mix(in srgb, var(--amber) 60%, var(--text)); }
