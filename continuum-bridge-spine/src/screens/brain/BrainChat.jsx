@@ -4,6 +4,7 @@ import { useBrain } from "../../brain/brainContext";
 import { BRAIN_IS_MOCK } from "../../brain/brainClient";
 import { useAuth } from "../../state/authStore";
 import { clock } from "./agentDisplay";
+import { CHAT_DRAFT_EVENT } from "./BrainFlows";
 import "./brain.css";
 
 /**
@@ -54,6 +55,16 @@ export default function BrainChat() {
   useEffect(() => {
     if (log.current) log.current.scrollTop = log.current.scrollHeight;
   }, [messages.length, waiting.length]);
+
+  // "Try it" on a sample flow: its message in the box, ready to edit or send
+  useEffect(() => {
+    const take = (e) => {
+      setText(e.detail ?? "");
+      box.current?.focus();
+    };
+    window.addEventListener(CHAT_DRAFT_EVENT, take);
+    return () => window.removeEventListener(CHAT_DRAFT_EVENT, take);
+  }, []);
 
   // The input grows with what's typed (its CSS caps it), and is one line again once sent
   useEffect(() => {

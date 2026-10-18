@@ -833,23 +833,24 @@ button.goal-agent:hover { background: rgb(var(--c-rgb, var(--agent-off-rgb)) / 0
 }
 
 /* ---------- Chat screen ---------- */
-/* Framed like every other screen: the side panes' shade on both sides, the
-   conversation in the middle pane's place (no border; the shade sets it off) */
+/* The middle pane, edge to edge (its own padding off), between the guide
+   panes on wide screens; the whole screen on phones */
+.center:has(> .brain-chat) {
+  padding: 0;
+  overflow: hidden;
+}
 .brain-chat {
   height: 100%;
   min-height: 0;
-  background: var(--pane);
   font-size: 14px;
 }
 .brain-chat-panel {
-  --chat-pad: 40px; /* the middle pane's own padding (index.css .center) */
+  --chat-pad: 32px;
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  margin: 0 var(--right-w) 0 var(--left-w);
   background: var(--surface-subtle);
-  box-shadow: 0 0 28px -8px rgb(var(--shadow-rgb) / 0.45);
 }
 .brain-chat-top {
   flex: none;
@@ -949,7 +950,6 @@ button.goal-agent:hover { background: rgb(var(--c-rgb, var(--agent-off-rgb)) / 0
 
 /* Phones: the full width, the input clear of the bottom edge */
 @media (max-width: 899px) {
-  .brain-chat-panel { margin: 0; box-shadow: none; }
   .brain-chat-top,
   .brain-chat .chat-status { padding-left: calc(12px + env(safe-area-inset-left)); padding-right: calc(12px + env(safe-area-inset-right)); }
   .brain-chat-log { padding: 14px calc(12px + env(safe-area-inset-right)) 14px calc(12px + env(safe-area-inset-left)); }

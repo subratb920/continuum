@@ -1,0 +1,173 @@
+/* The Chat screen's side panes (BrainGuide left, BrainFlows right): a few
+   small sections on the pane's own shade, quiet colours, one loop each */
+
+.guide {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.guide-unit {
+  padding: 10px 12px 12px;
+  border-radius: 10px;
+  background: var(--surface-subtle);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 4px 12px -8px rgb(var(--shadow-rgb) / 0.5);
+}
+
+.guide-head {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ---------- Right now ---------- */
+.guide-stats { margin: 0; display: grid; gap: 2px; }
+.guide-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--surface);
+}
+.guide-stat dt { font-size: 12px; color: var(--text-muted); }
+.guide-stat dd { margin: 0; display: inline-flex; align-items: center; gap: 7px; font-weight: 600; color: var(--text); }
+.guide-stat.is-attention dd { color: var(--warning-text); }
+.guide-led { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+.guide-led.is-stopped { border-radius: 1px; background: var(--text-2); }
+.guide-led.is-ready { background: var(--success); }
+.guide-led.is-working { background: var(--agent-core); animation: agent-blink 1.4s ease-in-out infinite; }
+.guide-led.is-starting { background: var(--warning); animation: agent-blink 1.4s ease-in-out infinite; }
+.guide-led.is-failed { background: var(--danger); }
+.guide-meter { display: inline-flex; gap: 3px; }
+.guide-meter span { width: 12px; height: 4px; border-radius: 2px; background: var(--border-strong); }
+.guide-meter span.is-on { background: var(--agent-core); }
+
+/* ---------- The loop ---------- */
+.loop { display: block; width: 100%; height: auto; max-height: 140px; }
+.loop-link { fill: none; stroke: var(--border-strong); stroke-width: 1.5; }
+.loop-link.is-flow { stroke-dasharray: 3 4; animation: agent-flow 0.8s linear infinite; }
+.loop-link.is-ask { stroke: color-mix(in srgb, var(--warning) 55%, transparent); stroke-dasharray: 2 4; }
+.loop-pulse { fill: var(--agent-core); }
+.loop-node circle { fill: var(--surface); stroke: var(--border-strong); stroke-width: 1.5; }
+.loop-node text { font-size: 9px; text-anchor: middle; fill: var(--text-2); }
+.loop-node.is-core circle { fill: color-mix(in srgb, var(--agent-core) 30%, var(--surface)); stroke: var(--agent-core); }
+.loop-node.is-core text { font-size: 12px; fill: #fff; }
+.loop-node.is-worker circle { fill: color-mix(in srgb, var(--agent-core) 12%, var(--surface)); stroke: color-mix(in srgb, var(--agent-core) 60%, transparent); animation: loop-worker 8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.loop-commit { animation: loop-commit 8s ease-in-out infinite; }
+.loop-commit path { stroke: var(--success); stroke-width: 1.5; }
+.loop-commit circle { fill: var(--success); }
+.loop-label { font-size: 8px; text-anchor: middle; fill: var(--text-muted); letter-spacing: 0.04em; }
+/* Workers wake as the spawns arrive (~45% in), work, then rest */
+@keyframes loop-worker {
+  0%, 40% { transform: scale(0.85); opacity: 0.45; }
+  48%, 80% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.85); opacity: 0.45; }
+}
+/* The commit shows after the question is answered (~75% in) */
+@keyframes loop-commit { 0%, 74% { opacity: 0; } 80%, 95% { opacity: 1; } 100% { opacity: 0; } }
+
+.guide-steps {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+/* Each step lights up in its quarter of the loop */
+.guide-steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  animation: guide-step 8s linear infinite;
+  animation-delay: calc(var(--step) * 2s);
+}
+.guide-step-n {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--surface);
+  color: var(--text-2);
+}
+@keyframes guide-step {
+  0%, 24% { color: var(--text); background: color-mix(in srgb, var(--agent-core) 14%, transparent); }
+  25%, 100% { color: var(--text-muted); background: transparent; }
+}
+
+/* ---------- Ground rules ---------- */
+.guide-rules { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.guide-rules li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; align-items: center; cursor: default; }
+.guide-rule-icon { font-size: 12px; text-align: center; }
+.guide-rule { color: var(--text); line-height: 1.3; }
+
+/* ---------- Try a flow ---------- */
+.flows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.flow {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface);
+}
+.mini { display: block; width: 64px; height: 30px; }
+.mini-core { fill: color-mix(in srgb, var(--agent-core) 30%, var(--surface)); stroke: var(--agent-core); stroke-width: 1.5; }
+.mini-worker { fill: color-mix(in srgb, var(--agent-core) 12%, var(--surface)); stroke: color-mix(in srgb, var(--agent-core) 60%, transparent); stroke-width: 1.5; }
+.mini-worker.is-late { animation: mini-late 4s ease-in-out infinite; }
+.mini-you { fill: var(--surface-subtle); stroke: var(--warning); stroke-width: 1.5; }
+.mini-link { fill: none; stroke: var(--border-strong); stroke-width: 1.2; stroke-dasharray: 3 3; }
+.mini-link.is-ask { stroke: color-mix(in srgb, var(--warning) 55%, transparent); }
+.mini-dot { fill: var(--agent-core); }
+.mini-dot.is-ask { fill: var(--warning); }
+/* Plan first: the worker only appears once you've answered */
+@keyframes mini-late { 0%, 45% { opacity: 0.2; } 55%, 92% { opacity: 1; } 100% { opacity: 0.2; } }
+.flow-text { display: flex; flex-direction: column; gap: 2px; }
+.flow-title { font-weight: 600; color: var(--text); }
+.flow-line { font-size: 12px; color: var(--text-muted); }
+.flow-title-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.flow-try {
+  flex: none;
+  padding: 3px 10px;
+  border: 1px solid color-mix(in srgb, var(--agent-core) 45%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--agent-core) 10%, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.flow-try:hover,
+.flow-try:focus-visible { background: color-mix(in srgb, var(--agent-core) 22%, transparent); }
+
+/* ---------- Workers ---------- */
+.guide-sizes { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.guide-size { display: flex; align-items: baseline; gap: 8px; padding: 5px 8px; border-radius: 6px; background: var(--surface); }
+.guide-size-name { font-weight: 600; color: var(--text); min-width: 66px; }
+.guide-size-spec { font-size: 12px; color: var(--text-muted); }
+.guide-size-note { margin-left: auto; font-size: 11px; color: var(--agent-core); }
+.guide-limits { margin: 10px 0 0; display: grid; gap: 5px; }
+.guide-limits div { display: grid; grid-template-columns: 74px 1fr; gap: 8px; align-items: baseline; }
+.guide-limits dt { font-weight: 600; color: var(--text); }
+.guide-limits dd { margin: 0; font-size: 12px; color: var(--text-muted); }
+.guide-foot { margin: 10px 0 0; font-size: 12px; color: var(--text-muted); }
+
+/* Less motion asked for: the pictures stand still, every step shows plainly */
+@media (prefers-reduced-motion: reduce) {
+  .loop-pulse, .mini-dot { display: none; }
+  .loop-link.is-flow, .loop-node.is-worker circle, .loop-commit, .mini-worker.is-late, .guide-steps li, .guide-led { animation: none; }
+  .loop-commit, .mini-worker.is-late { opacity: 1; }
+}

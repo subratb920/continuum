@@ -650,7 +650,7 @@ export default function App() {
         onDeleteProject={(project) => (setProjectForAction(project), setShowDeleteProject(true))}
         leftPane={slots.left ?? null}
         rightPane={slots.right ?? null}
-        full={Boolean(screen.full)}
+        full={screen.full ?? false}
         leftLabel={screen.left.label}
         rightLabel={screen.right.label}
       >

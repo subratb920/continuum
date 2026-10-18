@@ -5,6 +5,8 @@ import AgentRoster from "./brain/AgentRoster";
 import AgentStage from "./brain/AgentStage";
 import AgentInspector from "./brain/AgentInspector";
 import BrainChat from "./brain/BrainChat";
+import BrainGuide from "./brain/BrainGuide";
+import BrainFlows from "./brain/BrainFlows";
 import { DataProvider } from "../data/DataProvider";
 import { useBuildingCount } from "../data/dataContext";
 import { DATA_ENABLED } from "../data/dataApi";
@@ -31,7 +33,7 @@ import AdminDetail from "./admin/AdminDetail";
  *   feature: what your role must have switched on (access/features); off, the
  *     screen shows "No feature access" (and the switcher a lock)
  *   full: the screen's middle takes the whole width (no side panes; phones
- *     show only the screen tabs above it)
+ *     show only the screen tabs above it); "narrow": only on phones
  *
  * ctx comes from App: { intervalCenter, dashboardCenter, navigate }
  */
@@ -81,7 +83,8 @@ export const SCREENS = [
         },
       ]
     : []),
-  // Chat with your brain: a screen of its own, the whole width (its state is the Agents screen's BrainProvider)
+  // Chat with the brain: a screen of its own (its state is the Agents screen's BrainProvider).
+  // Wide screens: how the brain works on the left, sample flows on the right; phones: the chat alone
   {
     id: "chat",
     feature: "agents",
@@ -89,11 +92,11 @@ export const SCREENS = [
     label: "Chat",
     icon: "💬",
     switcher: true,
-    full: true,
-    left: { label: "Chat", icon: "💬" },
+    full: "narrow",
+    left: { label: "How it works", icon: "✦" },
     center: { label: "Chat", icon: "💬" },
-    right: { label: "Chat", icon: "💬" },
-    slots: () => ({ center: <BrainChat /> }),
+    right: { label: "Flows", icon: "⇉" },
+    slots: () => ({ left: <BrainGuide />, center: <BrainChat />, right: <BrainFlows /> }),
   },
   {
     id: "dashboard",
