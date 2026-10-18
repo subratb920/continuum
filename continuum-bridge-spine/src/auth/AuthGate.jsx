@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/authStore";
 import { FaGithub, FaGoogle } from "react-icons/fa";
 import "./AuthGate.css";
@@ -10,7 +10,8 @@ export default function AuthGate() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const [mode, setMode] = useState("login"); // login | signup
+  // login | signup ("Create an account" on the public page opens it as signup: /signin?new=1)
+  const [mode, setMode] = useState(() => (new URLSearchParams(window.location.search).has("new") ? "signup" : "login"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -59,6 +60,9 @@ export default function AuthGate() {
   return (
     <div className="auth-root">
       <div className="auth-card">
+        <Link to="/" className="auth-about">
+          ← About continuum
+        </Link>
         <h1 className="auth-title">Continuum</h1>
         <p className="auth-subtitle">
           Single focus. Continuous execution.

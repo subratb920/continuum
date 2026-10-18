@@ -1,0 +1,64 @@
+/* Feature pictures: soft lines in the feature's tone (--tone), slow and calm */
+.art { display: block; width: 100%; height: auto; overflow: visible; }
+.art * { transform-box: fill-box; transform-origin: center; }
+.art-faint { fill: none; stroke: color-mix(in srgb, var(--tone) 28%, transparent); stroke-width: 2; }
+.art-faint-fill { fill: color-mix(in srgb, var(--tone) 18%, transparent); }
+
+/* Intervals */
+.art-dial { fill: none; stroke: var(--tone); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 0 100; transform: rotate(-90deg); animation: art-dial 9s ease-in-out infinite; }
+.art-dial-text { font-size: 13px; font-weight: 600; text-anchor: middle; fill: var(--text-2); font-variant-numeric: tabular-nums; }
+.art-check { fill: color-mix(in srgb, var(--tone) 25%, var(--surface)); stroke: var(--tone); stroke-width: 1.5; animation: art-check 9s ease-in-out infinite; animation-delay: calc(var(--i) * 1.8s + 1.5s); }
+@keyframes art-dial { 0% { stroke-dasharray: 0 100; } 75%, 90% { stroke-dasharray: 100 100; } 100% { stroke-dasharray: 0 100; } }
+@keyframes art-check { 0%, 8% { fill: color-mix(in srgb, var(--tone) 10%, var(--surface)); } 14%, 70% { fill: var(--tone); } 80%, 100% { fill: color-mix(in srgb, var(--tone) 10%, var(--surface)); } }
+
+/* The Bridge Spine */
+.art-spine-line { fill: none; stroke: var(--tone); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 0 100; animation: art-draw 10s ease-in-out infinite; }
+.art-bridge circle { fill: var(--surface); stroke: color-mix(in srgb, var(--tone) 40%, transparent); stroke-width: 2; animation: art-node 10s ease-in-out infinite; animation-delay: calc(var(--i) * 1.4s); }
+.art-bridge path { fill: none; stroke: color-mix(in srgb, var(--tone) 50%, transparent); stroke-width: 1.5; stroke-linecap: round; }
+@keyframes art-draw { 0% { stroke-dasharray: 0 100; } 70%, 88% { stroke-dasharray: 100 100; } 100% { stroke-dasharray: 0 100; } }
+@keyframes art-node { 0%, 4% { fill: var(--surface); } 12%, 70% { fill: color-mix(in srgb, var(--tone) 55%, var(--surface)); stroke: var(--tone); } 85%, 100% { fill: var(--surface); } }
+
+/* Agents */
+.art-core { fill: var(--tone); }
+.art-core-glow { fill: color-mix(in srgb, var(--tone) 22%, transparent); animation: art-breathe 6s ease-in-out infinite; }
+.art-orbit { transform-box: view-box; transform-origin: 100px 60px; animation: art-spin 36s linear infinite; }
+.art-worker { fill: color-mix(in srgb, var(--tone) 30%, var(--surface)); stroke: var(--tone); stroke-width: 1.5; }
+@keyframes art-breathe { 50% { transform: scale(1.25); opacity: 0.55; } }
+@keyframes art-spin { to { transform: rotate(360deg); } }
+
+/* Data */
+.art-row { fill: var(--tone); opacity: 0; animation: art-row 8s ease-in-out infinite; animation-delay: calc(var(--i) * 1.3s); }
+.art-row.is-out { fill: color-mix(in srgb, #e57373 70%, var(--tone)); animation-name: art-row-out; }
+@keyframes art-row {
+  0% { opacity: 0; transform: translate(0, 0); }
+  8% { opacity: 1; }
+  45% { transform: translate(98px, 0); }
+  70% { opacity: 1; transform: translate(168px, var(--lane)); }
+  85%, 100% { opacity: 0; transform: translate(168px, var(--lane)); }
+}
+@keyframes art-row-out {
+  0% { opacity: 0; transform: translate(0, 0); }
+  8% { opacity: 1; }
+  40% { opacity: 1; transform: translate(70px, 0); }
+  60%, 100% { opacity: 0; transform: translate(80px, 30px); }
+}
+
+/* Workspaces */
+.art-window { fill: color-mix(in srgb, var(--tone) 8%, var(--surface)); stroke: color-mix(in srgb, var(--tone) 40%, transparent); stroke-width: 1.5; }
+.art-code { fill: color-mix(in srgb, var(--tone) 60%, transparent); transform-origin: left center; animation: art-type 10s ease-in-out infinite; animation-delay: calc(var(--i) * 1.6s); }
+.art-cursor { fill: var(--tone); animation: art-blink 1.2s steps(2, start) infinite; }
+@keyframes art-type { 0%, 4% { transform: scaleX(0); } 14%, 80% { transform: scaleX(1); } 92%, 100% { transform: scaleX(0); } }
+@keyframes art-blink { to { visibility: hidden; } }
+
+/* Deploy */
+.art-cloud { fill: color-mix(in srgb, var(--tone) 14%, var(--surface)); stroke: color-mix(in srgb, var(--tone) 55%, transparent); stroke-width: 1.5; animation: art-float 7s ease-in-out infinite; }
+.art-layer { fill: var(--tone); opacity: 0; animation: art-rise 7.5s ease-in-out infinite; animation-delay: calc(var(--i) * 2.5s); }
+@keyframes art-float { 50% { transform: translateY(-4px); } }
+@keyframes art-rise { 0% { opacity: 0; transform: translateY(0); } 15% { opacity: 0.9; } 60% { opacity: 0.9; transform: translateY(-38px) scaleX(0.8); } 75%, 100% { opacity: 0; transform: translateY(-46px) scaleX(0.6); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .art * { animation: none !important; }
+  .art-dial, .art-spine-line { stroke-dasharray: 70 100; }
+  .art-row:not(.is-out) { opacity: 1; transform: translate(168px, var(--lane)); }
+  .art-layer { opacity: 0.8; transform: translateY(calc(var(--i) * -14px - 24px)); }
+}

@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { createProject } from "../api";
 import { useAuth } from "../state/authStore";
-import { overview, gettingStarted } from "../content/continuumGuide";
+import { overview } from "../content/continuumGuide";
+import PowerOfContinuum from "../components/PowerOfContinuum";
 import { onPhone } from "../utils/device";
 
 import "./Welcome.css";
@@ -10,7 +11,8 @@ import "./Welcome.css";
 /**
  * Welcome
  * -------
- * Home page (/), shown after every sign-in and from the header title.
+ * Home page (/) once signed in, from the header title (sign-in lands on
+ * Chat; before sign-in / is the public page, Landing).
  * Rendered inside PageShell, so it has the shared header.
  * The user can create a project or continue to the console (/console).
  */
@@ -124,17 +126,9 @@ export default function Welcome({ projectCount = 0, activeProject, onCreated, on
         </section>
       </div>
 
-      {/* Getting started */}
-      <section className="welcome-card">
-        <h2>{gettingStarted.title}</h2>
-        <ol className="welcome-steps">
-          {gettingStarted.steps.map((step) => (
-            <li key={step.title}>
-              <strong>{step.title}</strong>
-              <span>{step.text}</span>
-            </li>
-          ))}
-        </ol>
+      {/* What Continuum can do: the features gliding by */}
+      <section className="welcome-card welcome-power">
+        <PowerOfContinuum lead={null} />
       </section>
 
       {/* Continue */}

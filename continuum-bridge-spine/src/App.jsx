@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { assertProject } from "./utils/assertions";
 
 import { useAuth } from "./state/authStore";
@@ -19,6 +19,7 @@ import { screenForPath } from "./screens/registry";
 import { setRunningInterval } from "./brain/runningInterval";
 import { IMPORT_EVENT } from "./utils/importFromDevice";
 import Welcome from "./screens/Welcome";
+import Landing from "./screens/Landing";
 import HelpPage from "./pages/HelpPage";
 import LegalPage from "./legal/LegalPage";
 import EmptyConsole from "./components/EmptyConsole";
@@ -396,13 +397,17 @@ export default function App() {
      🔒 AUTH GATES
      ========================================================= */
 
-  // The Legal page: open to everyone, signed in or not
+  // The Legal page and the page about Continuum: open to everyone, signed in or not
   if (pathname === "/legal") return <LegalPage />;
+  if (pathname === "/about") return <Landing />;
   if (status === "checking") return null;
   if (pathname === "/auth/callback") {
     return <AuthCallback />;
   }
-  if (status === "unauthenticated") return <AuthGate />;
+  // Signed out: the public page about Continuum at /, the sign-in card anywhere else (/signin, or a link into the app)
+  if (status === "unauthenticated") return pathname === "/" ? <Landing /> : <AuthGate />;
+  // Signed in already: /signin goes on to Chat
+  if (pathname === "/signin") return <Navigate to="/chat" replace />;
 
   // Sign-in to Continuum Deploy (shown after Continuum's own sign-in if needed)
   if (pathname === "/sso/authorize") return <SsoAuthorize />;

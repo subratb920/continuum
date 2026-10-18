@@ -1,0 +1,76 @@
+/* Soft, professional tones for Continuum's features (each section has one).
+   Muted on purpose: easy on the eyes in the light and the dark themes. */
+.tone-sage { --tone: #7fb69a; }
+.tone-mist { --tone: #79b8c4; }
+.tone-lavender { --tone: #a99be0; }
+.tone-sky { --tone: #82a9dc; }
+.tone-sand { --tone: #d4b07a; }
+.tone-rose { --tone: #d79a9a; }
+
+.power { display: flex; flex-direction: column; gap: 10px; }
+.power-heading { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); }
+.power-lead { margin: 0 0 6px; max-width: 640px; font-size: 15px; line-height: 1.55; color: var(--text-2); }
+
+/* The rail: the row glides left forever, fading out at both edges */
+.power-rail {
+  overflow: hidden;
+  padding: 6px 0 10px;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+}
+.power-track {
+  display: flex;
+  gap: 16px;
+  width: max-content;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  animation: power-glide 60s linear infinite;
+}
+.power-rail:hover .power-track,
+.power-rail:focus-within .power-track { animation-play-state: paused; }
+/* Two copies of the row: moving by one copy (half the track) loops seamlessly */
+@keyframes power-glide { to { transform: translateX(calc(-50% - 8px)); } }
+
+.power-card { flex: none; width: 250px; }
+.power-card-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  padding: 14px 16px 16px;
+  border: 1px solid color-mix(in srgb, var(--tone) 30%, transparent);
+  border-radius: 16px;
+  background:
+    radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, var(--tone) 16%, transparent), transparent 70%),
+    var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
+}
+.power-card-btn:hover,
+.power-card-btn:focus-visible {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--tone) 60%, transparent);
+  box-shadow: 0 14px 30px -18px color-mix(in srgb, var(--tone) 70%, transparent);
+}
+.power-art { display: block; height: 96px; margin-bottom: 6px; }
+.power-art .art { height: 100%; }
+.power-kicker { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: color-mix(in srgb, var(--tone) 75%, var(--text)); }
+.power-title { font-size: 16px; font-weight: 600; color: var(--text); }
+.power-line { font-size: 13px; line-height: 1.45; color: var(--text-muted); }
+
+/* Less motion: no gliding; the cards wrap in a grid (the copies hidden) */
+@media (prefers-reduced-motion: reduce) {
+  .power-rail { -webkit-mask-image: none; mask-image: none; }
+  .power-track { animation: none; width: auto; flex-wrap: wrap; }
+  .power-card[aria-hidden="true"] { display: none; }
+}
+
+@media (max-width: 599px) {
+  .power-card { width: 220px; }
+  .power-heading { font-size: 20px; }
+}
