@@ -28,6 +28,7 @@ import { usage } from "../middleware/access.js";
 import { getOAuthConfig } from "./oauth.config.js";
 import { randomToken, signJwt, verifyJwt } from "./oauth.crypto.js";
 import { byFolder, detectDatabases, filesToRead } from "./detect-databases.js";
+import { deviceApp } from "./detect-runtime.js";
 import { ObjectId } from "mongodb";
 import fetch from "node-fetch";
 import { getTheme } from "../services/appearance.js";
@@ -203,6 +204,7 @@ router.get("/projects/:id/scan", requireDeployToken, async (req, res) => {
   // Which database the code uses (dependency files, compose files, .env.example names only), overall and per app folder
   let databases = [];
   let perFolder = {};
+  const skipped = []; // desktop and mobile apps: built for devices, never deployed
   try {
     const texts = await Promise.all(
       filesToRead(tree.body.tree ?? [], SKIP_DIRS).map(async (path) => {
@@ -210,6 +212,14 @@ router.get("/projects/:id/scan", requireDeployToken, async (req, res) => {
         return { path, text: file.status === 200 ? Buffer.from(file.body?.content ?? "", "base64").toString("utf8") : "" };
       }),
     );
+    const paths = (tree.body.tree ?? []).filter((i) => i.type === "blob").map((i) => i.path);
+    for (const folder of [...folders.keys()]) {
+      const device = deviceApp(texts, paths, folder);
+      if (device) skipped.push({ path: folder, ...device });
+    }
+    // A device app's folders go, with everything inside them (an Android project inside a Capacitor app)
+    const left = (f) => !skipped.some((d) => f === d.path || d.path === "" || f.startsWith(`${d.path}/`));
+    for (const folder of [...folders.keys()]) if (!left(folder)) folders.delete(folder);
     databases = detectDatabases(texts);
     perFolder = byFolder(texts, [...folders.keys()], (tree.body.tree ?? []).filter((i) => i.type === "blob").map((i) => i.path));
   } catch {
@@ -229,6 +239,7 @@ router.get("/projects/:id/scan", requireDeployToken, async (req, res) => {
     databases,
     byFolder: perFolder,
     folders: [...folders.entries()].map(([path, kinds]) => ({ path, kinds: [...kinds].sort() })).sort((a, b) => a.path.localeCompare(b.path)),
+    skipped,
     truncated: Boolean(tree.body.truncated),
   });
 });

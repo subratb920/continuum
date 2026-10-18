@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { runtimeOf } from "../src/oauth/detect-runtime.js";
+import { deviceApp, runtimeOf } from "../src/oauth/detect-runtime.js";
 
 const pkg = (o) => JSON.stringify(o);
 
@@ -41,4 +41,16 @@ test("runtime: plain HTML is static as it is; a Node app with nothing to start i
   const none = runtimeOf([{ path: "package.json", text: pkg({ scripts: { test: "vitest" } }) }], ["package.json", "lib/util.js"], "");
   assert.equal(none.kind, "none");
   assert.equal(runtimeOf([], ["go.mod", "main.go"], ""), null);
+});
+
+test("device apps: Electron and Capacitor apps and native Android projects are for devices, not the cloud", () => {
+  const electron = [{ path: "chat-electron-app/package.json", text: pkg({ main: "main.js", devDependencies: { electron: "^38", "electron-builder": "^26" } }) }];
+  assert.deepEqual(deviceApp(electron, ["chat-electron-app/package.json", "chat-electron-app/main.js"], "chat-electron-app"), { platform: "desktop", evidence: ["depends on electron, electron-builder"] });
+  const capacitor = [{ path: "mobile/package.json", text: pkg({ dependencies: { "@capacitor/core": "^7", "@capacitor/android": "^7" } }) }];
+  assert.equal(deviceApp(capacitor, ["mobile/package.json"], "mobile").platform, "mobile");
+  assert.equal(deviceApp([], ["mobile/android/build.gradle", "mobile/android/app/src/main/AndroidManifest.xml"], "mobile/android").platform, "mobile");
+  // A server and a web front end are not
+  const server = [{ path: "api/package.json", text: pkg({ scripts: { start: "node app.js" }, dependencies: { express: "^5" } }) }];
+  assert.equal(deviceApp(server, ["api/package.json"], "api"), null);
+  assert.equal(deviceApp([], ["chatbot/requirements.txt"], "chatbot"), null);
 });

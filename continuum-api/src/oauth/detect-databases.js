@@ -146,6 +146,7 @@ export function filesToRead(tree, skipDirs) {
       const name = i.path.split("/").pop();
       return DEP_FILES.has(name) || COMPOSE.test(name) || ENV_EXAMPLE.test(name) || name === "Dockerfile" || name === ENV_PRODUCTION || RUNTIME_FILES.test(name);
     })
+    .sort((a, b) => Number(b.path.endsWith("package.json")) - Number(a.path.endsWith("package.json")))
     .slice(0, 40)
     .map((i) => i.path);
 }

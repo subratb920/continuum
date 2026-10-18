@@ -90,3 +90,35 @@ export function runtimeOf(files, paths, folder) {
 
 /** Files the runtime check reads besides dependency files. */
 export const RUNTIME_FILES = /^(angular\.json|vite\.config\.(ts|js|mts|mjs))$/;
+
+/** Dependencies of apps that run on people's devices, never on a server. */
+const DESKTOP_DEPS = ["electron", "electron-builder", "@electron-forge/cli", "@tauri-apps/cli", "@tauri-apps/api", "nw"];
+const MOBILE_DEPS = ["react-native", "expo", "@capacitor/core", "@capacitor/android", "@capacitor/ios", "cordova", "@nativescript/core"];
+
+/**
+ * A desktop or mobile app (Electron, Tauri, Capacitor, React Native, a native
+ * Android or iOS project): built for people's devices, not deployed to a
+ * cloud. → { platform: "desktop" | "mobile", evidence } | null.
+ */
+export function deviceApp(files, paths, folder) {
+  const at = (name) => (folder ? `${folder}/${name}` : name);
+  const pkgText = files.find((f) => f.path === at("package.json"))?.text;
+  if (pkgText) {
+    try {
+      const pkg = JSON.parse(pkgText);
+      const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
+      const desktop = DESKTOP_DEPS.filter((d) => d in deps);
+      if (desktop.length) return { platform: "desktop", evidence: [`depends on ${desktop.join(", ")}`] };
+      const mobile = MOBILE_DEPS.filter((d) => d in deps);
+      if (mobile.length) return { platform: "mobile", evidence: [`depends on ${mobile.join(", ")}`] };
+    } catch {
+      /* not JSON: not a device app by its dependencies */
+    }
+  }
+  // A native Android or iOS project
+  const name = folder.split("/").pop();
+  const inside = (p) => (folder ? p.startsWith(`${folder}/`) : true);
+  if (paths.some((p) => inside(p) && /(^|\/)AndroidManifest\.xml$/.test(p)) || (name === "android" && paths.some((p) => inside(p) && /(^|\/)(settings|build)\.gradle(\.kts)?$/.test(p)))) return { platform: "mobile", evidence: ["an Android project"] };
+  if (name === "ios" && paths.some((p) => inside(p) && /\.xcodeproj\//.test(p))) return { platform: "mobile", evidence: ["an iOS project"] };
+  return null;
+}
