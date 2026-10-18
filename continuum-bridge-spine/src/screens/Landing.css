@@ -69,7 +69,16 @@
 }
 .landing-hero-inner { position: relative; max-width: 940px; margin: 0 auto; }
 .landing-title { margin: 0; font-family: "Outfit", system-ui, sans-serif; font-weight: 500; font-size: clamp(28px, 4.3vw, 48px); line-height: 1.12; letter-spacing: -0.015em; text-wrap: balance; }
-.landing-motto { margin: 14px 0 0; font-family: "Outfit", system-ui, sans-serif; font-weight: 400; font-size: clamp(18px, 2.4vw, 24px); color: color-mix(in srgb, #f59e0b 55%, var(--text-muted)); }
+/* Under the headline: a long line in the logo's colours (blue into amber and orange), fading at both ends */
+.landing-divider {
+  width: min(760px, 88%);
+  height: 2px;
+  margin: 41px auto 0; /* with the paragraph's 18px below: the same gap the motto took (about 61px) */
+  border: 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent 0%, #1d4ed8 12%, #38bdf8 32%, #a78bfa 50%, #fbbf24 68%, #ea580c 88%, transparent 100%);
+  opacity: 0.85;
+}
 .landing-sub { max-width: 620px; margin: 18px auto 0; font-size: clamp(15px, 1.9vw, 18px); line-height: 1.6; color: var(--text-2); }
 .landing-ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 28px; }
 

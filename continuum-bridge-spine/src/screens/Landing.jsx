@@ -66,7 +66,7 @@ export default function Landing() {
         </div>
         <div className="landing-hero-inner">
           <h1 className="landing-title">AI Agent Orchestrated Development, Data Curation &amp; Model Training IDE</h1>
-          <p className="landing-motto">Keep your work moving, calmly.</p>
+          <hr className="landing-divider" />
           <p className="landing-sub">Plan in focused intervals, hand the coding to AI that asks before it acts, prepare your data and ship to your own cloud. Continuum remembers where you left off.</p>
           <div className="landing-ctas">
             <Link to="/signin" className="landing-btn">
