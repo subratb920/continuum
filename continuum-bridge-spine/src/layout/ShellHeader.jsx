@@ -1,5 +1,8 @@
 import { LockMark } from "../components/NoAccess";
 import BrandMark from "../components/BrandMark";
+// The wordmark's typeface (bundled with the app, latin only, two weights)
+import "@fontsource/sora/latin-400.css";
+import "@fontsource/sora/latin-600.css";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/authStore";
