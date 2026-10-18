@@ -48,7 +48,7 @@ export default function AuthGate() {
       }
 
       login(data.token);
-      navigate("/", { replace: true }); // always land on the home page after sign-in
+      navigate("/chat", { replace: true }); // sign-in lands on Chat (App sends roles without Agents home)
     } catch (err) {
       setError(err.message);
     } finally {

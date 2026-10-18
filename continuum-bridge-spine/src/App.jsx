@@ -209,6 +209,16 @@ export default function App() {
     }
   }, [pathname, status]);
 
+  // Sign-in lands on Chat; a role without Agents lands on the home page instead
+  // (once your access is known), not on "No feature access"
+  const landing = useRef(true);
+  useEffect(() => {
+    if (status !== "authenticated" || !access || !landing.current) return;
+    landing.current = false;
+    if (pathname === "/chat" && !can("agents")) navigate("/", { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, access]);
+
   useEffect(() => {
     if (status !== "authenticated") return;
     // Neither Interval Setup nor the Dashboard: no projects to load (the screens say "No feature access")
@@ -505,7 +515,8 @@ export default function App() {
   }
 
   /* =========================================================
-     🏠 HOME (/) — welcome page, always shown after sign-in.
+     🏠 HOME (/) — the welcome page (sign-in lands on Chat; roles
+     without Agents land here).
      The console lives at /console.
      ========================================================= */
 

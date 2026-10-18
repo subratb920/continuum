@@ -24,10 +24,10 @@ export default function AuthCallback() {
       // ✅ Store token + update auth state
       login(token);
 
-      // ✅ This callback is only used by GitHub sign-in: show the
-      // Import from GitHub page once, right after signing in.
+      // ✅ This callback is only used by GitHub sign-in: it lands on Chat,
+      // as every sign-in does (Import from GitHub is in Create/Import).
       // replace() also drops the address with the token from history.
-      window.location.replace("/import");
+      window.location.replace("/chat");
     } catch (err) {
       console.error("AuthCallback error:", err);
       window.location.replace("/");
