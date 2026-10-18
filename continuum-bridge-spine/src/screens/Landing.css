@@ -28,26 +28,30 @@
 .landing-link { border: none; background: none; color: var(--text-2); font: inherit; font-size: 14px; cursor: pointer; padding: 6px 4px; }
 .landing-link:hover { color: var(--text); }
 
+/* Buttons: rounded squares in the wordmark's CONSOLE amber, lit from the top left */
 .landing-btn {
+  --amber: color-mix(in srgb, #f59e0b 55%, var(--text-muted));
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 44px;
   padding: 0 22px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  background: linear-gradient(135deg, #5b8def, #8b7be6);
-  color: #fff;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--amber) 70%, #fff 30%);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--amber) 82%, #fff) 0%, var(--amber) 45%, color-mix(in srgb, var(--amber) 78%, #000) 100%);
+  color: #1c1405;
   font-weight: 600;
   font-size: 15px;
   text-decoration: none;
-  box-shadow: 0 10px 24px -14px rgb(91 141 239 / 0.9);
+  box-shadow: 0 10px 24px -14px color-mix(in srgb, var(--amber) 90%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.25);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 .landing-btn:hover,
-.landing-btn:focus-visible { transform: translateY(-1px); box-shadow: 0 14px 28px -14px rgb(91 141 239 / 1); }
-.landing-btn.is-quiet { background: transparent; color: var(--text); border-color: var(--border-strong); box-shadow: none; }
-.landing-btn.is-small { min-height: 36px; padding: 0 16px; font-size: 14px; }
+.landing-btn:focus-visible { transform: translateY(-1px); box-shadow: 0 14px 28px -14px var(--amber), inset 0 1px 0 rgb(255 255 255 / 0.3); }
+.landing-btn.is-quiet { background: transparent; color: var(--text); border-color: color-mix(in srgb, var(--amber) 45%, var(--border-strong)); box-shadow: none; }
+.landing-btn.is-quiet:hover,
+.landing-btn.is-quiet:focus-visible { border-color: var(--amber); color: color-mix(in srgb, var(--amber) 60%, var(--text)); }
+.landing-btn.is-small { min-height: 36px; padding: 0 16px; font-size: 14px; border-radius: 9px; }
 
 /* ---------- Hero: over a slow aurora ---------- */
 .landing-hero { position: relative; overflow: hidden; padding: 72px 20px 56px; text-align: center; }
