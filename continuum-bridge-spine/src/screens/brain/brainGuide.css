@@ -107,11 +107,37 @@
   25%, 100% { color: var(--text-muted); background: transparent; }
 }
 
-/* ---------- Ground rules ---------- */
-.guide-rules { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
-.guide-rules li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; align-items: center; cursor: default; }
-.guide-rule-icon { font-size: 12px; text-align: center; }
-.guide-rule { color: var(--text); line-height: 1.3; }
+/* ---------- Model building (Continuum Data's pipeline) ---------- */
+.pipe { display: block; width: 100%; height: auto; }
+.pipe-track { fill: none; stroke: var(--border-strong); stroke-width: 1.5; }
+.pipe-track.is-lane { stroke-dasharray: 2 3; }
+.pipe-track.is-next { stroke-dasharray: 3 3; animation: agent-flow 0.9s linear infinite; }
+.pipe-row { fill: var(--accent, #6366f1); }
+.pipe-row.lane-1 { fill: var(--warning); }
+.pipe-row.lane-2 { fill: var(--success); }
+.pipe-row.lane-0 { fill: color-mix(in srgb, var(--agent-core) 80%, #fff); }
+.pipe-row.is-dropped { fill: var(--danger); }
+.pipe-stage circle { fill: var(--surface); stroke: var(--border-strong); stroke-width: 1.5; animation: pipe-stage 6s ease-in-out infinite; animation-delay: calc(var(--i) * 0.9s); }
+.pipe-stage text { font-size: 8.5px; text-anchor: middle; fill: var(--text-2); }
+/* Each stage glows as the rows pass through it */
+@keyframes pipe-stage {
+  0%, 18% { fill: color-mix(in srgb, var(--agent-core) 35%, var(--surface)); stroke: var(--agent-core); }
+  30%, 100% { fill: var(--surface); stroke: var(--border-strong); }
+}
+.pipe-lane-label { font-size: 7px; fill: var(--text-muted); dominant-baseline: middle; }
+.pipe-train rect { fill: none; stroke: color-mix(in srgb, var(--agent-core) 55%, transparent); stroke-width: 1.2; stroke-dasharray: 4 3; animation: agent-flow 1.6s linear infinite; }
+.pipe-train text { font-size: 8.5px; font-weight: 600; text-anchor: middle; fill: var(--text-2); }
+.pipe-train .pipe-soon { font-size: 7px; font-weight: 400; fill: var(--text-muted); }
+.pipe-quality circle { fill: var(--surface); stroke: var(--border); stroke-width: 3; }
+.pipe-quality .pipe-quality-arc { fill: none; stroke: var(--success); stroke-dasharray: 0 100; transform: rotate(-90deg); transform-box: fill-box; transform-origin: center; animation: pipe-quality 6s ease-in-out infinite; }
+.pipe-quality text { font-size: 9px; font-weight: 700; text-anchor: middle; fill: var(--text); }
+.pipe-quality .pipe-q-label { font-size: 8.5px; font-weight: 600; text-anchor: start; fill: var(--text-2); }
+.pipe-quality .pipe-q-label.is-sub { font-weight: 400; fill: var(--text-muted); }
+/* The score fills as the version is cleaned, holds, then starts again */
+@keyframes pipe-quality { 0%, 25% { stroke-dasharray: 20 100; } 70%, 92% { stroke-dasharray: 86 100; } 100% { stroke-dasharray: 20 100; } }
+.pipe-kinds { margin: 4px 0 0; font-size: 11px; color: var(--text-muted); }
+.guide-head-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.guide-head-row .guide-head { margin: 0; }
 
 /* ---------- Try a flow ---------- */
 .flows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
@@ -167,7 +193,8 @@
 
 /* Less motion asked for: the pictures stand still, every step shows plainly */
 @media (prefers-reduced-motion: reduce) {
-  .loop-pulse, .mini-dot { display: none; }
-  .loop-link.is-flow, .loop-node.is-worker circle, .loop-commit, .mini-worker.is-late, .guide-steps li, .guide-led { animation: none; }
+  .loop-pulse, .mini-dot, .pipe-row { display: none; }
+  .pipe-quality .pipe-quality-arc { stroke-dasharray: 86 100; }
+  .loop-link.is-flow, .loop-node.is-worker circle, .loop-commit, .mini-worker.is-late, .guide-steps li, .guide-led, .pipe-track.is-next, .pipe-stage circle, .pipe-train rect, .pipe-quality-arc { animation: none; }
   .loop-commit, .mini-worker.is-late { opacity: 1; }
 }

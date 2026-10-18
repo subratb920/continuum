@@ -1,30 +1,29 @@
 import { useBrain } from "../../brain/brainContext";
+import { useNavigate } from "react-router-dom";
 import { ACTIVE_STATES } from "../../brain/brainTypes";
+import { DATA_ENABLED } from "../../data/dataApi";
+import { useAuth } from "../../state/authStore";
 import "./brain.css";
 import "./brainGuide.css";
 
 /**
- * The Chat screen's left pane: how the brain works, in three small parts —
- * what's happening right now, the loop it runs (animated), and the rules it
- * keeps. The rules and limits are continuum-brain's own (agent-image/agents/
- * core.md and worker.md, brain-orchestrator's config); keep them in step.
+ * The Chat screen's left pane, in three small parts: what's happening right
+ * now, the loop the brain runs (animated), and model building — how Continuum
+ * Data takes raw data to a dataset ready to train on (continuum-data's
+ * pipeline: docs/phase1-spec.md §4; training itself is still to come).
+ * The limits are continuum-brain's defaults (brain-orchestrator config).
  */
 
 /** Workers a person may have awake at once (brain-orchestrator's default). */
 const WORKER_LIMIT = 3;
 
-const RULES = [
-  ["✋", "The brain never edits code", "It plans and hands the work to workers."],
-  ["🔐", "Workers ask before every change", "Each edit or command waits for your yes."],
-  ["🙋", "Only you answer", "Approvals and questions are yours, never the brain's."],
-  ["🌿", "Never main", "Each worker commits on its own continuum/agent-… branch."],
-  ["🚀", "Pushes and deploys are yours", "The brain only proposes them."],
-];
 
 const STEPS = ["You ask", "The brain spawns workers", "A worker asks you first", "It commits on its own branch"];
 
 export default function BrainGuide() {
   const brain = useBrain();
+  const { can } = useAuth();
+  const navigate = useNavigate();
   const awake = brain ? brain.workers.filter((w) => ACTIVE_STATES.includes(w.state) && w.state !== "stopping").length : 0;
   const waiting = brain?.pending.length ?? 0;
   const coreState = brain?.core?.state;
@@ -74,17 +73,16 @@ export default function BrainGuide() {
       </section>
 
       <section className="guide-unit">
-        <h3 className="guide-head">Ground rules</h3>
-        <ul className="guide-rules">
-          {RULES.map(([icon, rule, why]) => (
-            <li key={rule} title={why}>
-              <span className="guide-rule-icon" aria-hidden="true">
-                {icon}
-              </span>
-              <span className="guide-rule">{rule}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="guide-head-row">
+          <h3 className="guide-head">Model building</h3>
+          {DATA_ENABLED && can("data") && (
+            <button type="button" className="flow-try" onClick={() => navigate("/data")}>
+              Open Data ›
+            </button>
+          )}
+        </div>
+        <DataPipeline />
+        <p className="pipe-kinds">Text · tables · images · audio</p>
       </section>
     </div>
   );
@@ -145,6 +143,74 @@ function LoopDiagram() {
       </g>
       <text className="loop-label" x="110" y="98">brain</text>
       <text className="loop-label" x="110" y="146">workers</text>
+    </svg>
+  );
+}
+
+/**
+ * Raw data to a training-ready dataset, on a 6-second loop: rows enter from
+ * the sources, are profiled, the bad ones are dropped while cleaning (red,
+ * falling away), the rest split into train / validation / test lanes and are
+ * published; training, the next step, is still to come (dashed).
+ */
+const PIPE = "6s";
+const STAGES = [
+  [22, "Sources"],
+  [62, "Profile"],
+  [102, "Clean"],
+  [140, "Split"],
+  [176, "Publish"],
+];
+const LANES = [16, 30, 44]; // train · validation · test
+const ROWS = Array.from({ length: 9 }, (_, i) => i);
+const DROPPED = new Set([2, 6]);
+
+function DataPipeline() {
+  return (
+    <svg className="pipe" viewBox="0 0 220 118" role="img" aria-label="Data goes from its sources through profiling and cleaning, is split into train, validation and test, and is published ready to train a model; training is coming">
+      <path className="pipe-track" d="M10 30 L140 30" />
+      {LANES.map((y) => (
+        <path key={y} className="pipe-track is-lane" d={`M140 30 L158 ${y} L188 ${y}`} />
+      ))}
+      <path className="pipe-track is-next" d="M176 52 L176 84" />
+
+      {ROWS.map((i) => {
+        const drop = DROPPED.has(i);
+        const path = drop ? "M10 30 L102 30 L110 60" : `M10 30 L140 30 L158 ${LANES[i % 3]} L188 ${LANES[i % 3]}`;
+        const begin = `${(i * 6) / ROWS.length}s`;
+        return (
+          <rect key={i} className={`pipe-row${drop ? " is-dropped" : ""} lane-${i % 3}`} x="-3" y="-2" width="6" height="4" rx="1" opacity="0">
+            <animateMotion dur={PIPE} begin={begin} repeatCount="indefinite" path={path} keyPoints="0;1;1" keyTimes={drop ? "0;0.6;1" : "0;0.85;1"} calcMode="linear" />
+            <animate attributeName="opacity" dur={PIPE} begin={begin} repeatCount="indefinite" values={drop ? "0;1;1;0;0" : "0;1;1;0;0"} keyTimes={drop ? "0;0.05;0.45;0.6;1" : "0;0.05;0.8;0.88;1"} />
+          </rect>
+        );
+      })}
+
+      {STAGES.map(([x, label], i) => (
+        <g key={label} className="pipe-stage" style={{ "--i": i }}>
+          <circle cx={x} cy="30" r="5" />
+          <text x={x} y={i % 2 ? 62 : 10}>
+            {label}
+          </text>
+        </g>
+      ))}
+      <text className="pipe-lane-label" x="192" y="16">train</text>
+      <text className="pipe-lane-label" x="192" y="30">valid</text>
+      <text className="pipe-lane-label" x="192" y="44">test</text>
+
+      {/* The next step: a model trained from the published dataset — not built yet */}
+      <g className="pipe-train">
+        <rect x="132" y="86" width="84" height="28" rx="7" />
+        <text x="174" y="98">Train a model</text>
+        <text className="pipe-soon" x="174" y="108">coming soon</text>
+      </g>
+      <g className="pipe-quality">
+        <circle cx="34" cy="100" r="15" />
+        <circle className="pipe-quality-arc" cx="34" cy="100" r="15" pathLength="100" />
+        <text x="34" y="103">Q</text>
+        <text className="pipe-q-label" x="56" y="97">Quality score</text>
+        <text className="pipe-q-label is-sub" x="56" y="108">on every version</text>
+      </g>
     </svg>
   );
 }
