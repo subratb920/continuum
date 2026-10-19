@@ -32,6 +32,17 @@ export default function IntervalSetup({
   const [folder, setFolder] = useState(null);
   const [sending, setSending] = useState("");
   const [startError, setStartError] = useState("");
+  // A workflow for the brain: one of your templates, or "" (the brain drafts one); you approve it either way
+  const [templates, setTemplates] = useState([]);
+  const [templateId, setTemplateId] = useState("");
+  useEffect(() => {
+    if (!byBrain || !brain?.wf) return undefined;
+    let live = true;
+    brain.wf.workflows().then((all) => live && setTemplates(all.filter((w) => w.kind === "template")), () => {});
+    return () => {
+      live = false;
+    };
+  }, [byBrain, brain?.wf]);
   const projectId = selectedProject?._id;
   useEffect(() => {
     if (!onComputer || !projectId) return undefined;
@@ -126,7 +137,11 @@ export default function IntervalSetup({
       })),
     });
 
-    // The brain is given its goals (if it can't take them now, the agent bridge offers to hand them over again)
+    // Your template becomes the interval's draft workflow (you approve it on Workflows); then the brain is given its goals
+    // (if it can't take them now, the agent bridge offers to hand them over again)
+    if (byBrain && templateId && brain.wf) {
+      await brain.wf.useWorkflow(templateId, String(bridge._id)).catch((err) => setStartError(`The template couldn't be used (${err.message}); the brain drafts a workflow instead.`));
+    }
     if (byBrain) await brain.startAgentInterval(String(bridge._id)).catch(() => null);
 
     setGoals([]);
@@ -278,7 +293,7 @@ export default function IntervalSetup({
                       </button>
                     )}
                     <br />
-                    Workers start from it; the changes you allow come back into it.
+                    Workers start from it; their changes come into it after your final review.
                   </span>
                 </label>
                 <label className={`interval-who-option${workIn === "github" ? " is-on" : ""}${hasRepo ? "" : " is-off"}`}>
@@ -290,6 +305,22 @@ export default function IntervalSetup({
             ) : (
               <p className="hint">{hasRepo ? "GitHub: on a phone, workers start from the project's GitHub repository." : "This project isn't on GitHub: start it from a computer to work in your folder."}</p>
             )}
+          </section>
+        )}
+
+        {/* The brain's workflow: one of your templates, or one it drafts from the goals (you approve it on Workflows) */}
+        {byBrain && brain?.wf && (
+          <section className="interval-section">
+            <h3>Workflow</h3>
+            <select className="interval-select" value={templateId} onChange={(e) => setTemplateId(e.target.value)} aria-label="Workflow">
+              <option value="">Let the brain draft one from the goals</option>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} ({t.steps.length} steps)
+                </option>
+              ))}
+            </select>
+            <p className="hint">Either way you see it on Workflows, change it if you like, and approve it before any work starts.</p>
           </section>
         )}
 

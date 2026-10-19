@@ -296,6 +296,21 @@ export function BrainProvider({ children }) {
       settings: client.settings ? () => client.settings() : null,
       saveSettings: client.saveSettings ? (changes) => client.saveSettings(changes) : null,
       push: client.push ? (id, message) => client.push(id, message) : null,
+      // Workflows (null where this brain has none: the simulated one)
+      wf: client.workflows
+        ? {
+            workflows: (...a) => client.workflows(...a),
+            workflowOf: (...a) => client.workflowOf(...a),
+            workflow: (...a) => client.workflow(...a),
+            saveWorkflow: (...a) => client.saveWorkflow(...a),
+            deleteWorkflow: (...a) => client.deleteWorkflow(...a),
+            useWorkflow: (...a) => client.useWorkflow(...a),
+            approveWorkflow: (...a) => client.approveWorkflow(...a),
+            cancelWorkflow: (...a) => client.cancelWorkflow(...a),
+            saveAsTemplate: (...a) => client.saveAsTemplate(...a),
+            approveStep: (...a) => client.approveStep(...a),
+          }
+        : null,
       // Your own skills: null where this brain has none (the simulated one)
       skills: client.skills ? () => client.skills() : null,
       saveSkill: client.saveSkill ? (skill) => client.saveSkill(skill) : null,

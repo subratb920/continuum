@@ -7,6 +7,10 @@ import AgentInspector from "./brain/AgentInspector";
 import BrainChat from "./brain/BrainChat";
 import BrainGuide from "./brain/BrainGuide";
 import BrainFlows from "./brain/BrainFlows";
+import { WorkflowsProvider } from "../workflows/WorkflowsProvider";
+import WorkflowLibrary from "../workflows/WorkflowLibrary";
+import WorkflowCanvas from "../workflows/WorkflowCanvas";
+import WorkflowInspector from "../workflows/WorkflowInspector";
 import { DataProvider } from "../data/DataProvider";
 import { useBuildingCount } from "../data/dataContext";
 import { DATA_ENABLED } from "../data/dataApi";
@@ -76,6 +80,20 @@ export const SCREENS = [
     Provider: BrainProvider,
     useBadge: usePendingCount,
     slots: () => ({ left: <AgentRoster />, center: <AgentStage />, right: <AgentInspector /> }),
+  },
+  // Workflows: draw them, keep templates, approve the brain's draft and watch it run (after Agents: it uses the brain's state)
+  {
+    id: "workflows",
+    feature: "agents",
+    path: "/workflows",
+    label: "Workflows",
+    icon: "⛓",
+    switcher: true,
+    left: { label: "Workflows", icon: "⛓" },
+    center: { label: "Canvas", icon: "◇" },
+    right: { label: "Inspector", icon: "☰" },
+    Provider: WorkflowsProvider,
+    slots: () => ({ left: <WorkflowLibrary />, center: <WorkflowCanvas />, right: <WorkflowInspector /> }),
   },
   // Datasets (continuum-data): only when the engine is switched on (VITE_DATA_ENABLED)
   ...(DATA_ENABLED

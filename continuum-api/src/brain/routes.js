@@ -22,6 +22,7 @@
 //   POST   /brain/projects/:id/snapshot     your project folder (.tar.gz, from your computer): workers of
 //                                           an interval that works in your folder start from it
 //   GET    /brain/models   GET|PUT /brain/settings {model?, mode?}   the one model all your agents run on, and its speed
+//   GET|POST /brain/workflows[?bridgeId=]   GET|PUT|DELETE /brain/workflows/:id   POST …/{use|approve|cancel|template}   POST …/steps/:stepId/approve
 //   GET|POST /brain/skills   PUT|DELETE /brain/skills/:id   your own skills
 //   GET    /brain/reviews?bridgeId=   POST /brain/reviews/:id/{approvals|decisions|changes|applied}   the final review (works in your folder)
 
@@ -241,6 +242,36 @@ export function createBrainRouter(opts = {}) {
     const bridgeId = String(req.body?.bridgeId ?? "");
     if (!ID.test(bridgeId)) throw new AppError("bridgeId must be a bridge ID.", 400, "VALIDATION_ERROR");
     res.status(202).json(toAgent(await brain(req, "POST", "/brain/agent-interval", { bridgeId })));
+  });
+
+  // Workflows: your templates, and each agent interval's run (the brain drafts it, you edit and approve it)
+  const workflowId = (req) => {
+    const id = String(req.params.id);
+    if (!ID.test(id)) throw new AppError("No such workflow.", 404, "NOT_FOUND");
+    return id;
+  };
+  const workflowBody = (b) => ({ name: b?.name, description: b?.description, steps: b?.steps, edges: b?.edges, version: b?.version });
+  router.get("/workflows", async (req, res) => {
+    const bridgeId = typeof req.query.bridgeId === "string" ? req.query.bridgeId : null;
+    if (bridgeId !== null && !ID.test(bridgeId)) throw new AppError("bridgeId must be a bridge ID.", 400, "VALIDATION_ERROR");
+    res.set("Cache-Control", "no-store").json(await brain(req, "GET", `/workflows${bridgeId ? `?bridgeId=${bridgeId}` : ""}`));
+  });
+  router.post("/workflows", async (req, res) => res.status(201).json(await brain(req, "POST", "/workflows", workflowBody(req.body))));
+  router.get("/workflows/:id", async (req, res) => res.set("Cache-Control", "no-store").json(await brain(req, "GET", `/workflows/${workflowId(req)}`)));
+  router.put("/workflows/:id", async (req, res) => res.json(await brain(req, "PUT", `/workflows/${workflowId(req)}`, workflowBody(req.body))));
+  router.delete("/workflows/:id", async (req, res) => {
+    await brain(req, "DELETE", `/workflows/${workflowId(req)}`);
+    res.status(204).end();
+  });
+  router.post("/workflows/:id/use", async (req, res) => res.status(201).json(await brain(req, "POST", `/workflows/${workflowId(req)}/use`, { bridgeId: req.body?.bridgeId })));
+  for (const action of ["approve", "cancel"]) {
+    router.post(`/workflows/:id/${action}`, async (req, res) => res.json(await brain(req, "POST", `/workflows/${workflowId(req)}/${action}`, {})));
+  }
+  router.post("/workflows/:id/template", async (req, res) => res.status(201).json(await brain(req, "POST", `/workflows/${workflowId(req)}/template`, { name: req.body?.name })));
+  router.post("/workflows/:id/steps/:stepId/approve", async (req, res) => {
+    const stepId = String(req.params.stepId);
+    if (!/^[\w.-]{1,40}$/.test(stepId)) throw new AppError("No such step.", 404, "NOT_FOUND");
+    res.json(await brain(req, "POST", `/workflows/${workflowId(req)}/steps/${stepId}/approve`, {}));
   });
 
   // Your own skills (know-how your agents load when it fits): list, add, change, delete

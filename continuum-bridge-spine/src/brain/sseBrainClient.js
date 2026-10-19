@@ -88,6 +88,17 @@ export function createSseBrainClient(base = import.meta.env.VITE_BRAIN_API_URL) 
     changes: (agentId) => call("GET", `/brain/agents/${agentId}/changes`),
     file: (agentId, path) => call("GET", `/brain/agents/${agentId}/file?path=${encodeURIComponent(path)}`),
     push: (agentId, message) => call("POST", `/brain/agents/${agentId}/push`, message ? { message } : {}),
+    // Workflows: templates and each agent interval's run
+    workflows: () => call("GET", "/brain/workflows"),
+    workflowOf: async (bridgeId) => (await call("GET", `/brain/workflows?bridgeId=${encodeURIComponent(bridgeId)}`))?.workflow ?? null,
+    workflow: (id) => call("GET", `/brain/workflows/${id}`),
+    saveWorkflow: (w) => (w.id ? call("PUT", `/brain/workflows/${w.id}`, w) : call("POST", "/brain/workflows", w)),
+    deleteWorkflow: (id) => call("DELETE", `/brain/workflows/${id}`),
+    useWorkflow: (id, bridgeId) => call("POST", `/brain/workflows/${id}/use`, { bridgeId }),
+    approveWorkflow: (id) => call("POST", `/brain/workflows/${id}/approve`),
+    cancelWorkflow: (id) => call("POST", `/brain/workflows/${id}/cancel`),
+    saveAsTemplate: (id, name) => call("POST", `/brain/workflows/${id}/template`, name ? { name } : {}),
+    approveStep: (id, stepId) => call("POST", `/brain/workflows/${id}/steps/${encodeURIComponent(stepId)}/approve`),
     // Your own skills (Skills page)
     skills: () => call("GET", "/brain/skills"),
     saveSkill: (skill) => (skill.id ? call("PUT", `/brain/skills/${skill.id}`, skill) : call("POST", "/brain/skills", skill)),
