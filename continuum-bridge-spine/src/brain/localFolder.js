@@ -48,7 +48,8 @@ export async function savedFolder(key) {
 /** Asks which folder holds your copy of the project (straight from a click). Null: cancelled. */
 export async function pickFolder(key, suggestedName) {
   try {
-    const handle = await window.showDirectoryPicker({ id: `continuum-${String(key).replace(/[^a-z0-9_-]/gi, "-").slice(0, 30)}`, mode: "readwrite", startIn: "documents" });
+    // The browser refuses an id longer than 32 characters
+    const handle = await window.showDirectoryPicker({ id: `continuum-${String(key).replace(/[^a-z0-9_-]/gi, "-").slice(0, 22)}`, mode: "readwrite", startIn: "documents" });
     await tx("readwrite", (s) => s.put(handle, key));
     return handle;
   } catch (err) {
