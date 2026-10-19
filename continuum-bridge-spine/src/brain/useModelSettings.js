@@ -46,6 +46,9 @@ export function useModelSettings() {
     /** fast or thorough (a brain from before speeds: null), and what each means. */
     mode: settings?.mode ?? null,
     modes: settings?.modes ?? [],
+    /** lean or full (a brain from before: null), and what each costs. */
+    tools: settings?.tools ?? null,
+    toolsets: settings?.toolsets ?? [],
     refresh,
     save,
   };

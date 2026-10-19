@@ -48,6 +48,7 @@ function modelsOf(agents) {
 const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 const MODE_LABEL = { fast: "Fast", thorough: "Thorough" };
+const TOOLS_LABEL = { lean: "Lean", full: "Full" };
 
 /**
  * Model (in the Agents pane): the one model your brain and every worker run
@@ -60,9 +61,10 @@ export default function ModelSettings({ models }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [draftMode, setDraftMode] = useState(null);
+  const [draftTools, setDraftTools] = useState(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null); // { ok, text }
-  const { list, settings, error, model, chosen, defaultModel, save, refresh, available, mode, modes } = models;
+  const { list, settings, error, model, chosen, defaultModel, save, refresh, available, mode, modes, tools, toolsets } = models;
   if (!available) return null;
 
   // Now, from the agents themselves (live, even while replaying)
@@ -82,6 +84,7 @@ export default function ModelSettings({ models }) {
   const begin = () => {
     setDraft(chosen ?? "");
     setDraftMode(mode);
+    setDraftTools(tools);
     setMessage(null);
     setOpen(true);
     refresh();
@@ -92,9 +95,9 @@ export default function ModelSettings({ models }) {
     setSaving(true);
     setMessage(null);
     try {
-      const changes = { ...((draft || null) !== chosen ? { model: draft || null } : {}), ...(draftMode && draftMode !== mode ? { mode: draftMode } : {}) };
+      const changes = { ...((draft || null) !== chosen ? { model: draft || null } : {}), ...(draftMode && draftMode !== mode ? { mode: draftMode } : {}), ...(draftTools && draftTools !== tools ? { tools: draftTools } : {}) };
       const r = await save(changes);
-      const how = `${r.model}${r.mode ? `, ${MODE_LABEL[r.mode] ?? r.mode}` : ""}`;
+      const how = `${r.model}${r.mode ? `, ${MODE_LABEL[r.mode] ?? r.mode}` : ""}${r.tools ? `, ${TOOLS_LABEL[r.tools] ?? r.tools} tools` : ""}`;
       setMessage({ ok: true, text: r.stopped ? `Saved. ${count(r.stopped, "idle agent was", "idle agents were")} stopped, so every agent starts on ${how}.` : `Saved. Every agent now runs on ${how}.` });
       setOpen(false);
     } catch (err) {
@@ -129,6 +132,12 @@ export default function ModelSettings({ models }) {
         <dl>
           <dt>Model</dt>
           <dd className="brain-mono" title="The one model your brain and every worker run on">{model ?? "…"}</dd>
+          {tools && (
+            <>
+              <dt>Tools</dt>
+              <dd title={toolsets.find((t) => t.id === tools)?.words}>{TOOLS_LABEL[tools] ?? tools}</dd>
+            </>
+          )}
           {mode && (
             <>
               <dt>Speed</dt>
@@ -191,6 +200,18 @@ export default function ModelSettings({ models }) {
                   <span className="brain-hint">{m.words}</span>
                 </label>
               ))}
+              {toolsets.length > 0 && (
+                <>
+                  <legend className="model-modes-sub">Tools (workers)</legend>
+                  {toolsets.map((t) => (
+                    <label key={t.id} className={`model-mode${draftTools === t.id ? " is-selected" : ""}`}>
+                      <input type="radio" name="tools" value={t.id} checked={draftTools === t.id} onChange={() => setDraftTools(t.id)} />
+                      <span className="model-mode-name">{TOOLS_LABEL[t.id] ?? t.id}</span>
+                      <span className="brain-hint">{t.words}</span>
+                    </label>
+                  ))}
+                </>
+              )}
               {draftMode === "fast" && list?.models.find((x) => x.id === (draft || defaultModel))?.thinking === "always" && (
                 <p className="model-settings-warning">
                   {draft || defaultModel} always thinks before answering (a thinking-only build), so Fast only gives it a smaller context. For answers without thinking, choose a model that can skip it, e.g. qwen3:8b, or pull qwen3:4b-instruct.
@@ -213,7 +234,7 @@ export default function ModelSettings({ models }) {
           {error && <p className="model-settings-error" role="alert">{error}</p>}
           <div className="agent-spawn-actions">
             <button type="button" className="brain-btn" onClick={() => setOpen(false)} disabled={saving}>Cancel</button>
-            <button type="submit" className="brain-btn is-primary" disabled={saving || !list || !!lockedWhy || ((draft || null) === chosen && (!draftMode || draftMode === mode))}>{saving ? "Saving…" : "Save"}</button>
+            <button type="submit" className="brain-btn is-primary" disabled={saving || !list || !!lockedWhy || ((draft || null) === chosen && (!draftMode || draftMode === mode) && (!draftTools || draftTools === tools))}>{saving ? "Saving…" : "Save"}</button>
           </div>
         </form>
       )}
