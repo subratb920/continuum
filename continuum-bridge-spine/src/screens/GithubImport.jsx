@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "./GithubImport.css";
+import { useAuth } from "../state/authStore";
 import DeviceFolderOption from "../components/DeviceFolderOption";
 import { getPreferences } from "../utils/preferences";
 import { createProjectFolder, filesOfTarball, pickParentFolder, writeFiles } from "../utils/deviceFolder";
@@ -17,6 +18,11 @@ export default function GithubImport({ onImported, onDone }) {
     const [makeFolders, setMakeFolders] = useState(() => getPreferences().folderOptionDefault);
     const [progress, setProgress] = useState("");
     const [problem, setProblem] = useState("");
+    const { githubConnected, connectGithub, access } = useAuth();
+    // The server said GitHub isn't connected (or no longer accepts the token)
+    const [notConnected, setNotConnected] = useState(false);
+    // Known once your access has loaded; until then the list is fetched as before
+    const needsConnect = notConnected || (Boolean(access) && !githubConnected);
 
     const filteredRepos = repos.filter((repo) =>
         repo.name.toLowerCase().includes(search.toLowerCase())
@@ -40,8 +46,12 @@ export default function GithubImport({ onImported, onDone }) {
             // Only accept a list; an error response is an object
             if (res.ok && Array.isArray(data)) {
                 setRepos(data);
+                setProblem("");
+            } else if (data?.code === "GITHUB_NOT_CONNECTED") {
+                // Not connected (or GitHub no longer accepts the token): connect it first
+                setNotConnected(true);
             } else {
-                console.error("Failed to fetch repos", data);
+                setProblem(data?.message || "Couldn't load your GitHub repositories. Try again.");
             }
         } catch (err) {
             console.error("Failed to fetch repos", err);
@@ -49,6 +59,14 @@ export default function GithubImport({ onImported, onDone }) {
             setLoading(false);
         }
     };
+
+    // Connected (also just back from Connect GitHub): the list loads by itself, once
+    const fetchedOnce = useRef(false);
+    useEffect(() => {
+        if (!githubConnected || fetchedOnce.current) return;
+        fetchedOnce.current = true;
+        handleFetchRepos();
+    }, [githubConnected]);
 
     /** Each repository's files into a new folder of its own, inside parent. Returns the problems. */
     const copyToDevice = async (parent, list) => {
@@ -143,19 +161,20 @@ export default function GithubImport({ onImported, onDone }) {
                 <h1>Import from GitHub</h1>
 
                 <p>
-                    To import your GitHub repositories, please authenticate with your GitHub account.
+                    {needsConnect ? "Connect your GitHub account to import its repositories. Any sign-in works: GitHub is added to the account you're using." : "Pick the repositories to import."}
                 </p>
 
                 <div className="btn-group">
                     {repos.length === 0 && (
                         <button
                             type="button"
-                            onClick={handleFetchRepos}
+                            onClick={needsConnect ? () => connectGithub().catch((e) => setProblem(e.message)) : handleFetchRepos}
                             className="github-auth-btn"
                         >
-                            {loading ? "Loading..." : "Fetch GitHub Repositories"}
+                            {needsConnect ? "Connect GitHub" : loading ? "Loading..." : "Fetch GitHub Repositories"}
                         </button>
                     )}
+                    {repos.length === 0 && problem && <p className="github-import-problem">{problem}</p>}
 
                     {repos.length > 0 && (
                         <>

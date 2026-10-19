@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./ProjectList.css";
 import { getProjectMeta } from "../models/project";
-import { useAuth } from "../state/authStore";
 import { importFromDevice } from "../utils/importFromDevice";
 import { usePreferences } from "../utils/preferences";
 import ProjectContents from "./ProjectContents";
@@ -44,7 +43,6 @@ export default function ProjectList({
   const [query, setQuery] = useState("");
   // A device project's contents stay collapsed until its ▸ is clicked (id → open), unless Settings says otherwise
   const [contentsToggled, setContentsToggled] = useState({});
-  const { authProvider } = useAuth();
   const navigate = useNavigate();
   // On a phone projects are made on Continuum's server and kept in GitHub, never on the device
   const [phone] = useState(onPhone);
@@ -60,8 +58,8 @@ export default function ProjectList({
       .sort((a, b) => (isActive(a) !== isActive(b) ? (isActive(a) ? -1 : 1) : a.name.localeCompare(b.name)));
   }, [projects, query, activeProject]);
 
+  // Every sign-in: without GitHub connected, the import screen connects it first
   const importGithub = () => navigate("/import", { state: { from: pathname } });
-  const canImportGithub = authProvider === "github";
   // Settings → Projects: a device project's files may open when it's selected
   const { openFilesOnSelect } = usePreferences();
   const isContentsOpen = (project) => contentsToggled[project._id] ?? (openFilesOnSelect && selectedProject?._id === project._id);
@@ -111,7 +109,7 @@ export default function ProjectList({
               Import from device
             </button>
           )}
-          <button type="button" className="project-empty-btn" disabled={!canImportGithub} onClick={importGithub}>
+          <button type="button" className="project-empty-btn" onClick={importGithub}>
             Import from GitHub
           </button>
         </div>

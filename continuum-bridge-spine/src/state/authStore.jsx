@@ -157,6 +157,16 @@ export function AuthProvider({ children }) {
   const can = useCallback((feature) => !known || known.legacy || (!known.disabled && known.features.includes(feature)), [known]);
   /** A feature's name, e.g. "Agents". */
   const featureName = useCallback((feature) => known?.allFeatures?.find((f) => f.id === feature)?.label ?? feature, [known]);
+  // GitHub is connected: a GitHub sign-in, or Connect GitHub (any sign-in, any email)
+  const githubConnected = authProvider === "github" || Boolean(known?.github?.connected);
+
+  /** Connect GitHub to this account: off to GitHub, then back to the import screen. Throws with the reason if it can't start. */
+  const connectGithub = useCallback(async () => {
+    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/github/connect`, { method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY)}` } });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.url) throw new Error(data.message || data.error || "GitHub couldn't be connected. Try again.");
+    window.location.assign(data.url);
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -171,6 +181,8 @@ export function AuthProvider({ children }) {
         can,
         featureName,
         reloadAccess: loadAccess,
+        githubConnected,
+        connectGithub,
       }}
     >
       {children}

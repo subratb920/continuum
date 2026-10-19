@@ -14,6 +14,11 @@ export function clientAuthCallbackUrl(token) {
   return url.toString();
 }
 
+/** A page of the UI (e.g. "/import"), on the same site as the sign-in callback. */
+export function clientPageUrl(path) {
+  return new URL(path, clientAuthCallbackUrl("x")).toString();
+}
+
 /**
  * The address GitHub sends people back to (GITHUB_CALLBACK_URL). It must be
  * the callback URL registered on the GitHub OAuth app. Unset: GitHub uses the
@@ -23,11 +28,12 @@ export function githubCallbackUrl() {
   return process.env.GITHUB_CALLBACK_URL || null;
 }
 
-/** GitHub's sign-in page for this app (client ID, scopes and, if set, the callback). */
-export function githubAuthorizeUrl(scope) {
+/** GitHub's sign-in page for this app (client ID, scopes, the callback if set, and state: Connect GitHub's one-time code). */
+export function githubAuthorizeUrl(scope, state = null) {
   const url = new URL("https://github.com/login/oauth/authorize");
   url.searchParams.set("client_id", process.env.GITHUB_CLIENT_ID || "");
   url.searchParams.set("scope", scope);
+  if (state) url.searchParams.set("state", state);
   const callback = githubCallbackUrl();
   if (callback) url.searchParams.set("redirect_uri", callback);
   return url.toString();

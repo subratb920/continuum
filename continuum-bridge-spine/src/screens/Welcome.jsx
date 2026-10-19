@@ -67,11 +67,9 @@ export default function Welcome({ projectCount = 0, activeProject, onCreated, on
               <Link to="/new" className="welcome-btn welcome-new-project">
                 Create on GitHub: React, Node, Spring, Python…
               </Link>
-              {authProvider === "github" && (
-                <Link to="/import" className="welcome-btn welcome-btn-secondary">
-                  Import from GitHub
-                </Link>
-              )}
+              <Link to="/import" className="welcome-btn welcome-btn-secondary">
+                Import from GitHub
+              </Link>
             </>
           ) : (
             <>

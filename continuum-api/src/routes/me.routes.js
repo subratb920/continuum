@@ -1,4 +1,5 @@
 import express from "express";
+import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
 import { readTheme, setTheme } from "../services/appearance.js";
 import { FEATURES } from "../access/features.js";
@@ -15,7 +16,10 @@ const router = express.Router();
  */
 router.get("/", async (req, res) => {
   const a = req.access;
+  // GitHub connected (by a GitHub sign-in or Connect GitHub), whatever this session signed in with
+  const me = ObjectId.isValid(String(a.userId)) ? await getDB().collection("users").findOne({ _id: new ObjectId(String(a.userId)) }, { projection: { githubAccessToken: 1, "github.login": 1 } }) : null;
   res.set("Cache-Control", "no-store").json({
+    github: { connected: Boolean(me?.githubAccessToken), login: me?.github?.login ?? null },
     // No admin yet: the Admin page offers to claim it with the setup code (from this API's log)
     ...(a.isAdmin ? {} : { adminSetup: await adminSetupOpen(getDB()) }),
     id: a.userId,

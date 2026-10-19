@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { fetchProjects, requestCallback, saveAccountTheme } from "../api";
 import { getPreferences, resetPreferences, resolvedTheme, setPreference, THEMES, usePreferences } from "../utils/preferences";
 import { DEPLOY_AVAILABLE, deployHomeUrl } from "../deployLinks";
+import { useAuth } from "../state/authStore";
 import { BUILD, diagnostics, mailto, SUPPORT_EMAIL, SUPPORT_PHONE } from "../utils/support";
 import "./ProfileCards.css";
 
@@ -251,18 +252,19 @@ function Integration({ icon, name, status, on, children }) {
   );
 }
 
-function IntegrationsSection({ authProvider }) {
-  const github = authProvider === "github";
+function IntegrationsSection() {
+  const { githubConnected, connectGithub, access } = useAuth();
+  const [problem, setProblem] = useState(null);
+  const login = access?.github?.login;
   return (
     <>
       <h3 className="pcard-section">Connected services</h3>
-      <Integration icon="🐙" name="GitHub" on={github} status={github ? "Connected: import repositories and deploy them" : "Not connected: you signed in with email"}>
-        {!github && (
-          <a className="pcard-btn small" href={`${API_BASE}/auth/github`}>
-            Sign in with GitHub
-          </a>
-        )}
+      <Integration icon="🐙" name="GitHub" on={githubConnected} status={githubConnected ? `Connected${login ? ` as ${login}` : ""}: import repositories and deploy them` : "Not connected: connect it to import your repositories"}>
+        <button type="button" className="pcard-btn small" onClick={() => connectGithub().catch((e) => setProblem(e.message))}>
+          {githubConnected ? "Connect again" : "Connect GitHub"}
+        </button>
       </Integration>
+      {problem && <p className="pcard-status">{problem}</p>}
       <Integration icon="🚀" name="Continuum Deploy" on={DEPLOY_AVAILABLE} status={DEPLOY_AVAILABLE ? "Available: deploy projects to the cloud" : "Not set up for this Continuum"}>
         {DEPLOY_AVAILABLE && (
           <a className="pcard-btn small" href={deployHomeUrl()} target="_blank" rel="noopener noreferrer">
@@ -382,7 +384,7 @@ function AppearanceSection({ prefs, set }) {
   );
 }
 
-export function SettingsCard({ user, authProvider, onClose }) {
+export function SettingsCard({ user, onClose }) {
   const prefs = usePreferences();
   const [section, setSection] = useState("general");
   const set = (name, value) => setPreference(name, value);
@@ -403,7 +405,7 @@ export function SettingsCard({ user, authProvider, onClose }) {
           <h3 className="pcard-panel-title">{title}</h3>
           {section === "general" && <GeneralSection prefs={prefs} set={set} />}
           {section === "projects" && <ProjectsSection prefs={prefs} set={set} />}
-          {section === "integrations" && <IntegrationsSection authProvider={authProvider} />}
+          {section === "integrations" && <IntegrationsSection />}
           {section === "developer" && (
             <DeveloperSection
               user={user}

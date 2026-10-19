@@ -4,8 +4,15 @@ import { getDB } from "../config/db.js";
 import { ObjectId } from "mongodb";
 import { createProjectDoc } from "../models/project.model.js";
 import { createProjectService } from "../services/project.service.js";
+import { githubAuthorizeUrl } from "../config/urls.js";
+import { GITHUB_SCOPE, newConnectState } from "./githubConnect.js";
 
 const router = Router();
+
+/** Connect GitHub to the signed-in account (whatever its email or sign-in): GitHub's page to go to. */
+router.post("/connect", async (req, res) => {
+    res.json({ url: githubAuthorizeUrl(GITHUB_SCOPE, await newConnectState(getDB(), req.user.id)) });
+});
 
 // Safety cap: 10 pages × 100 = up to 1000 repositories
 const MAX_REPO_PAGES = 10;
@@ -20,7 +27,7 @@ router.get("/repos", async (req, res) => {
         const user = await users.findOne({ _id: new ObjectId(userId) });
 
         if (!user?.githubAccessToken) {
-            return res.status(400).json({ message: "GitHub not connected" });
+            return res.status(400).json({ message: "GitHub not connected", code: "GITHUB_NOT_CONNECTED" });
         }
 
         // All repos the user can access (public + private, owned,
@@ -45,7 +52,8 @@ router.get("/repos", async (req, res) => {
                 const body = await githubRes.json().catch(() => ({}));
                 console.error("GITHUB REPOS ERROR:", githubRes.status, body);
                 return res.status(400).json({
-                    message: "Couldn't load your GitHub repositories. Sign in with GitHub again.",
+                    message: "Couldn't load your GitHub repositories. Connect GitHub again.",
+                    code: "GITHUB_NOT_CONNECTED",
                 });
             }
 
@@ -107,7 +115,7 @@ router.get("/repos/:owner/:repo/tarball", async (req, res) => {
         const db = getDB();
         const user = await db.collection("users").findOne({ _id: new ObjectId(req.user.id) });
         if (!user?.githubAccessToken) {
-            return res.status(400).json({ message: "GitHub not connected" });
+            return res.status(400).json({ message: "GitHub not connected", code: "GITHUB_NOT_CONNECTED" });
         }
 
         const githubRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/tarball${ref ? `/${encodeURIComponent(ref)}` : ""}`, {

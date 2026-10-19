@@ -50,7 +50,7 @@ function getInitials(email) {
  * GitHub repository; without one it opens that cloud's deployments list.
  */
 export default function ShellHeader({ selectedProject = null }) {
-  const { user, authProvider, logout, access } = useAuth();
+  const { user, authProvider, logout, access, githubConnected } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -256,7 +256,7 @@ export default function ShellHeader({ selectedProject = null }) {
 
               {openMenu === "create" && (
                 <div className="menu-dropdown menu-rich" role="menu">
-                  {createItems(actions, authProvider).map((item) => (
+                  {createItems(actions, githubConnected).map((item) => (
                     <MenuItem key={item.key} item={item} />
                   ))}
                 </div>
@@ -419,7 +419,7 @@ export default function ShellHeader({ selectedProject = null }) {
             }}
           />
         )}
-        {card === "settings" && <SettingsCard user={user} authProvider={authProvider} onClose={closeCard} />}
+        {card === "settings" && <SettingsCard user={user} onClose={closeCard} />}
         {card === "support" && <SupportCard user={user} authProvider={authProvider} onClose={closeCard} onContact={() => setCard("contact")} />}
         {card === "contact" && <ContactCard user={user} authProvider={authProvider} onClose={closeCard} />}
       </div>

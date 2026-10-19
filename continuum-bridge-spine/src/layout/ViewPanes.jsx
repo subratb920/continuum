@@ -26,13 +26,13 @@ function Option({ item }) {
 }
 
 export function CreatePane({ selectedProject }) {
-  const { authProvider } = useAuth();
+  const { githubConnected } = useAuth();
   const actions = useShellActions(selectedProject);
   return (
     <section className="view-pane" aria-label="Create/Import">
       <h2 className="view-pane-title">Create/Import</h2>
       <div className="view-options">
-        {createItems(actions, authProvider).map((item) => (
+        {createItems(actions, githubConnected).map((item) => (
           <Option key={item.key} item={item} />
         ))}
       </div>

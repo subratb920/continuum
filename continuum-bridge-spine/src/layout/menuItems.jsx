@@ -20,7 +20,7 @@ const CLOUD_ICONS = {
  * Create using Continuum → Import from device → Import from GitHub → Create via Backstage.
  * On a phone nothing is made on the device: Create on GitHub (Continuum's server) and Import from GitHub.
  */
-export function createItems(actions, authProvider) {
+export function createItems(actions, githubConnected) {
   const phone = onPhone();
   return [
     {
@@ -49,10 +49,9 @@ export function createItems(actions, authProvider) {
       feature: "import_github",
       icon: <SiGithub className="menu-logo" />,
       title: "Import from GitHub",
-      // GitHub sign-ins only; greyed out (with the reason) for email sign-ins
-      hint: authProvider === "github" ? "One of your repositories." : "Sign in with GitHub to import a repository.",
+      // Every sign-in: without GitHub connected, the import screen connects it first
+      hint: githubConnected ? "One of your repositories." : "Connect GitHub, then pick a repository.",
       onClick: actions.importFromGithub,
-      disabled: authProvider !== "github",
     },
     ...(CREATE_URL
       ? [

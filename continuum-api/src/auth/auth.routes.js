@@ -5,7 +5,8 @@ import jwt from "jsonwebtoken";
 import { getDB } from "../config/db.js";
 import { ADMIN_ROLE, clearAccessCache, isOwnerEmail, roleForNewUser, sessionVersion } from "../access/access.js";
 import { recordLogin } from "../access/activity.js";
-import { clientAuthCallbackUrl, githubAuthorizeUrl, githubCallbackUrl } from "../config/urls.js";
+import { clientAuthCallbackUrl, clientPageUrl, githubAuthorizeUrl, githubCallbackUrl } from "../config/urls.js";
+import { GITHUB_SCOPE, takeConnectState } from "./githubConnect.js";
 
 const router = Router();
 
@@ -21,14 +22,14 @@ router.post("/login", login);
 router.get("/github", (req, res) => {
     // "repo" is needed to list private repositories (OAuth Apps have no
     // read-only private scope); Continuum only reads the repo list.
-    res.redirect(githubAuthorizeUrl("user:email repo"));
+    res.redirect(githubAuthorizeUrl(GITHUB_SCOPE));
 });
 
 /**
  * Step 2: GitHub OAuth callback
  */
 router.get("/github/callback", async (req, res) => {
-    const { code } = req.query;
+    const { code, state } = req.query;
 
     try {
         const db = getDB();
@@ -108,13 +109,42 @@ router.get("/github/callback", async (req, res) => {
             primaryEmail = githubUser.email;
         }
         
+        const profile = { login: githubUser.login ?? null, name: githubUser.name ?? null, avatarUrl: githubUser.avatar_url ?? null };
+
+        /**
+         * Connect GitHub (started by a signed-in user, any sign-in and any
+         * email): this GitHub account and its token go to that account, then
+         * back to the import screen. An account an earlier GitHub sign-in
+         * made for it loses the link.
+         */
+        const connectTo = await takeConnectState(db, state);
+        if (connectTo) {
+            await users.updateMany({ githubId: githubUser.id, _id: { $ne: connectTo } }, { $unset: { githubId: "", githubAccessToken: "", github: "" } });
+            await users.updateOne({ _id: connectTo }, { $set: { githubId: githubUser.id, githubAccessToken: access_token, github: profile, updatedAt: new Date() } });
+            clearAccessCache(connectTo);
+            req.log.info({ githubId: githubUser.id, userId: connectTo }, "GitHub connected to an account");
+            return res.redirect(clientPageUrl("/import"));
+        }
+
         /**
          * 4️⃣ Resolve or create user
         */
        let dbUser = await users.findOne({ githubId: githubUser.id });
-       
+
        const execution = db.collection("execution_state");
-       
+
+       // An account that already uses one of this GitHub account's verified emails is the same person: it gets GitHub
+       const sameEmail = { collation: { locale: "en", strength: 2 } };
+       const verified = Array.isArray(emails) ? emails.filter((e) => e.verified && e.email).map((e) => e.email) : [];
+       if (!dbUser && verified.length) {
+           dbUser = await users.findOne({ email: { $in: verified } }, sameEmail);
+           if (dbUser) await users.updateOne({ _id: dbUser._id }, { $set: { githubId: githubUser.id } });
+       }
+       // The email is taken by an account GitHub hasn't verified it for: the new account uses GitHub's private address
+       if (!dbUser && primaryEmail && (await users.findOne({ email: primaryEmail }, sameEmail))) {
+           primaryEmail = `${githubUser.id}+${githubUser.login}@users.noreply.github.com`;
+       }
+
        if (!dbUser) {
            // 1️⃣ Create user
            const result = await users.insertOne({
@@ -185,7 +215,7 @@ router.get("/github/callback", async (req, res) => {
                 $set: {
                     githubAccessToken: access_token,
                     // Their GitHub profile (for the admin's view, and a name to show)
-                    github: { login: githubUser.login ?? null, name: githubUser.name ?? null, avatarUrl: githubUser.avatar_url ?? null },
+                    github: profile,
                 },
             }
         );
@@ -222,7 +252,8 @@ router.get("/github/callback", async (req, res) => {
         const token = jwt.sign(
             {
                 userId: dbUser._id,
-                email: primaryEmail,
+                // The account's own email (an email account GitHub joined keeps its address)
+                email: dbUser.email || primaryEmail,
                 authProvider: "github",
                 tv: sessionVersion(dbUser), // session version (sign out everywhere)
             },
