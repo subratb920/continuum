@@ -112,7 +112,9 @@ services:
   # Development servers per project (OpenVSCode Server in a container each).
   # Local development only: it drives Docker through Docker's socket, which
   # gives it full control of Docker on this machine. The cloud uses Kubernetes.
-  # Workspace image first: docker build -t continuum-workspace:dev ../continuum-workspaces/image
+  # Workspace images first (the sandboxes: every tool, then Node, Python, Java), from ../continuum-workspaces/image:
+  #   docker build -t continuum-workspace:dev .
+  #   docker build --target node -t continuum-workspace-node:dev .   (and python, java likewise)
   continuum-workspaces:
     build:
       context: ../continuum-workspaces
@@ -128,6 +130,9 @@ services:
       INTERNAL_PORT: 45177
       DRIVER: docker
       WORKSPACE_IMAGE: continuum-workspace:dev
+      WORKSPACE_IMAGE_NODE: continuum-workspace-node:dev
+      WORKSPACE_IMAGE_PYTHON: continuum-workspace-python:dev
+      WORKSPACE_IMAGE_JAVA: continuum-workspace-java:dev
       WORKSPACE_NETWORK: docker_default
       IDLE_MINUTES: 30
     volumes:

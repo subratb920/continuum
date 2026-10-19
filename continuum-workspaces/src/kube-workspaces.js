@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { checkStart, clean, isWorkspaceId, probeEditor, SIZES, waitFor, WorkspaceError } from "./workspaces.js";
+import { availableSandboxes, checkStart, clean, imageFor, isWorkspaceId, probeEditor, SIZES, waitFor, WorkspaceError } from "./workspaces.js";
 
 const LABEL = "continuum.workspace";
 const UID = 1000; // the workspace image's user (openvscode-server)
@@ -17,7 +17,7 @@ export const secretName = (id) => `ws-${id}-env`;
  * memory, and a Service the proxy sends the editor's traffic to. Stopping
  * removes the Pod, Service and Secret; deleting also removes the disk.
  */
-export function kubeWorkspaces({ objects, namespace, image, storageClass = "standard-rwo", diskGb = 10, basePath = "/w", probe = probeEditor, readyTimeoutMs = 45_000 }) {
+export function kubeWorkspaces({ objects, namespace, image, images = {}, storageClass = "standard-rwo", diskGb = 10, basePath = "/w", probe = probeEditor, readyTimeoutMs = 45_000 }) {
   const tokens = new Map();
   const pathOf = (id, token) => `${basePath}/${id}/?tkn=${encodeURIComponent(token)}`;
   const host = (id) => `${podName(id)}.${namespace}.svc.cluster.local`;
@@ -32,11 +32,12 @@ export function kubeWorkspaces({ objects, namespace, image, storageClass = "stan
     const pod = await objects.get("pods", podName(id));
     if (!pod || pod.metadata?.deletionTimestamp || ["Succeeded", "Failed"].includes(pod.status?.phase)) return { id, state: "stopped" };
     const ready = pod.status?.conditions?.some((c) => c.type === "Ready" && c.status === "True");
-    return { id, state: ready ? "running" : "starting", startedAt: pod.status?.startTime ?? null, size: pod.metadata?.labels?.["continuum.size"] ?? null };
+    return { id, state: ready ? "running" : "starting", startedAt: pod.status?.startTime ?? null, size: pod.metadata?.labels?.["continuum.size"] ?? null, sandbox: pod.metadata?.labels?.["continuum.sandbox"] ?? null };
   }
 
-  async function start({ id, repo, githubToken, size = "standard", author = {} }) {
+  async function start({ id, repo, githubToken, size = "standard", sandbox = "full", author = {} }) {
     const s = checkStart({ id, repo, githubToken, size });
+    const sandboxImage = imageFor(sandbox, image, images);
     const accessToken = randomBytes(24).toString("base64url");
     const path = `${basePath}/${id}`;
 
@@ -58,7 +59,7 @@ export function kubeWorkspaces({ objects, namespace, image, storageClass = "stan
     await objects.create("pods", {
       apiVersion: "v1",
       kind: "Pod",
-      metadata: { name: podName(id), labels: labels(id, { "continuum.size": size }) },
+      metadata: { name: podName(id), labels: labels(id, { "continuum.size": size, "continuum.sandbox": sandbox }) },
       spec: {
         restartPolicy: "Never",
         // The workspace never gets this service's Kubernetes rights
@@ -71,7 +72,7 @@ export function kubeWorkspaces({ objects, namespace, image, storageClass = "stan
         containers: [
           {
             name: "workspace",
-            image,
+            image: sandboxImage,
             ports: [{ containerPort: 3000, name: "editor" }],
             env: [
               { name: "BASE_PATH", value: path },
@@ -143,5 +144,5 @@ export function kubeWorkspaces({ objects, namespace, image, storageClass = "stan
 
   const target = (id) => (isWorkspaceId(id) ? { host: host(id), port: 3000 } : null);
 
-  return { status, start, open, stop, remove, running, target, sizes: SIZES };
+  return { status, start, open, stop, remove, running, target, sizes: SIZES, sandboxes: availableSandboxes(images) };
 }

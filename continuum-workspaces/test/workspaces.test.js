@@ -57,6 +57,19 @@ test("start: refuses bad ids, repositories, sizes and a missing GitHub sign-in",
   await assert.rejects(ws.start({ id: ID, repo: "o/r" }), /GitHub sign-in/);
 });
 
+test("sandboxes: full is the service's image; the others run their own image only where this install has it", async () => {
+  const docker = fakeDocker();
+  const ws = dockerWorkspaces({ docker, image: "full:dev", images: { node: "node:dev" }, network: "n", probe: async () => true });
+  assert.deepEqual(ws.sandboxes, ["full", "node"]);
+  await ws.start({ id: ID, repo: "me/shop", githubToken: "t", sandbox: "node" });
+  assert.equal(docker.containers.get(containerName(ID)).spec.Image, "node:dev");
+  assert.equal((await ws.status(ID)).sandbox, "node");
+  await ws.start({ id: ID, repo: "me/shop", githubToken: "t" });
+  assert.equal(docker.containers.get(containerName(ID)).spec.Image, "full:dev", "no sandbox: full");
+  await assert.rejects(ws.start({ id: ID, repo: "me/shop", githubToken: "t", sandbox: "java" }), /java sandbox isn't available/);
+  await assert.rejects(ws.start({ id: ID, repo: "me/shop", githubToken: "t", sandbox: "rust" }), /rust sandbox isn't available/);
+});
+
 test("stop keeps the volume (the code); delete removes both", async () => {
   const docker = fakeDocker();
   const ws = dockerWorkspaces({ docker, image: "i", network: "n", probe: async () => true });

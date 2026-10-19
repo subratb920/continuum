@@ -223,13 +223,13 @@ export async function fetchWorkspaces() {
   return request("GET", "/workspaces");
 }
 
-export async function createWorkspace(projectId, size) {
-  return request("POST", "/workspaces", { projectId, size });
+export async function createWorkspace(projectId, size, sandbox) {
+  return request("POST", "/workspaces", { projectId, size, ...(sandbox ? { sandbox } : {}) });
 }
 
-/** Starts it when stopped; { url } opens the editor (it carries a one-time access token) */
-export async function openWorkspace(id, size) {
-  return request("POST", `/workspaces/${id}/open`, size ? { size } : {});
+/** Starts it when stopped (with a new size or sandbox, if given); { url } opens the editor (it carries a one-time access token) */
+export async function openWorkspace(id, size, sandbox) {
+  return request("POST", `/workspaces/${id}/open`, { ...(size ? { size } : {}), ...(sandbox ? { sandbox } : {}) });
 }
 
 export async function stopWorkspace(id) {

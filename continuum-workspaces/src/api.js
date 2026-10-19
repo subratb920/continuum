@@ -8,8 +8,9 @@ const MAX_BODY = 16 * 1024;
  * The internal API, for continuum-api only (never published: the cloud and
  * Docker keep it on the private network):
  *   GET    /health
- *   GET    /internal/workspaces/:id        { state, startedAt?, lastUsed? }
- *   POST   /internal/workspaces/:id/start  { repo, githubToken, size, author } → { path }
+ *   GET    /internal/sandboxes             { sandboxes }: the ones this install can start
+ *   GET    /internal/workspaces/:id        { state, startedAt?, lastUsed?, sandbox? }
+ *   POST   /internal/workspaces/:id/start  { repo, githubToken, size, sandbox, author } → { path }
  *   POST   /internal/workspaces/:id/open   a running one's way in → { path } (409: not running)
  *   POST   /internal/workspaces/:id/stop
  *   DELETE /internal/workspaces/:id
@@ -19,6 +20,7 @@ export function createApi({ workspaces, proxy, log }) {
     const json = (status, body) => res.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "no-store" }).end(JSON.stringify(body));
     try {
       if (req.url === "/health") return void json(200, { status: "ok" });
+      if (req.url === "/internal/sandboxes" && req.method === "GET") return void json(200, { sandboxes: workspaces.sandboxes ?? ["full"] });
       const m = ROUTE.exec(req.url);
       if (!m) return void json(404, { error: "Not found." });
       const [, id, action] = m;
@@ -28,8 +30,8 @@ export function createApi({ workspaces, proxy, log }) {
       }
       if (req.method === "POST" && action === "/start") {
         const body = await readJson(req);
-        const started = await workspaces.start({ id, repo: body.repo, githubToken: body.githubToken, size: body.size, author: body.author });
-        log.info({ id, repo: body.repo, size: body.size ?? "standard" }, "workspace started");
+        const started = await workspaces.start({ id, repo: body.repo, githubToken: body.githubToken, size: body.size, sandbox: body.sandbox, author: body.author });
+        log.info({ id, repo: body.repo, size: body.size ?? "standard", sandbox: body.sandbox ?? "full" }, "workspace started");
         return void json(202, started);
       }
       if (req.method === "POST" && action === "/open") {

@@ -69,6 +69,7 @@
 }
 
 .ws-field select,
+.ws-field > input,
 .ws-size-select {
   min-height: 38px;
   padding: 6px 10px;
@@ -80,9 +81,59 @@
   font-size: 14px;
 }
 
+/* Sandbox and Size, one under the other */
+.ws-pickers {
+  display: grid;
+  gap: 12px;
+}
+
+/* Which workspace: Continuum's own, or another provider's */
+.ws-providers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+
+.ws-providers legend {
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+.ws-provider {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ws-provider input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ws-provider.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-ring);
+  background: var(--surface);
+}
+
+.ws-provider:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .ws-sizes {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 8px;
   margin: 0;
   padding: 0;

@@ -8,10 +8,10 @@ export class WorkspacesUnavailableError extends Error {}
 
 export function workspacesClient(baseUrl, fetchImpl = fetch) {
   const base = baseUrl.replace(/\/+$/, "");
-  async function call(method, path, body, timeoutMs = 30_000) {
+  async function call(method, path, body, timeoutMs = 30_000, prefix = "/internal/workspaces/") {
     let res;
     try {
-      res = await fetchImpl(`${base}/internal/workspaces/${path}`, {
+      res = await fetchImpl(`${base}${prefix}${path}`, {
         method,
         headers: body ? { "Content-Type": "application/json" } : {},
         body: body ? JSON.stringify(body) : undefined,
@@ -29,5 +29,7 @@ export function workspacesClient(baseUrl, fetchImpl = fetch) {
     open: (id) => call("POST", `${id}/open`),
     stop: (id) => call("POST", `${id}/stop`),
     remove: (id) => call("DELETE", id),
+    // The sandboxes this install can start (a service from before sandboxes: only "full")
+    sandboxes: () => call("GET", "sandboxes", undefined, 5_000, "/internal/"),
   };
 }

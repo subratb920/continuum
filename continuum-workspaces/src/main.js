@@ -16,6 +16,14 @@ const log = logger(env.LOG_LEVEL ?? "info");
 const IDLE_MS = Number(env.IDLE_MINUTES ?? 30) * 60_000;
 
 const driver = env.DRIVER ?? "docker";
+// The slimmer sandboxes, where this install has their images (WORKSPACE_IMAGE is "full", every tool)
+const images = Object.fromEntries(
+  [
+    ["node", env.WORKSPACE_IMAGE_NODE],
+    ["python", env.WORKSPACE_IMAGE_PYTHON],
+    ["java", env.WORKSPACE_IMAGE_JAVA],
+  ].filter(([, image]) => image),
+);
 let workspaces;
 if (driver === "kubernetes") {
   // In the cloud: this pod's namespace, with the Role the Continuum Deploy add-on gives it
@@ -28,6 +36,7 @@ if (driver === "kubernetes") {
     objects: kubeObjects(kubeClient(), namespace),
     namespace,
     image: env.WORKSPACE_IMAGE,
+    images,
     storageClass: env.WORKSPACE_STORAGE_CLASS ?? "standard-rwo",
     diskGb: Number(env.WORKSPACE_DISK_GB ?? 10),
   });
@@ -35,6 +44,7 @@ if (driver === "kubernetes") {
   workspaces = dockerWorkspaces({
     docker: dockerClient({ socketPath: env.DOCKER_SOCKET ?? "/var/run/docker.sock" }),
     image: env.WORKSPACE_IMAGE ?? "continuum-workspace:dev",
+    images,
     network: env.WORKSPACE_NETWORK ?? "docker_default",
   });
 } else {

@@ -8,6 +8,19 @@ export const SIZES = {
   large: { cpus: 4, memoryGb: 8 },
 };
 
+/** Sandboxes: the tools a workspace starts with ("full" has them all; the others are slimmer, quicker to start). */
+export const SANDBOXES = ["full", "node", "python", "java"];
+
+/** A sandbox's image: "full" is the service's own image; the others only where this install has them (images). */
+export function imageFor(sandbox, image, images = {}) {
+  const chosen = sandbox === "full" ? image : SANDBOXES.includes(sandbox) ? images[sandbox] : null;
+  if (!chosen) throw new WorkspaceError(400, `The ${sandbox} sandbox isn't available here.`);
+  return chosen;
+}
+
+/** The sandboxes this install can start ("full" always). */
+export const availableSandboxes = (images = {}) => SANDBOXES.filter((s) => s === "full" || images[s]);
+
 const ID = /^[a-f0-9]{24}$/;
 const REPO = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 const LABEL = "continuum.workspace";
@@ -41,7 +54,7 @@ export const volumeName = (id) => `continuum-ws-${id}-home`;
  * Docker network, with its own volume for /home/workspace. Stopping removes
  * the container and keeps the volume; deleting removes both.
  */
-export function dockerWorkspaces({ docker, image, network, basePath = "/w", probe = probeEditor, readyTimeoutMs = 45_000 }) {
+export function dockerWorkspaces({ docker, image, images = {}, network, basePath = "/w", probe = probeEditor, readyTimeoutMs = 45_000 }) {
   // Access tokens of running workspaces, only in this service's memory (lost on a restart: then Open restarts it)
   const tokens = new Map();
   const pathOf = (id, token) => `${basePath}/${id}/?tkn=${encodeURIComponent(token)}`;
@@ -54,7 +67,7 @@ export function dockerWorkspaces({ docker, image, network, basePath = "/w", prob
     check(id);
     const c = await docker.inspectContainer(containerName(id));
     if (!c) return { id, state: "stopped" };
-    if (c.State?.Running) return { id, state: c.State.Health?.Status === "starting" ? "starting" : "running", startedAt: c.State.StartedAt, size: c.Config?.Labels?.["continuum.size"] ?? null };
+    if (c.State?.Running) return { id, state: c.State.Health?.Status === "starting" ? "starting" : "running", startedAt: c.State.StartedAt, size: c.Config?.Labels?.["continuum.size"] ?? null, sandbox: c.Config?.Labels?.["continuum.sandbox"] ?? null };
     return { id, state: "stopped" };
   }
 
@@ -63,16 +76,17 @@ export function dockerWorkspaces({ docker, image, network, basePath = "/w", prob
    * the new access token live only in the running container. Returns the
    * path to open, with the access token.
    */
-  async function start({ id, repo, githubToken, size = "standard", author = {} }) {
+  async function start({ id, repo, githubToken, size = "standard", sandbox = "full", author = {} }) {
     const s = checkStart({ id, repo, githubToken, size });
+    const sandboxImage = imageFor(sandbox, image, images);
 
     const accessToken = randomBytes(24).toString("base64url");
     const path = `${basePath}/${id}`;
     await docker.removeContainer(containerName(id));
     await docker.createVolume(volumeName(id), { [LABEL]: id });
     await docker.createContainer(containerName(id), {
-      Image: image,
-      Labels: { [LABEL]: id, "continuum.size": size, "continuum.repo": repo },
+      Image: sandboxImage,
+      Labels: { [LABEL]: id, "continuum.size": size, "continuum.sandbox": sandbox, "continuum.repo": repo },
       Env: [
         `CONNECTION_TOKEN=${accessToken}`,
         `BASE_PATH=${path}`,
@@ -138,7 +152,7 @@ export function dockerWorkspaces({ docker, image, network, basePath = "/w", prob
   /** Where the proxy sends a workspace's traffic (its container on the Docker network). */
   const target = (id) => (ID.test(String(id)) ? { host: containerName(id), port: 3000 } : null);
 
-  return { status, start, open, stop, remove, running, target };
+  return { status, start, open, stop, remove, running, target, sandboxes: availableSandboxes(images) };
 }
 
 /** One line, no control characters (for git's author settings). */
