@@ -484,26 +484,12 @@ export default function App() {
      details, git, then the project is written to a device folder
      ========================================================= */
 
-  /* =========================================================
-     💻 WORKSPACES (/workspaces) — a development server per
-     project with a GitHub repository (continuum-workspaces)
-     ========================================================= */
+  // Workspaces (/workspaces) is a console screen (screens/registry.jsx): Projects and Bridges beside it
 
-  if ((pathname === "/workspaces" && !can("workspaces")) || (pathname === "/new" && !can("create"))) {
+  if (pathname === "/new" && !can("create")) {
     return (
       <PageShell scroll>
-        <NoAccess feature={pathname === "/new" ? "create" : "workspaces"} />
-      </PageShell>
-    );
-  }
-
-  if (pathname === "/workspaces") {
-    return (
-      <PageShell scroll>
-        <Suspense fallback={null}>
-          <Workspaces projects={projects} initialProjectId={locationState?.projectId ?? null} onProjectChanged={(p) => setProjects((prev) => prev.map((x) => (x._id === p._id ? { ...x, ...p } : x)))} />
-        </Suspense>
-        {draftModal}
+        <NoAccess feature="create" />
       </PageShell>
     );
   }
@@ -645,6 +631,18 @@ export default function App() {
     />
   );
 
+  // Workspaces: a browser editor per project; the project picked on the left (or the one a link named) is preselected
+  const workspacesCenter = (
+    <Suspense fallback={null}>
+      <Workspaces
+        projects={projects}
+        initialProjectId={locationState?.projectId ?? selectedProject?._id ?? null}
+        selectedProjectId={selectedProject?._id ?? null}
+        onProjectChanged={(p) => setProjects((prev) => prev.map((x) => (x._id === p._id ? { ...x, ...p } : x)))}
+      />
+    </Suspense>
+  );
+
   // No admin yet: the Admin screen offers to claim it (the one-time setup code)
   const slots =
     screen.id === "admin" && !can("admin") && access?.adminSetup
@@ -652,7 +650,7 @@ export default function App() {
       : // A screen your role has switched off: "No feature access" in its panes
     screen.feature && !can(screen.feature)
       ? { left: <NoAccess feature={screen.feature} compact />, center: <NoAccess feature={screen.feature} />, right: <NoAccess feature={screen.feature} compact /> }
-      : screen.slots({ intervalCenter, dashboardCenter, navigate });
+      : screen.slots({ intervalCenter, dashboardCenter, workspacesCenter, navigate });
 
   /* =========================================================
      🖥️ UI

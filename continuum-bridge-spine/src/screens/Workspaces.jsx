@@ -32,10 +32,16 @@ function repoOf(p) {
  * It stops by itself after 30 minutes with no editor open; the code stays
  * until the workspace is deleted. Works the same on a phone.
  */
-export default function Workspaces({ projects, initialProjectId = null, onProjectChanged }) {
+export default function Workspaces({ projects, initialProjectId = null, selectedProjectId = null, onProjectChanged }) {
   const [data, setData] = useState(null); // { items, limits }
   const [loadError, setLoadError] = useState("");
   const [projectId, setProjectId] = useState(initialProjectId ?? "");
+  // A project picked in the Projects pane becomes the one to open
+  const [followed, setFollowed] = useState(selectedProjectId);
+  if (selectedProjectId && selectedProjectId !== followed) {
+    setFollowed(selectedProjectId);
+    setProjectId(selectedProjectId);
+  }
   const [size, setSize] = useState("standard");
   const [busy, setBusy] = useState(null); // { id, action } (id "new": the new workspace)
   const [error, setError] = useState("");

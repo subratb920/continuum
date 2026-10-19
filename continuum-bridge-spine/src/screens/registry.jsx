@@ -35,7 +35,7 @@ import AdminDetail from "./admin/AdminDetail";
  *   full: the screen's middle takes the whole width (no side panes; phones
  *     show only the screen tabs above it); "narrow": only on phones
  *
- * ctx comes from App: { intervalCenter, dashboardCenter, navigate }
+ * ctx comes from App: { intervalCenter, dashboardCenter, workspacesCenter, navigate }
  */
 export const SCREENS = [
   {
@@ -49,6 +49,19 @@ export const SCREENS = [
     center: { label: "Interval Setup", icon: "⏱" },
     right: { label: "Bridges", icon: "🌉" },
     slots: (ctx) => ({ center: ctx.intervalCenter }),
+  },
+  // Workspaces (the header's Workspaces button): a browser editor per project, with Projects and Bridges beside it
+  {
+    id: "workspaces",
+    feature: "workspaces",
+    path: "/workspaces",
+    label: "Workspaces",
+    icon: "💻",
+    switcher: false,
+    left: { label: "Projects", icon: "📂" },
+    center: { label: "Workspaces", icon: "💻" },
+    right: { label: "Bridges", icon: "🌉" },
+    slots: (ctx) => ({ center: ctx.workspacesCenter }),
   },
   {
     id: "agents",

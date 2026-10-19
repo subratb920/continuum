@@ -83,19 +83,26 @@ export default function ShellHeader({ selectedProject = null }) {
     setOpenMenu((current) => (current === menu ? null : menu));
   }
 
-  // Deploy opens on hover or keyboard focus; a short delay lets the pointer cross to the list
-  const deployCloseTimer = useRef(null);
-  function openDeploy() {
+  // Create/Import and Deploy open on hover or keyboard focus; a short delay lets the pointer cross to the list
+  const hoverCloseTimer = useRef(null);
+  function openOnHover(menu) {
     if (noHover()) return; // touch: the tap opens it (hover events would fight the tap)
-    clearTimeout(deployCloseTimer.current);
-    setOpenMenu("deploy");
+    clearTimeout(hoverCloseTimer.current);
+    setOpenMenu(menu);
   }
-  function closeDeploySoon() {
+  function closeSoon(menu) {
     if (noHover()) return;
-    clearTimeout(deployCloseTimer.current);
-    deployCloseTimer.current = setTimeout(() => setOpenMenu((m) => (m === "deploy" ? null : m)), 200);
+    clearTimeout(hoverCloseTimer.current);
+    hoverCloseTimer.current = setTimeout(() => setOpenMenu((m) => (m === menu ? null : m)), 200);
   }
-  useEffect(() => () => clearTimeout(deployCloseTimer.current), []);
+  /** What a hover menu's wrapper listens to: pointer in and out, and keyboard focus. */
+  const hoverMenu = (menu) => ({
+    onMouseEnter: () => openOnHover(menu),
+    onMouseLeave: () => closeSoon(menu),
+    onFocus: () => openOnHover(menu),
+    onBlur: (e) => !e.currentTarget.contains(e.relatedTarget) && closeSoon(menu),
+  });
+  useEffect(() => () => clearTimeout(hoverCloseTimer.current), []);
 
   const actions = useShellActions(selectedProject, () => setOpenMenu(null));
   const deployable = actions.deployable;
@@ -242,12 +249,12 @@ export default function ShellHeader({ selectedProject = null }) {
               <LockMark feature="workspaces" />
             </button>
 
-            {/* Create/Import (no icon: like the other header buttons) */}
-            <div className="shell-menu">
+            {/* Create/Import (no icon: like the other header buttons); opens on hover, or a tap on touch screens */}
+            <div className="shell-menu" {...hoverMenu("create")}>
               <button
                 type="button"
                 className="shell-nav-btn"
-                onClick={() => toggle("create")}
+                onClick={() => (noHover() ? toggle("create") : setOpenMenu("create"))}
                 aria-haspopup="menu"
                 aria-expanded={openMenu === "create"}
               >
@@ -265,13 +272,7 @@ export default function ShellHeader({ selectedProject = null }) {
 
             {/* Deploy — click opens Continuum Deploy with all clouds; hover lists the clouds (only when this setup has one) */}
             {DEPLOY_AVAILABLE && (
-<div
-              className="shell-menu"
-              onMouseEnter={openDeploy}
-              onMouseLeave={closeDeploySoon}
-              onFocus={openDeploy}
-              onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && closeDeploySoon()}
-            >
+<div className="shell-menu" {...hoverMenu("deploy")}>
               <button
                 type="button"
                 className="shell-nav-btn"
