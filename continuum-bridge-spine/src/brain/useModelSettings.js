@@ -22,10 +22,10 @@ export function useModelSettings() {
   }, [brain, can]);
   useEffect(refresh, [refresh]);
 
-  /** Changes the one model (null: back to the server's default). Throws when refused. */
+  /** Changes the one model (null: back to the server's default) and/or the speed (fast | thorough). Throws when refused. */
   const save = useCallback(
-    async (model) => {
-      const settings = await brain.saveSettings({ model });
+    async (changes) => {
+      const settings = await brain.saveSettings(changes);
       setState((s) => ({ ...s, settings }));
       return settings;
     },
@@ -43,6 +43,9 @@ export function useModelSettings() {
     model: settings ? settings.model ?? settings.chosen ?? settings.brainModel ?? settings.defaults?.model ?? settings.defaults?.brain ?? null : null,
     chosen: settings ? settings.chosen ?? settings.brainModel ?? null : null,
     defaultModel: settings?.defaults?.model ?? settings?.defaults?.brain ?? null,
+    /** fast or thorough (a brain from before speeds: null), and what each means. */
+    mode: settings?.mode ?? null,
+    modes: settings?.modes ?? [],
     refresh,
     save,
   };

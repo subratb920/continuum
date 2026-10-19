@@ -10,7 +10,7 @@ import { sharedFeed } from "../utils/sharedFeed";
  *        last event's seq) catches up first
  *   GET  /brain/pending                    → what waits on you (requests not yet answered)
  *   GET  /brain/models                     → the models agents can use, by provider
- *   GET  /brain/settings  PUT /brain/settings {model}  the one model all your agents run on (null: the
+ *   GET  /brain/settings  PUT /brain/settings {model?, mode?}  the one model all your agents run on, fast or thorough (null model: the
  *        default); only while nothing is awake or waits on you (409 otherwise)
  *   POST /brain/agents              {task, repo?, goal?: {bridgeId, goalId}}  (on your one model)
  *        a worker: on that repository, or that interval goal's project; else the core picks

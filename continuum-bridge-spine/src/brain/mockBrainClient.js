@@ -65,7 +65,11 @@ export function createMockBrainClient({ speed = 1 } = {}) {
     ],
   };
   const DEFAULT_MODEL = "ollama/qwen3:4b";
-  const choice = { model: null }; // one model for the brain and every worker
+  const choice = { model: null, mode: "fast" }; // one model for the brain and every worker, and how fast they run
+  const MODES = [
+    { id: "fast", words: "Quicker replies, lighter on your computer: a smaller context, and no thinking before each answer where the model allows it." },
+    { id: "thorough", words: "More room and reasoning, slower: the biggest context and the model's own thinking." },
+  ];
   const oneModel = () => choice.model ?? DEFAULT_MODEL;
 
   function addAgent(kind, task, { repo = null, goal = null, retryOf = null, model = null } = {}) {
@@ -228,24 +232,26 @@ export function createMockBrainClient({ speed = 1 } = {}) {
 
     async settings() {
       const awake = [...agents.values()].some((a) => ["queued", "starting", "working", "stopping"].includes(a.state)) || waiting.size > 0;
-      return { model: oneModel(), chosen: choice.model, defaults: { model: DEFAULT_MODEL }, changeable: !awake, locked: awake ? "Agents are awake." : null };
+      return { model: oneModel(), chosen: choice.model, defaults: { model: DEFAULT_MODEL, mode: "fast" }, mode: choice.mode, modes: MODES, changeable: !awake, locked: awake ? "Agents are awake." : null };
     },
 
     /**
      * The one model (as brain-api): only while nothing is awake and nothing
      * waits on you; a model it lists, that can use tools; idle agents stop.
      */
-    async saveSettings({ model }) {
+    async saveSettings({ model, mode }) {
       const awake = [...agents.values()].filter((a) => ["queued", "starting", "working", "stopping"].includes(a.state)).length;
       if (awake) throw new Error(`${awake} ${awake === 1 ? "agent is" : "agents are"} awake. Change the model once everything is idle.`);
       if (waiting.size) throw new Error(`${waiting.size} ${waiting.size === 1 ? "request waits" : "requests wait"} for your answer. Answer them first, then change the model.`);
       const m = model && MODELS.models.find((x) => x.id === model);
       if (model && !m) throw new Error(`${model} isn't available.`);
       if (m && m.tools === false) throw new Error(`${m.name} can't use tools, and agents need them.`);
-      const before = oneModel();
-      choice.model = model || null;
+      if (mode !== undefined && !MODES.some((x) => x.id === mode)) throw new Error("mode must be fast or thorough.");
+      const before = `${oneModel()} ${choice.mode}`;
+      if (model !== undefined) choice.model = model || null;
+      if (mode !== undefined) choice.mode = mode;
       let stopped = 0;
-      if (oneModel() !== before) {
+      if (`${oneModel()} ${choice.mode}` !== before) {
         for (const a of agents.values()) {
           if (a.state !== "idle") continue;
           this.stop(a._id);

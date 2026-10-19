@@ -562,6 +562,25 @@ html.reduce-motion .model-change svg { transition: none; }
   color: var(--text);
 }
 @media (hover: none) { .model-select { min-height: 40px; } }
+/* Speed: Fast or Thorough, one card each */
+.model-modes { display: grid; gap: 6px; margin: 0; padding: 0; border: 0; }
+.model-modes legend { margin-bottom: 4px; color: var(--text-muted); font-weight: 600; font-size: 12px; }
+.model-settings-form .model-mode {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  padding: 7px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--surface-subtle);
+  font-weight: 400;
+  cursor: pointer;
+}
+.model-mode input { position: absolute; opacity: 0; pointer-events: none; }
+.model-settings-form .model-mode.is-selected { border-color: var(--brand); background: var(--surface); }
+.model-mode:focus-within { outline: 2px solid var(--brand); outline-offset: 2px; }
+.model-mode-name { color: var(--text); font-weight: 600; font-size: 12px; }
+.model-modes:disabled .model-mode { opacity: 0.55; cursor: not-allowed; }
 
 /* Approvals: one worker's requests, or all */
 .ask-filter { display: flex; flex-wrap: wrap; gap: 6px; }
