@@ -1,0 +1,45 @@
+/* Skills: yours (add, change, delete) and Continuum's own */
+.skills-backdrop { z-index: 1200; }
+.modal-window.skills-dialog { width: 680px; max-width: calc(100vw - 32px); max-height: calc(100vh - 48px); display: flex; flex-direction: column; }
+.skills-body { overflow: auto; display: grid; gap: 10px; }
+.skills-h { margin: 6px 0 0; font-size: 14px; }
+.skills-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.skills-item,
+.skills-list.is-built-in li {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  font: inherit;
+  color: var(--text);
+}
+.skills-item { cursor: pointer; }
+.skills-item:hover { border-color: var(--brand); }
+.skills-list.is-built-in li { opacity: 0.85; }
+.skills-name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-weight: 600; }
+.skills-for { font-size: 12px; color: var(--text-muted); justify-self: end; }
+.skills-desc { grid-column: 1 / -1; font-size: 12px; color: var(--text-2); }
+.skills-form { display: grid; gap: 10px; }
+.skills-form > label { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.skills-form input:not([type]),
+.skills-form textarea {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  padding: 6px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+}
+.skills-form textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+.skills-for-choice,
+.skills-projects { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 0; border: 0; font-size: 13px; }
+.skills-for-choice legend,
+.skills-projects legend { width: 100%; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.skills-delete { margin-right: auto; color: var(--danger-text); }

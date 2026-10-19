@@ -296,6 +296,10 @@ export function BrainProvider({ children }) {
       settings: client.settings ? () => client.settings() : null,
       saveSettings: client.saveSettings ? (changes) => client.saveSettings(changes) : null,
       push: client.push ? (id, message) => client.push(id, message) : null,
+      // Your own skills: null where this brain has none (the simulated one)
+      skills: client.skills ? () => client.skills() : null,
+      saveSkill: client.saveSkill ? (skill) => client.saveSkill(skill) : null,
+      deleteSkill: client.deleteSkill ? (id) => client.deleteSkill(id) : null,
       // The final review (works in your folder): null where this brain has none (the simulated one)
       review: client.review ? (bridgeId) => client.review(bridgeId) : null,
       approveReview: client.approveReview ? (id) => client.approveReview(id) : null,

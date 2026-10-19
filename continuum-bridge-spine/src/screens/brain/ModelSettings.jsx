@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useBrain } from "../../brain/brainContext";
 import { runningModel } from "./agentDisplay";
+import SkillsDialog from "./SkillsDialog";
 import "./brain.css";
 
 const PROVIDER_LABEL = { ollama: "Ollama (this computer)", anthropic: "Claude", openai: "OpenAI", opencode: "OpenCode Zen", compat: "OpenAI-compatible" };
@@ -62,6 +63,7 @@ export default function ModelSettings({ models }) {
   const [draft, setDraft] = useState("");
   const [draftMode, setDraftMode] = useState(null);
   const [draftTools, setDraftTools] = useState(null);
+  const [skillsOpen, setSkillsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null); // { ok, text }
   const { list, settings, error, model, chosen, defaultModel, save, refresh, available, mode, modes, tools, toolsets } = models;
@@ -180,6 +182,12 @@ export default function ModelSettings({ models }) {
         )}
       </div>
       {!open && lockedWhy && <p className="brain-hint">{lockedWhy}</p>}
+      {brain?.skills && (
+        <button type="button" className="brain-link model-skills" onClick={() => setSkillsOpen(true)}>
+          Skills…
+        </button>
+      )}
+      {skillsOpen && <SkillsDialog brain={brain} onClose={() => setSkillsOpen(false)} />}
       {settings && "localHelpers" in settings && (
         <label className="model-helpers" title="A worker may ask the brain for helpers that take part of its task. On a local model they mostly wait their turn (it answers one request at a time).">
           <input type="checkbox" checked={!!settings.localHelpers} disabled={saving} onChange={(e) => toggleHelpers(e.target.checked)} />

@@ -22,6 +22,7 @@
 //   POST   /brain/projects/:id/snapshot     your project folder (.tar.gz, from your computer): workers of
 //                                           an interval that works in your folder start from it
 //   GET    /brain/models   GET|PUT /brain/settings {model?, mode?}   the one model all your agents run on, and its speed
+//   GET|POST /brain/skills   PUT|DELETE /brain/skills/:id   your own skills
 //   GET    /brain/reviews?bridgeId=   POST /brain/reviews/:id/{approvals|decisions|changes|applied}   the final review (works in your folder)
 
 import express from "express";
@@ -240,6 +241,21 @@ export function createBrainRouter(opts = {}) {
     const bridgeId = String(req.body?.bridgeId ?? "");
     if (!ID.test(bridgeId)) throw new AppError("bridgeId must be a bridge ID.", 400, "VALIDATION_ERROR");
     res.status(202).json(toAgent(await brain(req, "POST", "/brain/agent-interval", { bridgeId })));
+  });
+
+  // Your own skills (know-how your agents load when it fits): list, add, change, delete
+  const skillId = (req) => {
+    const id = String(req.params.id);
+    if (!ID.test(id)) throw new AppError("No such skill.", 404, "NOT_FOUND");
+    return id;
+  };
+  const skillBody = (b) => ({ name: b?.name, description: b?.description, body: b?.body, for: b?.for, projects: b?.projects });
+  router.get("/skills", async (req, res) => res.set("Cache-Control", "no-store").json(await brain(req, "GET", "/skills")));
+  router.post("/skills", async (req, res) => res.status(201).json(await brain(req, "POST", "/skills", skillBody(req.body))));
+  router.put("/skills/:id", async (req, res) => res.json(await brain(req, "PUT", `/skills/${skillId(req)}`, skillBody(req.body))));
+  router.delete("/skills/:id", async (req, res) => {
+    await brain(req, "DELETE", `/skills/${skillId(req)}`);
+    res.status(204).end();
   });
 
   // The final review of an agent interval that works in your folder: approve, choose per clash, send a worker back, applied

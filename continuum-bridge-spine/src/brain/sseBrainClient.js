@@ -88,6 +88,10 @@ export function createSseBrainClient(base = import.meta.env.VITE_BRAIN_API_URL) 
     changes: (agentId) => call("GET", `/brain/agents/${agentId}/changes`),
     file: (agentId, path) => call("GET", `/brain/agents/${agentId}/file?path=${encodeURIComponent(path)}`),
     push: (agentId, message) => call("POST", `/brain/agents/${agentId}/push`, message ? { message } : {}),
+    // Your own skills (Skills page)
+    skills: () => call("GET", "/brain/skills"),
+    saveSkill: (skill) => (skill.id ? call("PUT", `/brain/skills/${skill.id}`, skill) : call("POST", "/brain/skills", skill)),
+    deleteSkill: (id) => call("DELETE", `/brain/skills/${id}`),
     // The final review of an agent interval that works in your folder
     review: async (bridgeId) => (await call("GET", `/brain/reviews?bridgeId=${encodeURIComponent(bridgeId)}`))?.review ?? null,
     approveReview: (id) => call("POST", `/brain/reviews/${id}/approvals`),
