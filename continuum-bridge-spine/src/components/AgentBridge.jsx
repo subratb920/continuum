@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchBridges, patchBridge } from "../api";
 import { useBrain, workersOnGoal } from "../brain/brainContext";
@@ -7,6 +7,7 @@ import { agentName } from "../screens/brain/agentDisplay";
 import { brainStatus } from "../screens/brain/brainStatus";
 import { normalizeBridge } from "../utils/normalizeBridge";
 import { formatClock } from "../utils/time";
+import FinalReview from "./FinalReview";
 
 import "../screens/brain/brain.css"; // the brain's state pill, as in Chat
 import "./BridgeDraftModal.css";
@@ -28,7 +29,17 @@ import "./AgentBridge.css";
  * - docked (Agents, Chat): a corner panel that folds down; minimized: a pill.
  */
 
-const BRIDGE_TOOLS = /plan_goal|update_task|report_goal|finish_interval|spawn_agent/;
+const BRIDGE_TOOLS = /plan_goal|update_task|report_goal|finish_interval|spawn_agent|request_approval|resolve_conflicts/;
+
+/** The final review's state in a line (works in your folder). */
+const REVIEW_LINE = {
+  waiting: "The brain asks for your final review: nothing is in your folder until you approve.",
+  resolving: "Merging: the brain is settling clashes between workers.",
+  needs_you: "Some clashes need your choice.",
+  ready: "Merged. Write the result into your folder.",
+  changes_requested: "Sent back to a worker; the brain asks again when it's fixed.",
+  applied: "✓ Merged into your folder.",
+};
 const minimizedKey = (id) => `continuum.draftMinimized.${id}`;
 const readMinimized = (id) => {
   try {
@@ -52,6 +63,9 @@ function liveTaskState(task, agent) {
 
 export default function AgentBridge({ bridge, onEnded, docked = false }) {
   const brain = useBrain();
+  // The review lookup, kept out of refresh's dependencies (the brain's state changes all the time)
+  const readReview = useRef(null);
+  readReview.current = brain?.review ?? null;
   const navigate = useNavigate();
   const [current, setCurrent] = useState(bridge);
   const [folded, setFolded] = useState(false);
@@ -60,6 +74,9 @@ export default function AgentBridge({ bridge, onEnded, docked = false }) {
   const [stopping, setStopping] = useState(false);
   const [error, setError] = useState("");
   const [now, setNow] = useState(() => Date.now());
+  const [review, setReview] = useState(null);
+  const [reviewing, setReviewing] = useState(false);
+  const folderInterval = (bridge.interval?.workFrom ?? current?.interval?.workFrom) === "device";
 
   const setMinimized = (v) => {
     setMinimizedState(v);
@@ -82,6 +99,11 @@ export default function AgentBridge({ bridge, onEnded, docked = false }) {
     } catch {
       // the next refresh tries again
     }
+    // Its final review (works in your folder), as the brain has it now
+    if (readReview.current && (bridge.interval?.workFrom ?? current?.interval?.workFrom) === "device") {
+      readReview.current(bridge._id).then(setReview).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bridge._id, bridge.projectId, onEnded]);
 
   // Again when the brain uses a bridge tool or any worker moves on; and every 15 s
@@ -153,7 +175,7 @@ export default function AgentBridge({ bridge, onEnded, docked = false }) {
           <span className="draft-pill-dot is-running" aria-hidden="true" />
           <span className="draft-pill-clock">✦ {elapsed}</span>
           <span className="draft-pill-meta">
-            Agent bridge · {settled} of {goals.length} {goals.length === 1 ? "goal" : "goals"} settled
+            Agent bridge · {review && ["waiting", "needs_you", "ready"].includes(review.state) ? "your review is waiting" : `${settled} of ${goals.length} ${goals.length === 1 ? "goal" : "goals"} settled`}
           </span>
         </button>
       </div>
@@ -257,6 +279,17 @@ export default function AgentBridge({ bridge, onEnded, docked = false }) {
             </div>
           )}
 
+          {folderInterval && review && (
+            <div className={`agent-bridge-review${review.state === "applied" ? " is-done" : ""}`}>
+              <span>{REVIEW_LINE[review.state] ?? review.state}</span>
+              {review.state !== "applied" && review.state !== "changes_requested" && (
+                <button type="button" className="draft-btn-primary" onClick={() => setReviewing(true)}>
+                  {review.state === "waiting" ? "Review" : review.state === "ready" ? "Write into my folder" : "Open"}
+                </button>
+              )}
+            </div>
+          )}
+
           {error && <p className="draft-error">{error}</p>}
         </section>
 
@@ -283,6 +316,16 @@ export default function AgentBridge({ bridge, onEnded, docked = false }) {
           )}
         </footer>
       </div>
+      {reviewing && review && (
+        <FinalReview
+          review={review}
+          projectId={bridge.projectId}
+          workers={workers}
+          brain={brain}
+          onClose={() => setReviewing(false)}
+          onChanged={async () => setReview(await brain.review(bridge._id))}
+        />
+      )}
     </div>
   );
 }

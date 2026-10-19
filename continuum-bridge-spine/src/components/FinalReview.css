@@ -1,0 +1,237 @@
+/* Final review: an agent interval's changes before they go into your folder */
+.review-backdrop {
+  z-index: 1200;
+}
+.modal-window.final-review {
+  width: 920px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+}
+.review-body {
+  overflow: auto;
+  display: grid;
+  gap: 12px;
+}
+.review-summary {
+  margin: 0;
+  white-space: pre-wrap;
+  color: var(--text);
+}
+.review-muted {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.review-worker {
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--surface-subtle);
+}
+.review-worker-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-bottom: 6px;
+}
+.review-task {
+  color: var(--text-2);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.review-scope {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.review-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.review-file {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 3px 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+.review-path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.review-status {
+  font-size: 11px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+}
+.review-status.is-added {
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+.review-status.is-deleted {
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+.review-patch,
+.review-side pre {
+  margin: 4px 0 6px;
+  padding: 8px;
+  max-height: 320px;
+  overflow: auto;
+  border-radius: 6px;
+  background: var(--surface);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre;
+}
+.review-patch .is-add {
+  color: var(--success-text);
+  background: var(--success-soft);
+}
+.review-patch .is-del {
+  color: var(--danger-text);
+  background: var(--danger-soft);
+}
+.review-patch .is-hunk {
+  color: var(--text-muted);
+}
+.review-clashes h3 {
+  margin: 4px 0;
+  font-size: 15px;
+}
+.review-clash {
+  border: 1px solid var(--warning-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 8px;
+}
+.review-clash.is-settled {
+  border-color: var(--border-strong);
+}
+.review-clash-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.review-needs {
+  font-size: 12px;
+  color: var(--warning-text);
+  font-weight: 600;
+}
+.review-decided {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.review-clash-sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+.review-side {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  align-content: start;
+}
+.review-side.is-kept pre {
+  outline: 2px solid var(--success);
+}
+.review-side-who {
+  font-size: 12px;
+  font-weight: 600;
+}
+.review-both {
+  margin-top: 6px;
+  border: 0;
+  background: none;
+  color: var(--brand);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+.review-mine {
+  border: 1px solid var(--warning-border);
+  background: var(--warning-soft);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.review-mine p {
+  margin: 0 0 6px;
+}
+.review-mine ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.review-mine li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
+  font-size: 13px;
+}
+.review-back {
+  display: grid;
+  gap: 6px;
+}
+.review-back label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+.review-back select,
+.review-back textarea {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+}
+.review-done {
+  margin: 0;
+  color: var(--success-text);
+}
+@media (max-width: 700px) {
+  .review-clash-sides {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* In the agent interval's window: the review's state, and the button that opens it */
+.agent-bridge-review {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--brand);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.agent-bridge-review.is-done {
+  border-color: var(--success);
+}

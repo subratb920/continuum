@@ -153,6 +153,12 @@ export function createServiceRouter(opts = {}) {
     res.json({ activeProject: project ? projectView(project) : null, bridge: bridge ? bridgeView(bridge) : null });
   });
 
+  // Only the user's name for commits (work in their folder never touches GitHub)
+  router.get("/author", async (req, res) => {
+    const user = await db().collection("users").findOne({ _id: req.serviceUser }, { projection: { name: 1, email: 1 } });
+    res.json({ author: user?.email ? { name: user.name || user.email.split("@")[0], email: user.email } : null });
+  });
+
   router.get("/github", async (req, res) => {
     const token = await githubTokenOf(db(), String(req.serviceUser));
     const user = await db().collection("users").findOne({ _id: req.serviceUser }, { projection: { name: 1, email: 1 } });

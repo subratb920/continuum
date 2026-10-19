@@ -59,7 +59,8 @@ export default function WorkerWork({ agent }) {
     const h = await pickFolder(folderKey(agent), projectName).catch((err) => (setPushError(err.message), null));
     if (h) {
       setFolder(h);
-      if (running) copyToLocal(agent, { ask: true });
+      // A folder interval's changes come in after your final review, not now
+      if (running && !fromFolder) copyToLocal(agent, { ask: true });
     }
   }
 
@@ -94,7 +95,7 @@ export default function WorkerWork({ agent }) {
               {copy?.status === "copying" && " · copying…"}
               {copy?.status === "copied" && ` · ✓ ${copy.files} ${copy.files === 1 ? "file" : "files"} copied at ${clock(copy.at)}`}
               {copy?.status === "error" && ` · couldn't copy: ${copy.error}`}
-              {running && n > 0 && copy?.status !== "copying" && (
+              {running && n > 0 && !fromFolder && copy?.status !== "copying" && (
                 <button type="button" className="brain-link" onClick={() => copyToLocal(agent, { ask: true })}>
                   Copy again
                 </button>
@@ -142,9 +143,9 @@ export default function WorkerWork({ agent }) {
         </p>
       )}
 
-      {fromFolder && running && n > 0 && <p className="brain-hint">It works in a copy of your folder: the changes you allow come back into it.{agent.repo ? " You can also push them to GitHub." : ""}</p>}
+      {fromFolder && running && n > 0 && <p className="brain-hint">It works in a copy of your folder on its own branch. Nothing reaches your folder (or GitHub) until you approve the final review; then the brain merges every worker's branch into it.</p>}
 
-      {agent.repo && replay.live && running && n > 0 && !pushedSinceChange && !later && (
+      {agent.repo && !fromFolder && replay.live && running && n > 0 && !pushedSinceChange && !later && (
         <div className="ask-card kind-push">
           <p className="ask-card-text">
             Push {n} {n === 1 ? "change" : "changes"} to GitHub? They go on its own branch <span className="brain-mono">{agent.branch}</span> in {agent.repo} (never main); then you can open a pull request.

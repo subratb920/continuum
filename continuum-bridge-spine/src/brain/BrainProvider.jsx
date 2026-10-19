@@ -4,7 +4,7 @@ import { BrainContext } from "./brainContext";
 import { getBrainClient } from "./brainClient";
 import { ASKING_KINDS } from "./brainTypes";
 import { useRunningInterval } from "./runningInterval";
-import { copyToLocal, WRITE_TOOLS } from "./localSync";
+import { copyToLocal } from "./localSync";
 
 /**
  * The brain's state, for every signed-in page (the Agents screen, the
@@ -200,29 +200,11 @@ export function BrainProvider({ children }) {
       .catch(() => {}); // the next try (reconnect, focus, the minute) catches up
   }, [client]);
 
-  const agentsNow = useRef({});
-  useEffect(() => {
-    agentsNow.current = state.agents;
-  }, [state.agents]);
-  const copyTimers = useRef(new Map());
-
+  // Workers' changes never go into your folder on their own: a folder interval's are written after your final review;
+  // a GitHub worker's only when you copy them (Copy again)
   useEffect(() => {
     if (!signedIn) return;
     let live = true;
-    const openedAt = Date.now();
-    const timers = copyTimers.current;
-    function afterChange(e) {
-      if (e.kind !== "tool" || e.data?.status !== "completed" || !WRITE_TOOLS.includes(e.data?.tool)) return;
-      if (Date.parse(e.at) < openedAt) return;
-      clearTimeout(timers.get(e.agentId));
-      timers.set(
-        e.agentId,
-        setTimeout(() => {
-          const agent = agentsNow.current[e.agentId];
-          if (agent?.kind === "worker") copyToLocal(agent, client);
-        }, 800)
-      );
-    }
     client.listAgents().then((agents) => live && dispatch({ type: "agents", agents })).catch(() => {});
     const unsubscribe = client.subscribe((m) => {
       if (m.type === "agent") dispatch({ type: "agents", agents: [m.agent] });
@@ -231,10 +213,7 @@ export function BrainProvider({ children }) {
         dispatch({ type: "connected", connected: true });
         resync(); // (re)connected: messages may have been missed meanwhile
       } else if (m.type === "disconnected") dispatch({ type: "connected", connected: false });
-      else {
-        dispatch({ type: "event", event: m.event });
-        afterChange(m.event);
-      }
+      else dispatch({ type: "event", event: m.event });
     });
     resync();
     return () => {
@@ -317,6 +296,12 @@ export function BrainProvider({ children }) {
       settings: client.settings ? () => client.settings() : null,
       saveSettings: client.saveSettings ? (changes) => client.saveSettings(changes) : null,
       push: client.push ? (id, message) => client.push(id, message) : null,
+      // The final review (works in your folder): null where this brain has none (the simulated one)
+      review: client.review ? (bridgeId) => client.review(bridgeId) : null,
+      approveReview: client.approveReview ? (id) => client.approveReview(id) : null,
+      decideReview: client.decideReview ? (id, decisions) => client.decideReview(id, decisions) : null,
+      sendBack: client.sendBack ? (id, agentId, note) => client.sendBack(id, agentId, note) : null,
+      reviewApplied: client.reviewApplied ? (id, kept) => client.reviewApplied(id, kept) : null,
       copyToLocal: (agent, opts) => copyToLocal(agent, client, opts),
     };
   }, [state, client, interval]);

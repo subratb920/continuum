@@ -21,7 +21,8 @@
 //   POST   /brain/core/agent-interval {bridgeId}  an agent interval started: your brain works its goals
 //   POST   /brain/projects/:id/snapshot     your project folder (.tar.gz, from your computer): workers of
 //                                           an interval that works in your folder start from it
-//   GET    /brain/models   GET|PUT /brain/settings {model}   the one model all your agents run on
+//   GET    /brain/models   GET|PUT /brain/settings {model?, mode?}   the one model all your agents run on, and its speed
+//   GET    /brain/reviews?bridgeId=   POST /brain/reviews/:id/{approvals|decisions|changes|applied}   the final review (works in your folder)
 
 import express from "express";
 import { AppError } from "../errors/AppError.js";
@@ -240,6 +241,22 @@ export function createBrainRouter(opts = {}) {
     if (!ID.test(bridgeId)) throw new AppError("bridgeId must be a bridge ID.", 400, "VALIDATION_ERROR");
     res.status(202).json(toAgent(await brain(req, "POST", "/brain/agent-interval", { bridgeId })));
   });
+
+  // The final review of an agent interval that works in your folder: approve, choose per clash, send a worker back, applied
+  const reviewId = (req) => {
+    const id = String(req.params.id);
+    if (!ID.test(id)) throw new AppError("No such review.", 404, "NOT_FOUND");
+    return id;
+  };
+  router.get("/reviews", async (req, res) => {
+    const bridgeId = String(req.query.bridgeId ?? "");
+    if (!ID.test(bridgeId)) throw new AppError("bridgeId must be a bridge ID.", 400, "VALIDATION_ERROR");
+    res.set("Cache-Control", "no-store").json(await brain(req, "GET", `/reviews?bridgeId=${bridgeId}`));
+  });
+  router.post("/reviews/:id/approvals", async (req, res) => res.json(await brain(req, "POST", `/reviews/${reviewId(req)}/approvals`, {})));
+  router.post("/reviews/:id/decisions", async (req, res) => res.json(await brain(req, "POST", `/reviews/${reviewId(req)}/decisions`, { decisions: req.body?.decisions })));
+  router.post("/reviews/:id/changes", async (req, res) => res.json(await brain(req, "POST", `/reviews/${reviewId(req)}/changes`, { agentId: req.body?.agentId, note: req.body?.note })));
+  router.post("/reviews/:id/applied", async (req, res) => res.json(await brain(req, "POST", `/reviews/${reviewId(req)}/applied`, { kept: req.body?.kept })));
 
   router.get("/models", async (req, res) => res.json(await brain(req, "GET", "/models")));
   router.get("/settings", async (req, res) => res.json(await brain(req, "GET", "/settings")));

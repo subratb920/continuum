@@ -88,6 +88,12 @@ export function createSseBrainClient(base = import.meta.env.VITE_BRAIN_API_URL) 
     changes: (agentId) => call("GET", `/brain/agents/${agentId}/changes`),
     file: (agentId, path) => call("GET", `/brain/agents/${agentId}/file?path=${encodeURIComponent(path)}`),
     push: (agentId, message) => call("POST", `/brain/agents/${agentId}/push`, message ? { message } : {}),
+    // The final review of an agent interval that works in your folder
+    review: async (bridgeId) => (await call("GET", `/brain/reviews?bridgeId=${encodeURIComponent(bridgeId)}`))?.review ?? null,
+    approveReview: (id) => call("POST", `/brain/reviews/${id}/approvals`),
+    decideReview: (id, decisions) => call("POST", `/brain/reviews/${id}/decisions`, { decisions }),
+    sendBack: (id, agentId, note) => call("POST", `/brain/reviews/${id}/changes`, { agentId, note }),
+    reviewApplied: (id, kept) => call("POST", `/brain/reviews/${id}/applied`, { kept }),
     pending: () => call("GET", "/brain/pending"),
     reply: (agentId, eventId, answer, { message } = {}) => call("POST", `/brain/agents/${agentId}/reply`, { eventId, answer, ...(message ? { message } : {}) }),
     say: (text) => call("POST", "/brain/core/messages", { text }),

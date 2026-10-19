@@ -104,6 +104,19 @@ export default function ModelSettings({ models }) {
     }
   }
 
+  async function toggleHelpers(on) {
+    setSaving(true);
+    setMessage(null);
+    try {
+      await save({ localHelpers: on });
+      setMessage({ ok: true, text: on ? "Workers on a local model may get helpers (they mostly wait their turn there)." : "No helpers on local models." });
+    } catch (err) {
+      setMessage({ ok: false, text: err.message || "That couldn't be saved." });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const unset = (list?.providers ?? []).filter((p) => !p.setUp).map((p) => PROVIDER_LABEL[p.provider] ?? p.provider);
   const broken = (list?.providers ?? []).filter((p) => p.setUp && p.error);
   // Shown only when there's something to say: an agent awake, a model in use
@@ -158,6 +171,12 @@ export default function ModelSettings({ models }) {
         )}
       </div>
       {!open && lockedWhy && <p className="brain-hint">{lockedWhy}</p>}
+      {settings && "localHelpers" in settings && (
+        <label className="model-helpers" title="A worker may ask the brain for helpers that take part of its task. On a local model they mostly wait their turn (it answers one request at a time).">
+          <input type="checkbox" checked={!!settings.localHelpers} disabled={saving} onChange={(e) => toggleHelpers(e.target.checked)} />
+          Helpers on local models
+        </label>
+      )}
       {open && (
         <form className="model-settings-form" onSubmit={submit}>
           <ModelSelect list={list} value={draft} onChange={setDraft} defaultLabel={`Server default (${defaultModel ?? "…"})`} label="The model every agent runs on" disabled={!!lockedWhy || saving} />

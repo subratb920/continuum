@@ -113,3 +113,51 @@ export async function copyChanges(folder, files, readFile) {
   }
   return done;
 }
+
+/** A file in your folder now, in the review's terms (text as utf-8, binary as base64), or null when it isn't there. */
+export async function readFileAt(folder, path, encoding) {
+  if (!SAFE(path)) return null;
+  const parts = path.split("/");
+  let dir = folder;
+  try {
+    for (const p of parts.slice(0, -1)) dir = await dir.getDirectoryHandle(p);
+    const file = await (await dir.getFileHandle(parts.at(-1))).getFile();
+    if (encoding === "base64") {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      let bin = "";
+      for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      return btoa(bin);
+    }
+    return await file.text();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The merged result of a final review, before it's written: each file your
+ * folder changed meanwhile (it's neither as the workers started from it nor
+ * already the result), so you choose between yours and the merged one.
+ */
+export async function changedSince(folder, result) {
+  const out = [];
+  for (const f of result) {
+    if (!SAFE(f.path)) continue;
+    const now = await readFileAt(folder, f.path, f.encoding);
+    const target = f.deleted ? null : f.content;
+    if (now !== f.before && now !== target) out.push(f.path);
+  }
+  return out;
+}
+
+/** Writes the merged result into your folder (files in `keep` left as yours). Returns how many were written or removed. */
+export async function applyResult(folder, result, keep = new Set()) {
+  let done = 0;
+  for (const f of result) {
+    if (!SAFE(f.path) || keep.has(f.path)) continue;
+    if (f.deleted) await removeFile(folder, f.path);
+    else await writeFiles(folder, [{ path: f.path, data: f.encoding === "base64" ? bytesOf(f.content) : f.content }]);
+    done++;
+  }
+  return done;
+}
