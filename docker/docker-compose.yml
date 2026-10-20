@@ -215,6 +215,18 @@ services:
       - continuum-api
     command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 
+  # Continuum's public website (continuum-console.one): plain HTML for search engines
+  continuum-site-app:
+    build:
+      context: ../continuum-site
+    container_name: continuum-site-app
+    restart: unless-stopped
+    ports:
+      - "45195:45195"
+    environment:
+      SITE_URL: http://localhost:45195
+      APP_URL: http://localhost:45173
+
 
 volumes:
   mongo_data:

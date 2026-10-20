@@ -57,6 +57,19 @@
         "targetCpu": 70,
         "autoMemoryMax": "1Gi"
       }
+    },
+    {
+      "name": "continuum-site-app",
+      "path": "continuum-site",
+      "port": 45195,
+      "scale": {
+        "min": 1,
+        "max": 2,
+        "cpu": 0.25,
+        "memory": "256Mi",
+        "targetCpu": 70,
+        "autoMemoryMax": "512Mi"
+      }
     }
   ]
 }

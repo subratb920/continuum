@@ -1,0 +1,7 @@
+# Continuum (the app). Its public pages live on https://continuum-console.one
+User-agent: *
+Allow: /$
+Allow: /about$
+Disallow: /
+
+Sitemap: https://continuum-console.one/sitemap.xml

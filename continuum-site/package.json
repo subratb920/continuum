@@ -1,0 +1,13 @@
+{
+  "name": "continuum-site",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Continuum's public website (continuum-console.one): plain HTML pages for search engines and link previews. No dependencies.",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node build.mjs && node server.mjs",
+    "test": "node build.mjs && node --test --test-concurrency=1 test/*.test.mjs",
+    "og": "\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless=new --hide-scrollbars --force-device-scale-factor=1 --window-size=1200,630 --screenshot=static/og.png scripts/og.html"
+  }
+}
