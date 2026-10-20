@@ -17,6 +17,7 @@ Plain JavaScript (ES modules), Node 22. Each folder is its own app.
 - API: `cd continuum-api && npm test`
 - Data / Workspaces: `npm test` in that folder
 - UI: `cd continuum-bridge-spine && npx vite build && npx eslint <changed files>`
+- Changed `continuum.deploy.json`, `continuum.infra.json` or an app's `.env.production`: `node ../continuum-deploy-cloudrun/apps/continuum-deploy-api/scripts/check-repo.ts .` (Continuum Deploy's own rules; fix every problem before pushing).
 
 ## Rules
 - API errors: `throw new AppError(message, status, CODE)`; never answer errors by hand.
