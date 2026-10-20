@@ -1,5 +1,5 @@
-import { useCallback, useMemo } from "react";
-import { Background, Controls, Handle, MarkerType, MiniMap, Position, ReactFlow, applyEdgeChanges, applyNodeChanges } from "@xyflow/react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Background, ControlButton, Controls, Handle, MarkerType, MiniMap, Position, ReactFlow, applyEdgeChanges, applyNodeChanges, useReactFlow } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { agentName } from "../screens/brain/agentDisplay";
 import { KIND, newStep, useWorkflows } from "./workflowModel";
@@ -54,6 +54,47 @@ function StepNode({ data }) {
 }
 const nodeTypes = { step: StepNode };
 
+/** Fits the workflow to the canvas again when it's maximized or restored (once the new size has settled). */
+function FitWhenResized({ full }) {
+  const { fitView } = useReactFlow();
+  useEffect(() => {
+    const t = setTimeout(() => fitView({ padding: 0.12, duration: 300 }), 80);
+    return () => clearTimeout(t);
+  }, [full, fitView]);
+  return null;
+}
+
+/**
+ * Maximize: the canvas takes the whole screen (the browser's full screen
+ * where it allows it, else the whole window) and back. Esc restores it too.
+ */
+function useMaximize() {
+  const ref = useRef(null);
+  const [full, setFull] = useState(false);
+  const toggle = useCallback(async () => {
+    if (full) {
+      if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
+      setFull(false);
+      return;
+    }
+    setFull(true);
+    await ref.current?.requestFullscreen?.().catch(() => {}); // refused or unsupported: the whole window instead
+  }, [full]);
+  useEffect(() => {
+    if (!full) return undefined;
+    // Leaving the browser's full screen (its own Esc) restores the canvas too
+    const onChange = () => !document.fullscreenElement && setFull(false);
+    const onKey = (e) => e.key === "Escape" && !document.fullscreenElement && setFull(false);
+    document.addEventListener("fullscreenchange", onChange);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("fullscreenchange", onChange);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [full]);
+  return { ref, full, toggle };
+}
+
 /**
  * The workflow as a free graph: drag steps, drag from a step's right handle
  * to another's left to say it waits for it, select and press Delete to
@@ -68,6 +109,7 @@ const reaches = (edges, a, b, seen = new Set()) => a === b || (!seen.has(a) && (
 export default function WorkflowCanvas() {
   const w = useWorkflows();
   const d = w?.draft;
+  const { ref: maxRef, full, toggle: toggleFull } = useMaximize();
   // A sample: its pretend run's steps while it plays
   const sample = d?.kind === "sample" ? (SAMPLE_WORKFLOWS.find((s) => s.id === d.sampleId) ?? null) : null;
   const played = useSampleRun(sample, !!w?.playing);
@@ -196,7 +238,7 @@ export default function WorkflowCanvas() {
   };
 
   return (
-    <div className="wf-canvas">
+    <div className={`wf-canvas${full ? " is-full" : ""}`} ref={maxRef}>
       {sample && (
         <div className="wf-toolbar wf-sample-bar">
           <span className="wf-sample-tag">Sample</span>
@@ -239,7 +281,12 @@ export default function WorkflowCanvas() {
       >
         <Background gap={20} />
         <MiniMap pannable zoomable className="wf-minimap" style={{ width: 150, height: 96 }} nodeColor={(n) => MINIMAP_COLOR[n.data?.step?.kind] ?? "#888"} maskColor="rgb(0 0 0 / 0.25)" />
-        <Controls showInteractive={false} />
+        <Controls showInteractive={false} showFitView={false}>
+          <ControlButton onClick={toggleFull} title={full ? "Restore (Esc)" : "Maximize: the whole screen"} aria-label={full ? "Restore the canvas" : "Maximize the canvas"} aria-pressed={full}>
+            {full ? "⤡" : "⤢"}
+          </ControlButton>
+        </Controls>
+        <FitWhenResized full={full} />
       </ReactFlow>
     </div>
   );

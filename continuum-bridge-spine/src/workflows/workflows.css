@@ -331,3 +331,22 @@ html.reduce-motion .wf-node.is-live.state-working {
 .wf-row-handle {
   opacity: 0;
 }
+
+/* Maximized: the canvas takes the whole screen (or the whole window), above everything */
+.wf-canvas.is-full {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  min-height: 0;
+  border-radius: 0;
+  background: var(--surface);
+}
+.wf-canvas:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  background: var(--surface);
+}
+.wf-canvas .react-flow__controls-button {
+  font-size: 14px;
+  line-height: 1;
+}
