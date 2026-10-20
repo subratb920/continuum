@@ -24,6 +24,7 @@ import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
 import { PROJECT_COLLECTION } from "../models/project.model.js";
 import { BRIDGE_COLLECTION } from "../models/bridge.model.js";
+import { bridgeFor, mineFilter } from "../services/bridgeAccess.js";
 import { EXECUTION_COLLECTION } from "../models/execution.model.js";
 import { githubTokenOf } from "../create/github.js";
 import { repoOf } from "../workspaces/routes.js";
@@ -105,7 +106,7 @@ export function createServiceRouter(opts = {}) {
   router.get("/projects/:id/bridges", async (req, res) => {
     const p = await ownProject(req);
     if (!p) return res.status(404).json({ error: "No such project." });
-    const bridges = await db().collection(BRIDGE_COLLECTION).find({ projectId: p._id }).sort({ index: 1 }).limit(500).toArray();
+    const bridges = await db().collection(BRIDGE_COLLECTION).find({ projectId: p._id, ...mineFilter(req.serviceUser, true) }).sort({ index: 1 }).limit(500).toArray();
     res.json(bridges.map(bridgeView));
   });
 
@@ -115,12 +116,9 @@ export function createServiceRouter(opts = {}) {
     res.json({ ...bridgeView(bridge), projectId: String(bridge.projectId) });
   });
 
-  /** The user's bridge (its project is theirs), or null. */
+  /** The user's own bridge, or null. */
   async function ownBridge(id, user) {
-    if (!/^[a-f0-9]{24}$/.test(id)) return null;
-    const bridge = await db().collection(BRIDGE_COLLECTION).findOne({ _id: new ObjectId(id) });
-    const project = bridge ? await db().collection(PROJECT_COLLECTION).findOne({ _id: bridge.projectId, userId: user }, { projection: { _id: 1 } }) : null;
-    return project ? bridge : null;
+    return bridgeFor(db(), id, user);
   }
 
   /** Changes an agent interval's bridge by one of agentBridge.js's rules, and answers with it as the brain sees it. */
@@ -149,7 +147,8 @@ export function createServiceRouter(opts = {}) {
   router.get("/interval", async (req, res) => {
     const state = await db().collection(EXECUTION_COLLECTION).findOne({ userId: req.serviceUser });
     const project = state?.activeProjectId ? await db().collection(PROJECT_COLLECTION).findOne({ _id: state.activeProjectId, userId: req.serviceUser }, { projection: { "contents.entries": 0 } }) : null;
-    const bridge = project ? await db().collection(BRIDGE_COLLECTION).findOne({ projectId: project._id, status: "draft" }, { sort: { createdAt: -1 } }) : null;
+    // The user's own running interval on it (another person's never)
+    const bridge = project ? await db().collection(BRIDGE_COLLECTION).findOne({ projectId: project._id, status: "draft", ...mineFilter(req.serviceUser, true) }, { sort: { createdAt: -1 } }) : null;
     res.json({ activeProject: project ? projectView(project) : null, bridge: bridge ? bridgeView(bridge) : null });
   });
 

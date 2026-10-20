@@ -228,7 +228,8 @@ export async function createProjectService(db) {
       projectId: pid,
     });
 
-    await db.collection("bridge_counters").deleteOne({ projectId: pid });
+    // Every person's count on it (each has their own)
+    await db.collection("bridge_counters").deleteMany({ projectId: pid });
 
     // Clear the active-project pointer if it referenced this project
     await executionCol.updateOne(

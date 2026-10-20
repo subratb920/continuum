@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { BRIDGE_COLLECTION } from "../models/bridge.model.js";
 import { withSystemContext } from "../logging/childLogger.js";
 import { finish, kindOf } from "./agentBridge.js";
+import { bridgeFor, mineFilter, ownsProject } from "./bridgeAccess.js";
 
 export function createBridgeService(db) {
   const log = withSystemContext("bridge");
@@ -12,8 +13,9 @@ export function createBridgeService(db) {
    * Start a new bridge (draft)
    * Assumes execution law has already been enforced.
    */
-  async function startBridge(projectId, interval, goals = [], ticketUrl) {
+  async function startBridge(userId, projectId, interval, goals = [], ticketUrl) {
     const pid = new ObjectId(projectId);
+    const uid = new ObjectId(String(userId));
 
     log.debug(
       { projectId: pid, interval },
@@ -26,11 +28,16 @@ export function createBridgeService(db) {
       time: new Date().toISOString()
     });
 
-    // Determine next bridge index (chronological spine)
+    // Determine next bridge index (chronological spine): each person's own on the project.
+    // The project's owner carries on from the count before bridges had owners
     const counters = db.collection("bridge_counters");
+    if (!(await counters.findOne({ projectId: pid, userId: uid }))) {
+      const before = (await ownsProject(db, pid, uid)) ? await counters.findOne({ projectId: pid, userId: { $exists: false } }) : null;
+      await counters.updateOne({ projectId: pid, userId: uid }, { $setOnInsert: { seq: before?.seq ?? 0 } }, { upsert: true });
+    }
 
     const result = await counters.findOneAndUpdate(
-      { projectId: pid },
+      { projectId: pid, userId: uid },
       { $inc: { seq: 1 } },
       {
         upsert: true,
@@ -45,7 +52,7 @@ export function createBridgeService(db) {
       index = result.value.seq;
     } else {
       // Fallback: fetch manually
-      const doc = await counters.findOne({ projectId: pid });
+      const doc = await counters.findOne({ projectId: pid, userId: uid });
 
       if (!doc || typeof doc.seq !== "number") {
         throw new Error("Failed to generate bridge index");
@@ -62,6 +69,8 @@ export function createBridgeService(db) {
 
     const doc = {
       projectId: pid,
+      // Whose bridge it is: only they see and change it
+      userId: uid,
       index,
       name: `bridge-${index}`,
       status: "draft",
@@ -137,18 +146,20 @@ export function createBridgeService(db) {
   //   );
   // }
 
-  async function updateBridge(bridgeId, updates) {
-    const bid = new ObjectId(bridgeId);
+  async function updateBridge(userId, bridgeId, updates) {
+    // Only your own bridge
+    const current = await bridgeFor(db, bridgeId, userId);
+    if (!current) return false;
+    const bid = current._id;
 
     // An agent interval's goals are the brain's (service routes): the person can only
     // stop it, which saves it as it stands, with who worked on what
-    const current = await bridgeCol.findOne({ _id: bid }, { projection: { interval: 1, status: 1, sessionGoals: 1 } });
     if (current && kindOf(current) === "agent") {
       const set = { updatedAt: new Date() };
       if (updates.ticketUrl) set.ticketUrl = updates.ticketUrl;
       if (updates.status === "finalized" && current.status === "draft") Object.assign(set, finish(current, { by: "person", agentNames: updates.agentNames ?? {} }));
       await bridgeCol.updateOne({ _id: bid }, { $set: set });
-      return;
+      return true;
     }
 
     const updateDoc = {
@@ -175,12 +186,13 @@ export function createBridgeService(db) {
       { _id: bid },
       { $set: updateDoc }
     );
+    return true;
   }
 
   /**
    * List all bridges for a project (chronological order)
    */
-  async function listBridges(projectId) {
+  async function listBridges(userId, projectId) {
     const pid = new ObjectId(projectId);
 
     log.debug(
@@ -188,8 +200,9 @@ export function createBridgeService(db) {
       "Listing bridges"
     );
 
+    // Only this person's bridges on the project (on their own project, also those from before owners)
     const bridges = await bridgeCol
-      .find({ projectId: pid })
+      .find({ projectId: pid, ...mineFilter(userId, await ownsProject(db, pid, userId)) })
       .sort({ index: 1 })
       .toArray();
 

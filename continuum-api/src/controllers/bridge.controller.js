@@ -32,6 +32,7 @@ export async function startBridge(req, res) {
 
   // 🔹 Start bridge and get FULL document
   const bridge = await bridgeService.startBridge(
+    req.user.id,
     projectId,
     interval,
     sessionGoals,
@@ -65,10 +66,13 @@ export async function updateBridge(req, res) {
     "Updating bridge"
   );
 
-  await bridgeService.updateBridge(
+  const found = await bridgeService.updateBridge(
+    req.user.id,
     bridgeId,
     req.body
   );
+  // Someone else's bridge (or none): not there, as far as you can tell
+  if (!found) return res.status(404).json({ error: "No such bridge.", code: "NOT_FOUND" });
 
   req.log.info(
     {
@@ -94,7 +98,8 @@ export async function getProjectBridges(req, res) {
     "Listing project bridges"
   );
 
-  const bridges = await bridgeService.listBridges(projectId);
+  if (!/^[a-f0-9]{24}$/.test(String(projectId))) return res.status(404).json({ error: "No such project.", code: "NOT_FOUND" });
+  const bridges = await bridgeService.listBridges(req.user.id, projectId);
 
   req.log.info(
     {

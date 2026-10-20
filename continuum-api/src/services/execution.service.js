@@ -3,6 +3,7 @@ import { EXECUTION_COLLECTION } from "../models/execution.model.js";
 import { PROJECT_COLLECTION } from "../models/project.model.js";
 import { BRIDGE_COLLECTION } from "../models/bridge.model.js";
 import { withSystemContext } from "../logging/childLogger.js";
+import { mineFilter } from "./bridgeAccess.js";
 
 export function createExecutionService(db) {
   const log = withSystemContext("execution");
@@ -134,10 +135,12 @@ export function createExecutionService(db) {
       throw new Error("Project is not active");
     }
 
-    // Auto-abandon draft
+    // Auto-abandon your own earlier draft on it (never another person's)
+    const project = await projectCol.findOne({ _id: pid }, { projection: { userId: 1 } });
     const existingDraft = await bridgeCol.findOne({
       projectId: pid,
       status: "draft",
+      ...mineFilter(uid, Boolean(project?.userId?.equals(uid))),
     });
 
     if (existingDraft) {
