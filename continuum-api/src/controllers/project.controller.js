@@ -4,8 +4,6 @@ import { createAuditService } from "../audit/audit.service.js";
 import { AUDIT_EVENTS } from "../audit/audit.types.js";
 
 export async function getProjects(req, res) {
-  console.log("USER ID TYPE:", typeof req.user.id);
-  console.log("USER ID VALUE:", req.user.id);
   const db = getDB();
   const projectService = await createProjectService(db);
 
@@ -16,7 +14,7 @@ export async function getProjects(req, res) {
     "Listing projects"
   );
 
-  const projects = await projectService.listProjects(req.user.id);
+  const projects = await projectService.listProjects(req.user.id, req.space);
 
   req.log.info(
     {
@@ -34,7 +32,7 @@ export async function createProject(req, res) {
   const projectService = await createProjectService(db);
   const audit = createAuditService(db);
 
-  const { name, source, contents, githubRepoUrl } = req.body;
+  const { name, source, contents, githubRepoUrl, departmentIds } = req.body;
 
   req.log.info(
     {
@@ -47,7 +45,8 @@ export async function createProject(req, res) {
   const projectId = await projectService.createProject(
     req.user.id,
     name,
-    { source, contents, githubRepoUrl }
+    { source, contents, githubRepoUrl, departmentIds },
+    req.space
   );
 
   // 🔒 IMMUTABLE AUDIT LOG
@@ -58,6 +57,7 @@ export async function createProject(req, res) {
     requestId: req.id,
     ip: req.ip,
     userAgent: req.headers["user-agent"],
+    metadata: { spaceId: req.space?.id },
   });
 
   req.log.info(
@@ -74,7 +74,7 @@ export async function createProject(req, res) {
 export async function getProjectContents(req, res) {
   const db = getDB();
   const projectService = await createProjectService(db);
-  const contents = await projectService.getProjectContents(req.user.id, req.params.id);
+  const contents = await projectService.getProjectContents(req.user.id, req.params.id, req.space);
   res.json(contents);
 }
 
@@ -97,7 +97,8 @@ export async function renameProject(req, res) {
   const project = await projectService.renameProject(
     req.user.id,
     projectId,
-    name
+    name,
+    req.space
   );
 
   // 🔒 IMMUTABLE AUDIT LOG
@@ -131,7 +132,8 @@ export async function deleteProject(req, res) {
 
   await projectService.deleteProject(
     req.user.id,
-    projectId
+    projectId,
+    req.space
   );
 
   // 🔒 IMMUTABLE AUDIT LOG
@@ -155,3 +157,24 @@ export async function deleteProject(req, res) {
   res.json({ success: true });
 }
 
+
+// An organization's project: which departments see it (none: every member)
+export async function setProjectDepartments(req, res) {
+  const db = getDB();
+  const projectService = await createProjectService(db);
+  const audit = createAuditService(db);
+
+  const r = await projectService.setProjectDepartments(req.user.id, req.params.id, req.body?.departmentIds, req.space);
+
+  await audit.logEvent({
+    type: AUDIT_EVENTS.PROJECT_DEPARTMENTS_SET,
+    userId: req.user.id,
+    projectId: req.params.id,
+    requestId: req.id,
+    ip: req.ip,
+    userAgent: req.headers["user-agent"],
+    metadata: { spaceId: req.space?.id, departmentIds: r.departmentIds },
+  });
+
+  res.json(r);
+}

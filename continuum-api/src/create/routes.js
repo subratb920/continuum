@@ -151,7 +151,7 @@ router.post("/generate", async (req, res) => {
   if (target === "github") {
     // The repository is the project's home: added like an import from GitHub
     const projects = await createProjectService(db);
-    const id = await projects.createProjectFromGithub(req.user.id, { id: repo.id, name: repo.name, html_url: repo.htmlUrl, private: repo.isPrivate, full_name: repo.fullName });
+    const id = await projects.createProjectFromGithub(req.user.id, { id: repo.id, name: repo.name, html_url: repo.htmlUrl, private: repo.isPrivate, full_name: repo.fullName }, req.space, { departmentIds: req.body?.departmentIds });
     res.status(201).json({ project: { _id: String(id), name: repo.name, source: "github", githubRepoId: repo.id, githubRepoUrl: repo.htmlUrl, visibility: repo.isPrivate ? "private" : "public", fullName: repo.fullName }, commit: sha });
     return;
   }

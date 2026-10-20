@@ -9,6 +9,7 @@ import { connectToDB, closeDB } from "./config/db.js";
 import { bootstrapSystem } from "./bootstrap/bootstrap.js";
 import { withSystemContext } from "./logging/childLogger.js";
 import { dataEngine } from "./data/engine.js";
+import { directory } from "./directory/directory.js";
 
 let server;
 
@@ -62,6 +63,7 @@ async function shutdown(signal) {
     }
 
     if (dataEngine) await dataEngine.stop();
+    await directory.stop().catch(() => {});
 
     await closeDB();
     log.info("Database connection closed");

@@ -1,7 +1,10 @@
-# continuum-api in the cloud, with the data engine (continuum-data) beside it.
-# Built from the repository root (continuum.deploy.json: "dockerfile"), so both
-# folders are in reach; continuum-api loads the engine from ../continuum-data
-# when DATA_ENABLED=true (src/data/engine.js). Locally, Dockerfile is used.
+# continuum-api in the cloud, with the data engine (continuum-data) and the
+# directory (continuum-directory/server) beside it. Built from the repository
+# root (continuum.deploy.json: "dockerfile"), so the folders are in reach;
+# continuum-api loads the engine from ../continuum-data when DATA_ENABLED=true
+# (src/data/engine.js) and the directory from ../continuum-directory/server
+# (src/directory/directory.js, its Postgres at DIRECTORY_DATABASE_URL).
+# Locally, Dockerfile is used.
 FROM node:20-alpine
 
 WORKDIR /app
@@ -12,8 +15,12 @@ RUN cd continuum-api && npm install --omit=dev
 COPY continuum-data/package*.json continuum-data/
 RUN cd continuum-data && npm ci --omit=dev
 
+COPY continuum-directory/server/package*.json continuum-directory/server/
+RUN cd continuum-directory/server && npm ci --omit=dev
+
 COPY continuum-api continuum-api
 COPY continuum-data/src continuum-data/src
+COPY continuum-directory/server/src continuum-directory/server/src
 
 # Settings files (.env.production) are read from the working folder
 WORKDIR /app/continuum-api

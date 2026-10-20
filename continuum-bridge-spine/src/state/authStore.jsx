@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { jwtDecode } from "jwt-decode";
+import { orgsApi } from "../api";
+import { chosenHere, forgetOtherAccount, getSpace, setSpace } from "./space";
 
 const TOKEN_KEY = "continuum_token";
 
@@ -52,6 +54,7 @@ export function AuthProvider({ children }) {
 
     try {
       const decoded = jwtDecode(token);
+      forgetOtherAccount(decoded.userId);
 
       setUser({
         id: decoded.userId,
@@ -85,6 +88,7 @@ export function AuthProvider({ children }) {
     sendDeviceDetails(token);
 
     const decoded = jwtDecode(token);
+    forgetOtherAccount(decoded.userId);
     setUser({
       id: decoded.userId,
       email: decoded.email,
@@ -148,6 +152,45 @@ export function AuthProvider({ children }) {
     };
   }, [status, loadAccess]);
 
+  // Your spaces (personal and your organizations) and invites waiting for you; null until known
+  const [spaceList, setSpaceList] = useState(null);
+  const userId = user?.id ?? null;
+  const loadSpaces = useCallback(async () => {
+    if (!userId || !localStorage.getItem(TOKEN_KEY)) return;
+    try {
+      const data = await orgsApi.spaces();
+      setSpaceList(data);
+      // A new device: the space you last used (on any device); one you've left: personal
+      const ids = data.spaces.map((s) => s.id);
+      const here = getSpace(userId);
+      const want = chosenHere(userId) && ids.includes(here) ? here : data.lastSpaceId;
+      if (want !== here) {
+        setSpace(userId, want);
+        if ((here ?? "").startsWith("o:") || want.startsWith("o:")) window.location.reload();
+      }
+    } catch {
+      // an API from before organizations, or offline: personal
+    }
+  }, [userId]);
+  useEffect(() => {
+    if (status !== "authenticated") return undefined;
+    const first = setTimeout(loadSpaces, 0);
+    return () => clearTimeout(first);
+  }, [status, loadSpaces]);
+
+  /** Work in another space: remembered here and on your account; the page loads again for it. */
+  const switchSpace = useCallback(
+    async (spaceId) => {
+      if (!userId) return;
+      setSpace(userId, spaceId);
+      await orgsApi.setActive(spaceId).catch(() => {});
+      window.location.reload();
+    },
+    [userId]
+  );
+  const activeId = (userId && getSpace(userId)) || (userId ? `u:${userId}` : null);
+  const space = spaceList?.spaces.find((s) => s.id === activeId) ?? (userId ? { id: `u:${userId}`, kind: "user", name: "Personal" } : null);
+
   /**
    * May you use this feature? Until your access is known, yes (the server
    * refuses anyway); a feature your role has switched off: no.
@@ -183,6 +226,12 @@ export function AuthProvider({ children }) {
         reloadAccess: loadAccess,
         githubConnected,
         connectGithub,
+        // Spaces: an organization's roles are its own (space.orgRole); Continuum's admin is only access.isAdmin
+        spaces: spaceList?.spaces ?? (space ? [space] : []),
+        space,
+        invites: spaceList?.invites ?? [],
+        switchSpace,
+        reloadSpaces: loadSpaces,
       }}
     >
       {children}

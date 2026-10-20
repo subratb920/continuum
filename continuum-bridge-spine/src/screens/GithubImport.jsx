@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./GithubImport.css";
 import { useAuth } from "../state/authStore";
+import { spaceHeaders } from "../state/space";
 import DeviceFolderOption from "../components/DeviceFolderOption";
 import { getPreferences } from "../utils/preferences";
 import { createProjectFolder, filesOfTarball, pickParentFolder, writeFiles } from "../utils/deviceFolder";
@@ -114,12 +115,16 @@ export default function GithubImport({ onImported, onDone }) {
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${localStorage.getItem("continuum_token")}`,
+                    // Into the space you're working in (your personal one, or an organization)
+                    ...spaceHeaders(),
                 },
                 body: JSON.stringify({ repos: selectedRepos }),
             });
 
             if (!res.ok) {
-                console.error("Import failed", await res.json().catch(() => ({})));
+                const data = await res.json().catch(() => ({}));
+                console.error("Import failed", data);
+                setProblem(data?.error || data?.message || "The import didn't work. Try again.");
                 return;
             }
 

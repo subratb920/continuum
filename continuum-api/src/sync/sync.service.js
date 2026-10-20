@@ -18,6 +18,8 @@ import { AppError } from "../errors/AppError.js";
 import { getOAuthConfig } from "../oauth/oauth.config.js";
 import { randomToken, sha256, signJwt } from "../oauth/oauth.crypto.js";
 import { addOnly, countsOf, pickProjects, remap } from "./merge.js";
+import { personalProjectFilter } from "../spaces/projectAccess.js";
+import { dir } from "../directory/directory.js";
 
 const { EJSON } = BSON;
 export const SYNC_CODES = "sync_codes";
@@ -77,14 +79,17 @@ export async function exportAccount(userId) {
   const db = getDB();
   const uid = new ObjectId(String(userId));
   const mine = { $or: [{ userId: uid }, { userId: String(uid) }] };
-  const projects = await db.collection("projects").find(mine).toArray();
+  // Your personal projects (an organization's projects are the organization's, not this account's)
+  const projects = await db.collection("projects").find({ $and: [mine, { $or: personalProjectFilter(uid).$or }] }).toArray();
   const pids = projects.flatMap((p) => [p._id, String(p._id)]);
   const continuum = {
     projects,
     bridges: await db.collection("bridges").find({ projectId: { $in: pids } }).toArray(),
     bridge_counters: await db.collection("bridge_counters").find({ projectId: { $in: pids } }).toArray(),
   };
-  for (const c of MINE) continuum[c] = await db.collection(c).find(mine).toArray();
+  for (const c of MINE) if (c !== "app_usage") continuum[c] = await db.collection(c).find(mine).toArray();
+  // App use is the directory's (sent in the same shape as before, so an older Continuum reads it too)
+  continuum.app_usage = (await dir.exportUsage(String(uid))).map((a) => ({ _id: `${uid}:${a.app}:${a.day}`, userId: uid, app: a.app, day: a.day, count: a.count, firstAt: a.firstAt, lastAt: a.lastAt }));
 
   const out = { fromUserId: String(uid), continuum, brain: null, deploy: null, notes: [] };
   if (process.env.BRAIN_URL && process.env.BRAIN_INTERNAL_TOKEN) {
@@ -131,7 +136,7 @@ export async function importWithCode(code, payload) {
   // Continuum: only these collections, every record moved onto the account
   const allowed = ["projects", "bridges", "bridge_counters", ...MINE];
   // A project this account already has here under the same name keeps its own (pickProjects)
-  const here = await db.collection("projects").find({ userId: user._id }, { projection: { name: 1 } }).toArray();
+  const here = await db.collection("projects").find(personalProjectFilter(user._id), { projection: { name: 1 } }).toArray();
   const projects = new Set();
   for (const name of allowed) {
     const given = Array.isArray(payload.continuum?.[name]) ? payload.continuum[name] : [];
@@ -139,7 +144,17 @@ export async function importWithCode(code, payload) {
     const docs = given.map((d) => remap(d, from, to));
     // Records of this account only: projects (and by-user records) must name it; bridges must belong to one of its projects
     const own = name === "projects" || MINE.includes(name) ? docs.filter((d) => String(d.userId) === to) : docs.filter((d) => projects.has(String(d.projectId)));
+    if (name === "app_usage") {
+      // Into the directory (a day already counted here keeps its own)
+      report.continuum.app_usage = { ...(await dir.importUsage(to, own)), refused: docs.length - own.length };
+      continue;
+    }
     if (name === "projects") {
+      // Into this account's personal space (never an organization)
+      for (const p of own) {
+        p.spaceId = `u:${to}`;
+        delete p.departmentIds;
+      }
       const pick = pickProjects(own, here);
       pick.ids.forEach((id) => projects.add(id));
       const r = await addOnly(db.collection(name), pick.add);

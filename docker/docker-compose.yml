@@ -80,13 +80,22 @@ services:
       DATA_RUNNER_TOKEN: ${DATA_RUNNER_TOKEN:-dev-data-runner-token}
       # Seals the tokens people save for sources (Kaggle, Hugging Face). Development value only.
       DATA_SECRET_KEY: ${DATA_SECRET_KEY:-dev-data-secret-key}
+      # Continuum Directory (users, roles, organizations, sign-ins): its code is mounted from
+      # ../continuum-directory/server, its data in continuum-directory-db (Postgres). Its page
+      # (continuum-directory-app) signs in through Continuum, from this address
+      DIRECTORY_MODULE: /continuum-directory/server/src/index.js
+      DIRECTORY_DATABASE_URL: postgres://continuum_directory:continuum_directory_dev_pw@continuum-directory-db:45193/directory
+      DIRECTORY_APP_URL: http://localhost:45194
 
     volumes:
       - ../continuum-data:/continuum-data:ro
+      - ../continuum-directory/server:/continuum-directory/server:ro
       - ${HOME}/.continuum/data-store:/store
 
     depends_on:
       mongo:
+        condition: service_healthy
+      continuum-directory-db:
         condition: service_healthy
 
 
@@ -104,6 +113,8 @@ services:
       VITE_PORT: 45173
       VITE_API_BASE_URL: http://localhost:45170
       VITE_DATA_ENABLED: ${DATA_ENABLED:-false}
+      # Continuum Directory's page (Admin in the profile menu opens it in a new tab)
+      VITE_DIRECTORY_URL: http://localhost:45194
 
     depends_on:
       - continuum-api
@@ -164,8 +175,50 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
 
+  # Continuum Directory's database (Postgres): users of every kind, roles,
+  # organizations, departments, sign-ins and app use. Only continuum-api uses it.
+  # Development password only (like Mongo's above); in the cloud Continuum Deploy makes it.
+  continuum-directory-db:
+    image: postgres:16
+    container_name: continuum-directory-db
+    restart: unless-stopped
+    command: ["postgres", "-p", "45193"]
+    ports:
+      - "127.0.0.1:45193:45193"
+    environment:
+      POSTGRES_DB: directory
+      POSTGRES_USER: continuum_directory
+      POSTGRES_PASSWORD: continuum_directory_dev_pw
+    volumes:
+      - continuum-directory-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-p", "45193", "-U", "continuum_directory", "-d", "directory"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+
+  # Continuum Directory's page: your organizations, and Continuum's users, roles
+  # and sign-ins (admins). Signs in through Continuum; opened in a new tab.
+  continuum-directory-app:
+    build:
+      context: ../continuum-directory/app
+    container_name: continuum-directory-app
+    restart: unless-stopped
+    ports:
+      - "45194:45194"
+    environment:
+      VITE_API_BASE_URL: http://localhost:45170
+      VITE_CONTINUUM_URL: http://localhost:45173
+    depends_on:
+      - continuum-api
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+
 volumes:
   mongo_data:
+  continuum-directory-db:
 
 secrets:
   mongo_keyfile:

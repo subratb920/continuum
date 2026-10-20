@@ -7,8 +7,13 @@ const TOKEN_KEY = "continuum_token";
 // Keep this page visible long enough to read (the code is valid for 60 s)
 const MIN_VISIBLE_MS = 3000;
 
+// The apps that sign in through Continuum (continuum-api's OAuth clients), by client id
+const APPS = { "continuum-deploy": "Continuum Deploy", "continuum-directory": "Continuum Directory" };
+const appName = () => APPS[new URLSearchParams(window.location.search).get("client_id")] ?? "the app";
+
 /**
- * /sso/authorize — signs the user in to Continuum Deploy (Phase 1 spec, Section 6).
+ * /sso/authorize — signs the user in to another Continuum app on its own
+ * address: Continuum Deploy, Continuum Directory (Phase 1 spec, Section 6).
  * The user is already signed in to Continuum here (the sign-in screen is shown
  * first if not). Continuum issues a single-use code and returns the verified
  * address to continue to; nothing is redirected unless continuum-api accepted it.
@@ -16,6 +21,7 @@ const MIN_VISIBLE_MS = 3000;
  */
 export default function SsoAuthorize() {
   const [error, setError] = useState(null);
+  const [app] = useState(appName);
   const started = useRef(false);
 
   useEffect(() => {
@@ -47,7 +53,7 @@ export default function SsoAuthorize() {
           const wait = Math.max(0, MIN_VISIBLE_MS - (Date.now() - shownAt));
           setTimeout(() => window.location.replace(data.redirectTo), wait);
         } else {
-          setError(data.error_description || data.error || "Continuum Deploy could not be opened.");
+          setError(data.error_description || data.error || `${appName()} could not be opened.`);
         }
       })
       .catch(() => setError("Continuum is not reachable. Please try again."));
@@ -58,13 +64,13 @@ export default function SsoAuthorize() {
       <div className="sso-card" role="status" aria-live="polite">
         {error ? (
           <>
-            <h1>Couldn't continue to Continuum Deploy</h1>
+            <h1>Couldn't continue to {app}</h1>
             <p className="sso-error">{error}</p>
             <a href="/">Back to Continuum</a>
           </>
         ) : (
           <>
-            <h1>Continuing to Continuum Deploy…</h1>
+            <h1>Continuing to {app}…</h1>
             <p>Signing you in with your Continuum account.</p>
             <div className="sso-progress" aria-hidden="true">
               <div className="sso-progress-bar" style={{ animationDuration: `${MIN_VISIBLE_MS}ms` }} />

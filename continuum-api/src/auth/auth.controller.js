@@ -1,10 +1,10 @@
 import { getDB } from "../config/db.js";
 import { createAuthService } from "./auth.service.js";
 import { AppError } from "../errors/AppError.js";
-import { recordLogin } from "../access/activity.js";
+import { dir } from "../directory/directory.js";
 
 /** A sign-in record must never stop a sign-in. */
-const note = (req, entry) => recordLogin(getDB(), { ...entry, req }).catch((err) => req.log.warn({ err: err.message }, "Sign-in not recorded"));
+const note = (req, entry) => dir.recordLogin({ ...entry, req }).catch((err) => req.log.warn({ err: err.message }, "Sign-in not recorded"));
 
 /**
  * Validate credentials from the request body.

@@ -1,0 +1,406 @@
+/* ==========================================================
+   Theme tokens: the ONLY place colours are defined.
+   Every stylesheet uses var(--token); none sets a colour itself
+   (npm run check:colors fails if one does).
+
+   Adding a theme:
+     1. copy the dark block below, change its selector to
+        :root[data-theme="<name>"] and its values;
+     2. add the name to THEMES in src/utils/preferences.js.
+   That's all: no stylesheet changes.
+
+   Channel tokens (*-rgb) are space-separated r g b, for
+   translucent uses: rgb(var(--success-rgb) / 0.55).
+   ========================================================== */
+
+:root[data-theme="light"] {
+  --color-scheme: light; /* native controls, scrollbars */
+
+  /* Surfaces */
+  --page: #ffffff; /* the app's background */
+  --page-alt: #fafafa; /* pages that scroll under the header (Help, Welcome) */
+  --header: #ffffff;
+  --pane: #f8fafc; /* the console's side panes and drawers */
+  --surface: #ffffff; /* cards, menus, windows, inputs */
+  --surface-subtle: #fafafa; /* insets inside a card (menu header, option boxes) */
+  --hover: #f3f4f6;
+  --selected: #eef2ff; /* selected rows and sections */
+  --selected-neutral: #ececec; /* current page in the header */
+  --control: #e5e7eb; /* chips, tracks, empty bars */
+  --control-strong: #cbd5e1; /* switch off, inactive dots */
+  --dim: #94a3b8; /* finished-bridge dots */
+  --page-rgb: 255 255 255;
+
+  /* Lines */
+  --border: #e5e7eb;
+  --border-subtle: #f0f0f0; /* dividers */
+  --border-strong: #d1d5db; /* inputs, buttons */
+  --border-emphasis: #b5b5b5; /* current-page outline */
+  --focus: #6366f1;
+
+  /* Text */
+  --text: #111827;
+  --text-2: #374151;
+  --text-3: #4b5563;
+  --text-muted: #6b7280;
+  --text-faint: #9ca3af;
+  --link: #0066cc;
+
+  /* Accent (primary actions, highlights) */
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-strong: #6366f1; /* bars, accent marks */
+  --accent-border: #c7d2fe;
+  --accent-text: #4338ca;
+  --accent-ring: #e0e7ff;
+  --on-accent: #ffffff;
+  --accent-rgb: 99 102 241;
+
+  /* Brand (avatars, welcome actions) */
+  --brand: #4f6ef7;
+  --brand-hover: #3d5be0;
+  --brand-text: #3d5be0; /* text in the brand blue: 4.5:1 on white */
+  --on-brand: #ffffff;
+  --brand-rgb: 79 110 247;
+
+  /* Status */
+  --success: #22c55e;
+  --success-soft: #f0fdf4;
+  --success-border: #bbf7d0;
+  --success-text: #15803d;
+  --success-rgb: 34 197 94;
+  --danger: #dc2626;
+  --danger-hover: #991b1b;
+  --danger-soft: #fef2f2;
+  --danger-border: #fecaca;
+  --danger-text: #b91c1c;
+  --on-danger: #ffffff;
+  --warning: #f59e0b;
+  --warning-soft: #fffbeb;
+  --warning-border: #fde68a;
+  --warning-text: #92400e;
+  --warning-rgb: 245 158 11;
+  --info: #0ea5e9;
+  --info-soft: #e0f2fe;
+  --info-border: #bae6fd;
+  --info-text: #075985;
+  --pink: #ec4899;
+  --pink-soft: #fce7f3;
+  --pink-border: #fbcfe8;
+  --pink-text: #9d174d;
+  --violet-soft: #f1ecfd;
+  --violet-border: #c9bdf2;
+  --violet-text: #5b3cc4;
+  --highlight-dot: #facc15; /* selected-but-inactive project */
+
+  /* Effects */
+  --shadow-rgb: 15 23 42;
+  --scrim: rgba(15, 23, 42, 0.38);
+
+  /* Agents (Agents screen): one hue per state; -rgb for glows */
+  --agent-core: #7c3aed;
+  --agent-core-rgb: 124 58 237;
+  --agent-working: #4f46e5;
+  --agent-working-rgb: 79 70 229;
+  --agent-waiting: #d97706;
+  --agent-waiting-rgb: 217 119 6;
+  --agent-failed: #dc2626;
+  --agent-failed-rgb: 220 38 38;
+  --agent-idle: #16a34a;
+  --agent-idle-rgb: 22 163 74;
+  --agent-off: #94a3b8;
+  --agent-off-rgb: 148 163 184;
+}
+
+/* Dark: ChatGPT's dark palette. Also the default (no theme chosen yet) */
+:root,
+:root[data-theme="dark"] {
+  --color-scheme: dark;
+
+  --page: #212121;
+  --page-alt: #212121;
+  --header: #171717;
+  --pane: #171717;
+  --surface: #2f2f2f;
+  --surface-subtle: #262626;
+  --hover: #3a3a3a;
+  --selected: #3a3a3a;
+  --selected-neutral: #424242;
+  --control: #424242;
+  --control-strong: #555555;
+  --dim: #6b6b6b;
+  --page-rgb: 33 33 33;
+
+  --border: #383838;
+  --border-subtle: #2c2c2c;
+  --border-strong: #4a4a4a;
+  --border-emphasis: #6b6b6b;
+  --focus: #ececec;
+
+  --text: #ececec;
+  --text-2: #d4d4d4;
+  --text-3: #b4b4b4;
+  --text-muted: #9b9b9b;
+  --text-faint: #8e8e8e;
+  --link: #7ab7ff;
+
+  --accent: #ececec;
+  --accent-hover: #d4d4d4;
+  --accent-strong: #ececec;
+  --accent-border: #4a4a4a;
+  --accent-text: #ececec;
+  --accent-ring: rgba(255, 255, 255, 0.14);
+  --on-accent: #0d0d0d;
+  --accent-rgb: 236 236 236;
+
+  --brand: #ececec;
+  --brand-hover: #d4d4d4;
+  --brand-text: #ececec;
+  --on-brand: #0d0d0d;
+  --brand-rgb: 236 236 236;
+
+  --success: #10a37f;
+  --success-soft: rgba(16, 163, 127, 0.16);
+  --success-border: rgba(16, 163, 127, 0.4);
+  --success-text: #19c37d;
+  --success-rgb: 16 163 127;
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-soft: rgba(239, 68, 68, 0.14);
+  --danger-border: rgba(239, 68, 68, 0.4);
+  --danger-text: #fca5a5; /* readable on the dark red tint */
+  --on-danger: #ffffff;
+  --warning: #f59e0b;
+  --warning-soft: rgba(245, 158, 11, 0.16);
+  --warning-border: rgba(245, 158, 11, 0.4);
+  --warning-text: #fcd34d;
+  --warning-rgb: 245 158 11;
+  --info: #0ea5e9;
+  --info-soft: rgba(14, 165, 233, 0.16);
+  --info-border: rgba(14, 165, 233, 0.4);
+  --info-text: #7dd3fc;
+  --pink: #ec4899;
+  --pink-soft: rgba(236, 72, 153, 0.16);
+  --pink-border: rgba(236, 72, 153, 0.4);
+  --pink-text: #f9a8d4;
+  --violet-soft: rgba(139, 92, 246, 0.16);
+  --violet-border: rgba(139, 92, 246, 0.4);
+  --violet-text: #c4b5fd;
+  --highlight-dot: #facc15;
+
+  --shadow-rgb: 0 0 0;
+  --scrim: rgba(0, 0, 0, 0.62);
+
+  /* Agents (Agents screen): one hue per state; -rgb for glows */
+  --agent-core: #a78bfa;
+  --agent-core-rgb: 167 139 250;
+  --agent-working: #818cf8;
+  --agent-working-rgb: 129 140 248;
+  --agent-waiting: #f59e0b;
+  --agent-waiting-rgb: 245 158 11;
+  --agent-failed: #ef4444;
+  --agent-failed-rgb: 239 68 68;
+  --agent-idle: #19c37d;
+  --agent-idle-rgb: 25 195 125;
+  --agent-off: #6b6b6b;
+  --agent-off-rgb: 107 107 107;
+}
+
+/* Gray: a professional neutral grey with a muted slate-blue accent */
+:root[data-theme="gray"] {
+  --color-scheme: light;
+
+  --page: #e8e9eb;
+  --page-alt: #e8e9eb;
+  --header: #dcdee2;
+  --pane: #dfe1e5;
+  --surface: #f4f5f6;
+  --surface-subtle: #eceef0;
+  --hover: #dadde1;
+  --selected: #cfd5dd;
+  --selected-neutral: #cfd3d8;
+  --control: #d3d6db;
+  --control-strong: #b9bec6;
+  --dim: #9aa1ab;
+  --page-rgb: 232 233 235;
+
+  --border: #c9cdd3;
+  --border-subtle: #d8dbdf;
+  --border-strong: #b3b8bf;
+  --border-emphasis: #8f959e;
+  --focus: #4a6a94;
+
+  --text: #1f2328;
+  --text-2: #33393f;
+  --text-3: #474e56;
+  --text-muted: #5c636b;
+  --text-faint: #7b828a;
+  --link: #2f5f9e;
+
+  --accent: #3d5a80;
+  --accent-hover: #2f4a6d;
+  --accent-strong: #4a6a94;
+  --accent-border: #a9b8cc;
+  --accent-text: #2f4a6d;
+  --accent-ring: #c8d3e1;
+  --on-accent: #ffffff;
+  --accent-rgb: 74 106 148;
+
+  --brand: #3d5a80;
+  --brand-hover: #2f4a6d;
+  --brand-text: #2f4a6d;
+  --on-brand: #ffffff;
+  --brand-rgb: 61 90 128;
+
+  --success: #2e8b57;
+  --success-soft: #dfeee5;
+  --success-border: #a9d3b9;
+  --success-text: #1f6b40;
+  --success-rgb: 46 139 87;
+  --danger: #c0392b;
+  --danger-hover: #962d22;
+  --danger-soft: #f3e0de;
+  --danger-border: #e0aaa4;
+  --danger-text: #9b2c20;
+  --on-danger: #ffffff;
+  --warning: #c58a1a;
+  --warning-soft: #f4ead3;
+  --warning-border: #e2cd9a;
+  --warning-text: #7a5410;
+  --warning-rgb: 197 138 26;
+  --info: #2f7fa8;
+  --info-soft: #dbe9f1;
+  --info-border: #a8cbe0;
+  --info-text: #1d5a7a;
+  --pink: #b0477a;
+  --pink-soft: #f1dfe8;
+  --pink-border: #ddb0c7;
+  --pink-text: #7f2f57;
+  --violet-soft: #e6e1f2;
+  --violet-border: #c3b8e3;
+  --violet-text: #5a4796;
+  --highlight-dot: #d4a72c;
+
+  --shadow-rgb: 31 35 40;
+  --scrim: rgba(31, 35, 40, 0.42);
+
+  /* Agents (Agents screen): one hue per state; -rgb for glows */
+  --agent-core: #6d5a9e;
+  --agent-core-rgb: 109 90 158;
+  --agent-working: #3d5a80;
+  --agent-working-rgb: 61 90 128;
+  --agent-waiting: #b7791f;
+  --agent-waiting-rgb: 183 121 31;
+  --agent-failed: #c0392b;
+  --agent-failed-rgb: 192 57 43;
+  --agent-idle: #2e8b57;
+  --agent-idle-rgb: 46 139 87;
+  --agent-off: #8a94a3;
+  --agent-off-rgb: 138 148 163;
+}
+
+/* Screens that are dark in every theme: sign-in (auth) and the GitHub import (GitHub's own palette) */
+:root {
+  --auth-bg: #0f1115;
+  --auth-card: #151821;
+  --auth-field: #111827;
+  --auth-field-hover: #1f2937;
+  --auth-border: #2a2f3a;
+  --auth-text: #e6e6e6;
+  --auth-muted: #9aa0aa;
+  --auth-subtle: #666666;
+  --auth-brand: #4f6ef7;
+  --auth-on-brand: #ffffff;
+  --auth-error: #ff6b6b;
+  --auth-google: #ea4335;
+  --auth-shadow: rgba(0, 0, 0, 0.4);
+
+  --gh-bg: #0d1117;
+  --gh-surface: #161b22;
+  --gh-border: #30363d;
+  --gh-border-subtle: #21262d;
+  --gh-text: #c9d1d9;
+  --gh-text-strong: #f0f6fc;
+  --gh-text-light: #e6edf3;
+  --gh-muted: #8b949e;
+  --gh-link: #58a6ff;
+  --gh-accent: #2f81f7;
+  --gh-selected: #1f6feb22;
+  --gh-green: #238636;
+  --gh-green-hover: #2ea043;
+  --gh-green-dark: #1f6f3a;
+  --gh-thumb-hover: #484f58;
+  --gh-danger: #f85149;
+  --gh-danger-text: #ff7b72;
+  --gh-danger-soft: #da363322;
+}
+
+/* Technology logos in the New Project wizard: each brand's own colour, the
+   same in every theme (black/white logos use the text colour instead) */
+:root {
+  --logo-astro: #bc52ee;
+  --logo-axios: #5a29e4;
+  --logo-chakra: #319795;
+  --logo-css: #663399;
+  --logo-docker: #2496ed;
+  --logo-dotenv: #d4bc1f;
+  --logo-dotnet: #512bd4;
+  --logo-drizzle: #a8c535;
+  --logo-celery: #37814a;
+  --logo-fastapi: #009688;
+  --logo-gatsby: #663399;
+  --logo-gin: #008ecf;
+  --logo-git: #f05032;
+  --logo-gcloud: #4285f4;
+  --logo-go: #00add8;
+  --logo-graphql: #e10098;
+  --logo-hono: #e36002;
+  --logo-html: #e34f26;
+  --logo-javascript: #e6c700;
+  --logo-kotlin: #7f52ff;
+  --logo-maven: #c71a36;
+  --logo-mongodb: #47a248;
+  --logo-mongoose: #880000;
+  --logo-mui: #007fff;
+  --logo-mysql: #4479a1;
+  --logo-nestjs: #e0234e;
+  --logo-node: #5fa04e;
+  --logo-npm: #cb3837;
+  --logo-nuxt: #00dc82;
+  --logo-passport: #34e27a;
+  --logo-pino: #687634;
+  --logo-pnpm: #f69220;
+  --logo-postgresql: #4169e1;
+  --logo-prettier: #e5a52e;
+  --logo-pydantic: #e92063;
+  --logo-pytest: #0a9edc;
+  --logo-python: #3776ab;
+  --logo-react: #3ec6ea;
+  --logo-react-hook-form: #ec5990;
+  --logo-react-router: #ca4245;
+  --logo-redis: #ff4438;
+  --logo-redux: #764abc;
+  --logo-ruff: #d7ff64;
+  --logo-spring: #6db33f;
+  --logo-sqlalchemy: #d71f00;
+  --logo-sqlite: #0f80cc;
+  --logo-svelte: #ff3e00;
+  --logo-tailwind: #06b6d4;
+  --logo-tanstack: #ff4154;
+  --logo-typescript: #3178c6;
+  --logo-uv: #de5fe9;
+  --logo-vite: #646cff;
+  --logo-vitest: #6e9f18;
+  --logo-vue: #4fc08d;
+  --logo-yarn: #2c8ebf;
+  --logo-zod: #3e67b1;
+}
+
+:root {
+  color-scheme: var(--color-scheme);
+}
+
+body {
+  background: var(--page);
+  color: var(--text);
+}

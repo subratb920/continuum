@@ -13,7 +13,7 @@ export async function getActiveProject(req, res) {
   );
 
   // const activeProjectId = await executionService.getActiveProject(req.user.id);
-  const activeProject = await executionService.getActiveProject(req.user.id);
+  const activeProject = await executionService.getActiveProject(req.user.id, req.space);
 
   req.log.info(
     {
@@ -46,7 +46,8 @@ export async function activateProject(req, res) {
 
   await executionService.activateProject(
     req.user.id,
-    projectId
+    projectId,
+    req.space
   );
 
   req.log.info(
@@ -71,7 +72,7 @@ export async function deactivateProject(req, res) {
     "Deactivating active project"
   );
 
-  await executionService.deactivateProject(req.user.id);
+  await executionService.deactivateProject(req.user.id, req.space);
 
   req.log.info(
     {

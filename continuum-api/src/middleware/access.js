@@ -1,16 +1,17 @@
 // src/middleware/access.js
 //
-// After requireAuth: the signed-in user's access (role and features) on
-// req.access, and the checks that refuse what their role has switched off.
+// After requireAuth: the signed-in user's access (role and features, from
+// continuum-directory) on req.access, and the checks that refuse what their
+// role has switched off.
 
-import { getDB } from "../config/db.js";
-import { accessFor } from "../access/access.js";
-import { createUsageTracker } from "../access/activity.js";
-import { featureLabel } from "../access/features.js";
+import { dir, features } from "../directory/directory.js";
 import { requireAuth } from "./requireAuth.js";
+import { withSpace } from "../spaces/projectAccess.js";
 
-/** App use and last seen, written once a minute (access/activity.js). */
-export const usage = createUsageTracker(() => getDB());
+const { featureLabel } = features;
+
+/** App use and last seen, written once a minute by the directory. */
+export const usage = { used: (userId, app) => dir.used(userId, app), sawUser: (userId) => dir.sawUser(userId) };
 
 /** Counts this request as use of an app (a feature), for the admin's view. */
 export const uses = (app) => (req, _res, next) => {
@@ -20,16 +21,16 @@ export const uses = (app) => (req, _res, next) => {
 
 /** Loads req.access; a disabled or deleted account gets nothing. */
 export function withAccess(opts = {}) {
-  const db = opts.db ?? (() => getDB());
+  const accessFor = opts.accessFor ?? dir.accessFor;
   return async (req, res, next) => {
     try {
-      const access = await accessFor(db(), req.user.id, opts);
+      const access = await accessFor(req.user.id);
       if (!access) return res.status(401).json({ error: "This account no longer exists.", code: "NO_ACCOUNT" });
       if (access.disabled) return res.status(403).json({ error: "This account is disabled. Ask your admin.", code: "ACCOUNT_DISABLED" });
       // Signed out everywhere since this token was made: sign in again
       if ((req.user.tv ?? 0) !== access.tokenVersion) return res.status(401).json({ error: "You were signed out. Sign in again.", code: "SESSION_ENDED" });
       req.access = access;
-      if (!opts.db) usage.sawUser(req.user.id); // last seen (not in tests with their own database)
+      if (!opts.accessFor) usage.sawUser(req.user.id); // last seen (not in tests with their own directory)
       next();
     } catch (err) {
       next(err);
@@ -37,8 +38,8 @@ export function withAccess(opts = {}) {
   };
 }
 
-/** Signed in, with access loaded: what every signed-in route needs. */
-export const authed = [requireAuth, withAccess()];
+/** Signed in, with access loaded and the space it works in (req.space: personal or an organization): what every signed-in route needs. */
+export const authed = [requireAuth, withAccess(), withSpace()];
 
 const refuse = (res, feature) =>
   res.status(403).json({

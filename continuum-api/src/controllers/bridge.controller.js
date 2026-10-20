@@ -27,7 +27,8 @@ export async function startBridge(req, res) {
   // 🔒 Enforce execution law FIRST
   await executionService.assertCanStartBridge(
     req.user.id,
-    projectId
+    projectId,
+    req.space
   );
 
   // 🔹 Start bridge and get FULL document

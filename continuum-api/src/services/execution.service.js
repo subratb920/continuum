@@ -4,6 +4,14 @@ import { PROJECT_COLLECTION } from "../models/project.model.js";
 import { BRIDGE_COLLECTION } from "../models/bridge.model.js";
 import { withSystemContext } from "../logging/childLogger.js";
 import { mineFilter } from "./bridgeAccess.js";
+import { canWrite, findProject, personalSpace, projectFilter } from "../spaces/projectAccess.js";
+import { AppError } from "../errors/AppError.js";
+
+// Your active project is one per space: your personal space's is activeProjectId
+// (as before spaces, and what the brain reads); an organization's is
+// activeBySpace["o:<id>"]. Each person has their own, even on a shared project.
+const pointer = (space) => (space?.kind === "org" ? `activeBySpace.${space.id}` : "activeProjectId");
+const activeIn = (state, space) => (space?.kind === "org" ? state.activeBySpace?.[space.id] ?? null : state.activeProjectId ?? null);
 
 export function createExecutionService(db) {
   const log = withSystemContext("execution");
@@ -35,20 +43,22 @@ export function createExecutionService(db) {
   /**
    * Get FULL active project (FIXED)
    */
-  async function getActiveProject(userId) {
+  async function getActiveProject(userId, space = personalSpace(userId)) {
     const uid = toObjectId(userId);
 
-    log.debug({ userId: uid }, "Fetching active project");
+    log.debug({ userId: uid, spaceId: space.id }, "Fetching active project");
 
     const state = await getExecutionState(uid);
+    const active = activeIn(state, space);
 
-    if (!state.activeProjectId) {
+    if (!active) {
       return null;
     }
 
+    // Still one you can see (in an organization, your departments may have changed)
     const project = await projectCol.findOne({
-      _id: state.activeProjectId,
-      userId: uid,
+      _id: active,
+      ...projectFilter(space, uid),
     });
 
     return project || null;
@@ -57,31 +67,26 @@ export function createExecutionService(db) {
   /**
    * Activate project
    */
-  async function activateProject(userId, projectId) {
+  async function activateProject(userId, projectId, space = personalSpace(userId)) {
     const uid = toObjectId(userId);
-    const pid = toObjectId(projectId);
 
-    log.debug({ userId: uid, projectId: pid }, "Activating project");
+    log.debug({ userId: uid, projectId, spaceId: space.id }, "Activating project");
 
-    const project = await projectCol.findOne({
-      _id: pid,
-      userId: uid,
-    });
-
-    if (!project) {
-      log.warn(
-        { userId: uid, projectId: pid },
-        "Project activation rejected"
-      );
-      throw new Error("Project not found or not owned by user");
+    let project;
+    try {
+      project = await findProject(db, space, uid, String(projectId ?? ""), { projection: { _id: 1 } });
+    } catch (err) {
+      log.warn({ userId: uid, projectId, spaceId: space.id }, "Project activation rejected");
+      throw err;
     }
+    const pid = project._id;
 
     const result = await executionCol.updateOne(
       { userId: uid },
       {
         $set: {
           userId: uid,
-          activeProjectId: pid,
+          [pointer(space)]: pid,
           updatedAt: new Date(),
         },
       },
@@ -98,17 +103,19 @@ export function createExecutionService(db) {
   /**
    * Deactivate project
    */
-  async function deactivateProject(userId) {
+  async function deactivateProject(userId, space = personalSpace(userId)) {
     const uid = toObjectId(userId);
 
     const result = await executionCol.updateOne(
       { userId: uid },
-      {
-        $set: {
-          activeProjectId: null,
-          updatedAt: new Date(),
-        },
-      }
+      space.kind === "org"
+        ? { $unset: { [pointer(space)]: "" }, $set: { updatedAt: new Date() } }
+        : {
+            $set: {
+              activeProjectId: null,
+              updatedAt: new Date(),
+            },
+          }
     );
 
     if (result.matchedCount === 0) {
@@ -121,17 +128,21 @@ export function createExecutionService(db) {
   /**
    * Execution LAW enforcement
    */
-  async function assertCanStartBridge(userId, projectId) {
+  async function assertCanStartBridge(userId, projectId, space = personalSpace(userId)) {
     const uid = toObjectId(userId);
-    const pid = toObjectId(projectId);
+
+    // A viewer only looks; and it must be a project you can still see here
+    if (!canWrite(space)) throw new AppError("You can only look at this organization's projects (you're a viewer).", 403, "READ_ONLY");
+    const pid = (await findProject(db, space, uid, String(projectId ?? ""), { need: "write", projection: { _id: 1 } }))._id;
 
     const state = await getExecutionState(uid);
+    const active = activeIn(state, space);
 
-    if (!state.activeProjectId) {
+    if (!active) {
       throw new Error("No active project");
     }
 
-    if (!state.activeProjectId.equals(pid)) {
+    if (!active.equals(pid)) {
       throw new Error("Project is not active");
     }
 

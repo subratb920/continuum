@@ -11,9 +11,17 @@ import { usePanels } from "./PanelsContext";
 import { DEPLOY_AVAILABLE, useShellActions } from "./shellActions";
 import { createItems, deployItems } from "./menuItems";
 import MenuItem from "./MenuItem";
-import { ContactCard, ProfileCard, SettingsCard, SupportCard } from "../components/ProfileCards";
 import { BUILD } from "../utils/support";
 import { SCREENS, screenForPath } from "../screens/registry";
+import SpaceSwitcher from "./SpaceSwitcher";
+import { deferred } from "../utils/deferred";
+import { DIRECTORY_AVAILABLE, openDirectory } from "../directoryLinks";
+
+// The profile menu's cards load when one is opened
+const ProfileCard = deferred(() => import("../components/ProfileCards"), "ProfileCard");
+const SettingsCard = deferred(() => import("../components/ProfileCards"), "SettingsCard");
+const SupportCard = deferred(() => import("../components/ProfileCards"), "SupportCard");
+const ContactCard = deferred(() => import("../components/ProfileCards"), "ContactCard");
 
 /** A screen without hover (phones, tablets): menus open on a tap instead. */
 const noHover = () => typeof window !== "undefined" && window.matchMedia?.("(hover: none)").matches;
@@ -54,7 +62,7 @@ export default function ShellHeader({ selectedProject = null }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  const [openMenu, setOpenMenu] = useState(null); // null | "nav" | "create" | "deploy" | "profile"
+  const [openMenu, setOpenMenu] = useState(null); // null | "nav" | "create" | "deploy" | "space" | "profile"
   const panels = usePanels();
 
   // Close on outside click (outside any header menu) or Escape
@@ -309,6 +317,9 @@ export default function ShellHeader({ selectedProject = null }) {
       </nav>
 
       <div className="shell-actions">
+        {/* Where you work: personal or an organization */}
+        <SpaceSwitcher open={openMenu === "space"} onToggle={() => toggle("space")} onClose={() => setOpenMenu(null)} />
+
         {/* Profile avatar */}
         <div className="shell-menu">
           <button
@@ -353,19 +364,20 @@ export default function ShellHeader({ selectedProject = null }) {
                   <span className="profile-menu-icon" aria-hidden="true">📊</span>
                   <span className="profile-menu-label">Dashboard</span>
                 </button>
-                {/* Admins only: the item isn't there for anyone else */}
-                {access?.isAdmin && (
+                {/* Admins (and, with no admin yet, whoever claims it): Continuum Directory, in a new tab */}
+                {DIRECTORY_AVAILABLE && (access?.isAdmin || access?.adminSetup) && (
                   <button
                     role="menuitem"
                     className="profile-menu-item"
-                    aria-current={pathname === "/admin" ? "page" : undefined}
+                    title="Opens Continuum Directory in a new tab: users, roles, sign-ins and organizations"
                     onClick={() => {
                       setOpenMenu(null);
-                      navigate("/admin");
+                      openDirectory("users");
                     }}
                   >
                     <span className="profile-menu-icon" aria-hidden="true">🛡</span>
                     <span className="profile-menu-label">Admin</span>
+                    <span className="profile-menu-trail" aria-hidden="true">↗</span>
                   </button>
                 )}
               </div>

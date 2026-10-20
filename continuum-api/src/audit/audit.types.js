@@ -19,4 +19,7 @@ export const AUDIT_EVENTS = {
   ADMIN_SETTINGS_UPDATED: "ADMIN_SETTINGS_UPDATED",
   ADMIN_USER_SIGNED_OUT: "ADMIN_USER_SIGNED_OUT",
   ADMIN_CLAIMED: "ADMIN_CLAIMED", // the first admin, with the setup code
+
+  // An organization's project: which departments see it (organizations themselves are the directory's)
+  PROJECT_DEPARTMENTS_SET: "PROJECT_DEPARTMENTS_SET",
 };

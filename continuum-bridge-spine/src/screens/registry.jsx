@@ -1,26 +1,25 @@
-import { DashboardNav } from "../components/Dashboard";
 import { BrainProvider } from "../brain/BrainProvider";
 import { usePendingCount } from "../brain/brainContext";
-import AgentRoster from "./brain/AgentRoster";
-import AgentStage from "./brain/AgentStage";
-import AgentInspector from "./brain/AgentInspector";
-import BrainChat from "./brain/BrainChat";
-import BrainGuide from "./brain/BrainGuide";
-import BrainFlows from "./brain/BrainFlows";
 import { WorkflowsProvider } from "../workflows/WorkflowsProvider";
-import WorkflowLibrary from "../workflows/WorkflowLibrary";
-import WorkflowCanvas from "../workflows/WorkflowCanvas";
-import WorkflowInspector from "../workflows/WorkflowInspector";
 import { DataProvider } from "../data/DataProvider";
 import { useBuildingCount } from "../data/dataContext";
 import { DATA_ENABLED } from "../data/dataApi";
-import DataLibrary from "./data/DataLibrary";
-import DataWorkbench from "./data/DataWorkbench";
-import DataInspector from "./data/DataInspector";
-import { AdminProvider } from "./admin/AdminProvider";
-import AdminNav from "./admin/AdminNav";
-import AdminMain from "./admin/AdminMain";
-import AdminDetail from "./admin/AdminDetail";
+import { deferred } from "../utils/deferred";
+
+// Each screen's panes load when the screen is first opened (utils/deferred.jsx)
+const DashboardNav = deferred(() => import("../components/Dashboard"), "DashboardNav");
+const AgentRoster = deferred(() => import("./brain/AgentRoster"));
+const AgentStage = deferred(() => import("./brain/AgentStage"));
+const AgentInspector = deferred(() => import("./brain/AgentInspector"));
+const BrainChat = deferred(() => import("./brain/BrainChat"));
+const BrainGuide = deferred(() => import("./brain/BrainGuide"));
+const BrainFlows = deferred(() => import("./brain/BrainFlows"));
+const WorkflowLibrary = deferred(() => import("../workflows/WorkflowLibrary"));
+const WorkflowCanvas = deferred(() => import("../workflows/WorkflowCanvas"));
+const WorkflowInspector = deferred(() => import("../workflows/WorkflowInspector"));
+const DataLibrary = deferred(() => import("./data/DataLibrary"));
+const DataWorkbench = deferred(() => import("./data/DataWorkbench"));
+const DataInspector = deferred(() => import("./data/DataInspector"));
 
 /**
  * The console's screens: each one fills the three panes (left · centre · right)
@@ -140,20 +139,6 @@ export const SCREENS = [
     center: { label: "Dashboard", icon: "📊" },
     right: { label: "Bridges", icon: "🌉" },
     slots: (ctx) => ({ left: <DashboardNav onIntervalSetup={() => ctx.navigate("/console")} />, center: ctx.dashboardCenter }),
-  },
-  // Admins only: users, roles (each feature a switch), sign-ins; the profile menu opens it
-  {
-    id: "admin",
-    feature: "admin",
-    path: "/admin",
-    label: "Admin",
-    icon: "🛡",
-    switcher: false,
-    left: { label: "Sections", icon: "📑" },
-    center: { label: "Admin", icon: "🛡" },
-    right: { label: "Details", icon: "☰" },
-    Provider: AdminProvider,
-    slots: () => ({ left: <AdminNav />, center: <AdminMain />, right: <AdminDetail /> }),
   },
 ];
 

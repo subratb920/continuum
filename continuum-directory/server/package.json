@@ -1,0 +1,22 @@
+{
+  "name": "continuum-directory",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Continuum's directory: users of every kind, roles and features, organizations and departments, sign-ins and app use, on its own Postgres. Mounted into continuum-api at /directory.",
+  "license": "UNLICENSED",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test --test-concurrency=1 test/*.test.js"
+  },
+  "dependencies": {
+    "express": "5.2.1",
+    "pg": "8.13.1"
+  }
+}

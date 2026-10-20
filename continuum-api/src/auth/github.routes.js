@@ -76,7 +76,7 @@ router.post("/import", async (req, res) => {
         const projectService = await createProjectService(db);
 
         const userId = req.user.id;
-        const { repos } = req.body;
+        const { repos, departmentIds } = req.body;
 
         if (!repos || repos.length === 0) {
             return res.status(400).json({ message: "No repos selected" });
@@ -85,15 +85,19 @@ router.post("/import", async (req, res) => {
         const created = [];
 
         for (const repo of repos) {
+            // Into the space you're working in (an organization's: with the departments chosen)
             const id = await projectService.createProjectFromGithub(
                 userId,
-                repo
+                repo,
+                req.space,
+                { departmentIds }
             );
             created.push(id);
         }
 
         res.json({ message: "Projects imported successfully", count: created.length });
     } catch (err) {
+        if (err.isOperational) return res.status(err.statusCode).json({ message: err.message, error: err.message, code: err.code });
         console.error(err);
         res.status(500).json({ message: "Import failed" });
     }

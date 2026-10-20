@@ -6,6 +6,7 @@ import {
   renameProject,
   deleteProject,
   getProjectContents,
+  setProjectDepartments,
 } from "../controllers/project.controller.js";
 import { getProjectBridges } from "../controllers/bridge.controller.js";
 
@@ -17,5 +18,6 @@ router.patch("/:id", requireAuth, renameProject);
 router.delete("/:id", requireAuth, deleteProject);
 router.get("/:id/bridges", requireAuth, getProjectBridges);
 router.get("/:id/contents", requireAuth, getProjectContents);
+router.put("/:id/departments", requireAuth, setProjectDepartments);
 
 export default router;

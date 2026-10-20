@@ -3,8 +3,7 @@ import { signup, login } from "./auth.controller.js";
 import fetch from "node-fetch";
 import jwt from "jsonwebtoken";
 import { getDB } from "../config/db.js";
-import { ADMIN_ROLE, clearAccessCache, isOwnerEmail, roleForNewUser, sessionVersion } from "../access/access.js";
-import { recordLogin } from "../access/activity.js";
+import { dir } from "../directory/directory.js";
 import { clientAuthCallbackUrl, clientPageUrl, githubAuthorizeUrl, githubCallbackUrl } from "../config/urls.js";
 import { GITHUB_SCOPE, takeConnectState } from "./githubConnect.js";
 
@@ -110,6 +109,8 @@ router.get("/github/callback", async (req, res) => {
         }
         
         const profile = { login: githubUser.login ?? null, name: githubUser.name ?? null, avatarUrl: githubUser.avatar_url ?? null };
+        // The directory's mapping to this GitHub account, with the addresses GitHub has verified for it (the owner is decided from them)
+        const githubLink = { id: githubUser.id, ...profile, verifiedEmails: Array.isArray(emails) ? emails.filter((e) => e.verified && e.email).map((e) => e.email) : [] };
 
         /**
          * Connect GitHub (started by a signed-in user, any sign-in and any
@@ -121,7 +122,8 @@ router.get("/github/callback", async (req, res) => {
         if (connectTo) {
             await users.updateMany({ githubId: githubUser.id, _id: { $ne: connectTo } }, { $unset: { githubId: "", githubAccessToken: "", github: "" } });
             await users.updateOne({ _id: connectTo }, { $set: { githubId: githubUser.id, githubAccessToken: access_token, github: profile, updatedAt: new Date() } });
-            clearAccessCache(connectTo);
+            await dir.linkGithub(String(connectTo), githubLink);
+            dir.clearAccessCache(connectTo);
             req.log.info({ githubId: githubUser.id, userId: connectTo }, "GitHub connected to an account");
             return res.redirect(clientPageUrl("/import"));
         }
@@ -150,11 +152,12 @@ router.get("/github/callback", async (req, res) => {
            const result = await users.insertOne({
                githubId: githubUser.id,
                email: primaryEmail,
-               roleId: await roleForNewUser(db), // the default role for new users
                createdAt: new Date(),
                updatedAt: new Date(),
             });
             const userId = result.insertedId;
+            // In the directory as a human, with the default role for new users
+            await dir.registerHuman({ id: String(userId), email: primaryEmail, displayName: profile.name ?? profile.login });
             req.log.info(
                 {
                     githubId: githubUser.id,
@@ -220,11 +223,9 @@ router.get("/github/callback", async (req, res) => {
             }
         );
 
-        // The owner: GitHub has verified this address (primary and verified) → always an admin
-        if (Array.isArray(emails) && emails.some((e) => e.primary && e.verified && isOwnerEmail(e.email)) && isOwnerEmail(primaryEmail)) {
-            await users.updateOne({ _id: dbUser._id }, { $set: { roleId: ADMIN_ROLE, disabled: false } });
-            clearAccessCache(dbUser._id);
-        }
+        // The directory's mapping to GitHub; the owner (an address GitHub has verified) is always an admin
+        await dir.linkGithub(String(dbUser._id), githubLink);
+        dir.clearAccessCache(dbUser._id);
 
         /**
          * 6️⃣ Check existing session
@@ -237,9 +238,9 @@ router.get("/github/callback", async (req, res) => {
             try {
                 const kept = jwt.verify(existingSession.token, JWT_SECRET);
                 // A session from before "sign out everywhere" isn't reused
-                if ((kept.tv ?? 0) !== sessionVersion(dbUser)) throw new Error("old session");
+                if ((kept.tv ?? 0) !== (await dir.sessionVersion(dbUser._id))) throw new Error("old session");
 
-                await recordLogin(db, { userId: dbUser._id, email: primaryEmail, method: "github", req }).catch(() => {});
+                await dir.recordLogin({ userId: dbUser._id, email: primaryEmail, method: "github", req }).catch(() => {});
                 return res.redirect(clientAuthCallbackUrl(existingSession.token));
             } catch {
                 // expired → continue
@@ -255,7 +256,7 @@ router.get("/github/callback", async (req, res) => {
                 // The account's own email (an email account GitHub joined keeps its address)
                 email: dbUser.email || primaryEmail,
                 authProvider: "github",
-                tv: sessionVersion(dbUser), // session version (sign out everywhere)
+                tv: await dir.sessionVersion(dbUser._id), // session version (sign out everywhere)
             },
             JWT_SECRET,
             { expiresIn: "7d" }
@@ -278,7 +279,7 @@ router.get("/github/callback", async (req, res) => {
         /**
          * 9️⃣ Redirect to frontend
          */
-        await recordLogin(db, { userId: dbUser._id, email: primaryEmail, method: "github", req }).catch(() => {});
+        await dir.recordLogin({ userId: dbUser._id, email: primaryEmail, method: "github", req }).catch(() => {});
         res.redirect(clientAuthCallbackUrl(token));
 
     } catch (err) {

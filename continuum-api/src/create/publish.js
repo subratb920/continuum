@@ -13,6 +13,7 @@ import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
 import { AppError } from "../errors/AppError.js";
 import { PROJECT_COLLECTION } from "../models/project.model.js";
+import { findProject } from "../spaces/projectAccess.js";
 import { checkRepoName, createRepo, githubAccount, githubTokenOf, repoAvailable } from "./github.js";
 import { withGitRepository } from "./git.js";
 import { readTarGz } from "./tar.js";
@@ -39,8 +40,8 @@ router.post("/:id/github", express.raw({ type: "application/gzip", limit: "60mb"
   const db = getDB();
   const userId = new ObjectId(req.user.id);
   if (!ObjectId.isValid(req.params.id)) throw new AppError("Not a project.", 404, "NOT_FOUND");
-  const project = await db.collection(PROJECT_COLLECTION).findOne({ _id: new ObjectId(req.params.id), userId });
-  if (!project) throw new AppError("Not a project.", 404, "NOT_FOUND");
+  // One you can work on in this space (an organization's: not as a viewer)
+  const project = await findProject(db, req.space, userId, req.params.id, { need: "write" });
   if (repoOf(project)) throw new AppError("This project is already on GitHub.", 409, "ALREADY_ON_GITHUB");
 
   const since = new Date(Date.now() - 3600_000);

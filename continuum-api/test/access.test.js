@@ -1,119 +1,29 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import express from "express";
-import { ObjectId } from "mongodb";
 
-// The middleware reads the server's settings when it loads
+// The middleware reads the server's settings when it loads. Who may use what
+// is continuum-directory's (its own tests); here: how the API applies it.
 Object.assign(process.env, { NODE_ENV: "test", LOG_LEVEL: "silent", PORT: "0", MONGO_URI: "mongodb://x", DB_NAME: "t", JWT_SECRET: "s".repeat(32), CLIENT_ORIGIN: "http://x" });
-const { accessFor, clearAccessCache, ensureAccess, roleForNewUser, ADMIN_ROLE, MEMBER_ROLE } = await import("../src/access/access.js");
-const { FEATURE_IDS, FEATURES, effectiveFeatures } = await import("../src/access/features.js");
 const { requireFeature, requireFeatureByMethod, requireFeatureFor, withAccess } = await import("../src/middleware/access.js");
 const { AGENTS_RULES, CREATE_RULES, DATA_RULES, WORKSPACES_RULES } = await import("../src/access/rules.js");
 
-/** Collections in memory: enough for findOne / updateOne(upsert) / createIndex by _id. */
-function fakeDb() {
-  const cols = new Map();
-  const col = (name) => {
-    if (!cols.has(name)) {
-      const docs = new Map();
-      cols.set(name, {
-        docs,
-        findOne: async (q) => docs.get(String(q._id)) ?? null,
-        // Enough of a query for the role upgrade: { field: value } and { field: { $ne: value } }
-        find: (q = {}) => ({
-          toArray: async () =>
-            [...docs.values()].filter((d) => Object.entries(q).every(([k, v]) => (v && typeof v === "object" && "$ne" in v ? d[k] !== v.$ne : d[k] === v))),
-        }),
-        updateOne: async (q, u, o) => {
-          const k = String(q._id);
-          if (!docs.has(k) && o?.upsert) docs.set(k, { _id: q._id, ...(u.$setOnInsert ?? {}) });
-          if (docs.has(k) && u.$set) Object.assign(docs.get(k), u.$set);
-        },
-        createIndex: async () => {},
-      });
-    }
-    return cols.get(name);
-  };
-  return { collection: col };
-}
-
-async function setup() {
-  clearAccessCache();
-  const db = fakeDb();
-  await ensureAccess(db);
-  const user = (fields) => {
-    const _id = new ObjectId();
-    db.collection("users").docs.set(String(_id), { _id, email: `${_id}@x.test`, ...fields });
-    return _id;
-  };
-  return { db, user };
-}
-
-const env = {};
-
-test("access: users from before roles are members (everything but admin); a role's features are what it switches on", async () => {
-  const { db, user } = await setup();
-  const old = await accessFor(db, user({}), { env });
-  assert.equal(old.role.id, MEMBER_ROLE);
-  assert.deepEqual(old.features, FEATURE_IDS.filter((f) => f !== "admin"));
-  assert.equal(old.isAdmin, false);
-
-  await db.collection("roles").updateOne({ _id: "viewer" }, { $setOnInsert: { name: "Viewer", features: ["dashboard", "interval", "nonsense"] } }, { upsert: true });
-  const viewer = await accessFor(db, user({ roleId: "viewer" }), { env });
-  assert.deepEqual([viewer.role.name, viewer.features], ["Viewer", ["interval", "dashboard"]], "only known features, in order");
-
-  // A role that's gone: a member again (never more than that)
-  const orphan = await accessFor(db, user({ roleId: "deleted-role" }), { env });
-  assert.equal(orphan.role.id, MEMBER_ROLE);
-  assert.equal(await accessFor(db, new ObjectId(), { env }), null, "no such user");
-});
-
-test("access: only the admin role makes an admin (nothing outside the database does), and admin always has every feature", async () => {
-  const { db, user } = await setup();
-  process.env.ADMIN_EMAILS = "boss@example.com"; // a setting like this means nothing
-  const boss = await accessFor(db, user({ email: "boss@example.com", roleId: "viewer" }), { env });
-  delete process.env.ADMIN_EMAILS;
-  assert.equal(boss.isAdmin, false);
-  const admin = await accessFor(db, user({ roleId: ADMIN_ROLE }), { env });
-  assert.deepEqual([admin.role.id, admin.isAdmin, admin.features], [ADMIN_ROLE, true, FEATURE_IDS]);
-  // Even if the admin role's document were edited down
-  await db.collection("roles").updateOne({ _id: ADMIN_ROLE }, { $set: { features: ["dashboard"] } });
-  clearAccessCache();
-  assert.deepEqual((await accessFor(db, user({ roleId: ADMIN_ROLE }), { env })).features, FEATURE_IDS);
-  assert.equal((await accessFor(db, user({ email: "someone@example.com" }), { env })).isAdmin, false);
-});
-
-test("access: new users get the default role; a missing default falls back to member", async () => {
-  const { db } = await setup();
-  assert.equal(await roleForNewUser(db), MEMBER_ROLE);
-  await db.collection("roles").updateOne({ _id: "starter" }, { $setOnInsert: { name: "Starter", features: ["dashboard"] } }, { upsert: true });
-  await db.collection("settings").updateOne({ _id: "access" }, { $set: { defaultRoleId: "starter" } });
-  assert.equal(await roleForNewUser(db), "starter");
-  await db.collection("settings").updateOne({ _id: "access" }, { $set: { defaultRoleId: "gone" } });
-  assert.equal(await roleForNewUser(db), MEMBER_ROLE);
-});
-
-test("access: cached for a minute, cleared at once by the copy that changes it", async () => {
-  const { db, user } = await setup();
-  const id = user({});
-  assert.equal((await accessFor(db, id, { env, now: 0 })).role.id, MEMBER_ROLE);
-  db.collection("users").docs.get(String(id)).disabled = true;
-  assert.equal((await accessFor(db, id, { env, now: 30_000 })).disabled, false, "cached");
-  assert.equal((await accessFor(db, id, { env, now: 61_000 })).disabled, true, "a minute later");
-  db.collection("users").docs.get(String(id)).disabled = false;
-  clearAccessCache(id);
-  assert.equal((await accessFor(db, id, { env, now: 62_000 })).disabled, false, "cleared");
-});
-
 test("access: a feature switched off answers 403 No feature access; reading and changing can need different features; disabled accounts get nothing; old sessions end", async () => {
-  const { db, user } = await setup();
-  await db.collection("roles").updateOne({ _id: "viewer" }, { $setOnInsert: { name: "Viewer", features: ["dashboard"] } }, { upsert: true });
-  const ids = { viewer: user({ roleId: "viewer" }), member: user({}), off: user({ disabled: true }), outdated: user({ tokenVersion: 1 }) };
+  const member = ["interval", "dashboard", "agents"];
+  const people = {
+    viewer: { features: ["dashboard"], disabled: false, tokenVersion: 0 },
+    member: { features: member, disabled: false, tokenVersion: 0 },
+    off: { features: member, disabled: true, tokenVersion: 0 },
+    outdated: { features: member, disabled: false, tokenVersion: 1 },
+  };
+  const ids = Object.fromEntries(Object.keys(people).map((k) => [k, k]));
+  // The directory's answer for each (continuum-directory decides it)
+  const accessFor = async (id) => (people[id] ? { userId: id, ...people[id] } : null);
 
   const app = express();
   // Tokens carry the session version they were made with (here 0: before any "sign out everywhere")
   app.use((req, _res, next) => ((req.user = { id: ids[req.get("x-who")], tv: 0 }), next()));
-  app.use(withAccess({ db: () => db, env }));
+  app.use(withAccess({ accessFor }));
   app.get("/brain", requireFeature("agents"), (_req, res) => res.json({ ok: true }));
   app.all("/projects", requireFeatureByMethod({ read: ["interval", "dashboard"], write: ["interval"] }), (_req, res) => res.json({ ok: true }));
   const server = app.listen(0);
@@ -145,28 +55,6 @@ test("access: a feature switched off answers 403 No feature access; reading and 
   }
 });
 
-test("access: features come app by app; an app's sub-features count only while the app is on", () => {
-  assert.deepEqual([...new Set(FEATURES.map((f) => f.app))], ["console", "create", "workspaces", "agents", "data", "deploy"]);
-  for (const f of FEATURES.filter((x) => x.parent)) assert.equal(FEATURES.find((x) => x.id === f.parent)?.app, f.app, `${f.id}'s parent opens its app`);
-  assert.deepEqual(effectiveFeatures(["deploy_run", "data", "data_recipes", "nonsense"]), ["data", "data_recipes"], "deploy_run without deploy is off");
-});
-
-test("access: roles saved before the per-app features keep everything each app allowed (its new sub-features on), once", async () => {
-  clearAccessCache();
-  const db = fakeDb();
-  await db.collection("roles").updateOne({ _id: "member" }, { $setOnInsert: { name: "Member", features: ["interval", "dashboard", "agents", "data", "workspaces", "create", "import_github", "publish", "deploy"] } }, { upsert: true });
-  await db.collection("roles").updateOne({ _id: "viewer" }, { $setOnInsert: { name: "Viewer", features: ["dashboard", "data"] } }, { upsert: true });
-  await ensureAccess(db);
-  const roles = db.collection("roles").docs;
-  assert.deepEqual(roles.get("viewer").features.sort(), ["dashboard", "data", "data_credentials", "data_publish", "data_recipes", "data_sources"].sort());
-  assert.equal(roles.get("viewer").featureSet, 3);
-  assert.deepEqual(roles.get("member").features.sort(), FEATURE_IDS.filter((f) => f !== "admin").sort());
-  // An admin switches one off afterwards: it stays off
-  roles.get("viewer").features = ["dashboard", "data"];
-  await ensureAccess(db);
-  assert.deepEqual(roles.get("viewer").features, ["dashboard", "data"]);
-});
-
 test("access: Agents and Data refuse what a role switched off, request by request", async () => {
   const run = (rules, features, method, path) => {
     let passed = false;
@@ -195,12 +83,3 @@ test("access: Agents and Data refuse what a role switched off, request by reques
   assert.equal(run(WORKSPACES_RULES, ["workspaces"], "DELETE", "/w1"), "workspaces_manage");
 });
 
-test("access: a role from the first per-app version gains only what came after (Create's and Workspaces' new features), not what an admin switched off since", async () => {
-  clearAccessCache();
-  const db = fakeDb();
-  await db.collection("roles").updateOne({ _id: "dev" }, { $setOnInsert: { name: "Dev", featureSet: 2, features: ["agents", "workspaces", "create"] } }, { upsert: true });
-  await ensureAccess(db);
-  const dev = db.collection("roles").docs.get("dev");
-  assert.ok(!dev.features.includes("agents_run"), "switched off before: stays off");
-  assert.ok(["create_generate", "workspaces_create", "workspaces_start", "workspaces_manage"].every((f) => dev.features.includes(f)));
-});

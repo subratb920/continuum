@@ -13,7 +13,7 @@ import express from "express";
 import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
 import { AppError } from "../errors/AppError.js";
-import { PROJECT_COLLECTION } from "../models/project.model.js";
+import { findProject } from "../spaces/projectAccess.js";
 import { githubTokenOf } from "../create/github.js";
 import { workspacesClient, WorkspacesUnavailableError } from "./client.js";
 
@@ -105,8 +105,10 @@ export function createWorkspacesRouter(opts = {}) {
     if (!SIZES.includes(size)) throw Object.assign(new AppError("Choose Small, Standard or Large.", 400, "VALIDATION_ERROR"), { field: "size" });
     if (!(await sandboxes()).includes(sandbox)) throw sandboxError();
     if (!ObjectId.isValid(projectId)) throw Object.assign(new AppError("Choose a project.", 400, "VALIDATION_ERROR"), { field: "projectId" });
-    const project = await getDB().collection(PROJECT_COLLECTION).findOne({ _id: new ObjectId(projectId), userId: uid(req) });
-    if (!project) throw Object.assign(new AppError("Choose one of your projects.", 404, "NOT_FOUND"), { field: "projectId" });
+    // One you can work on in this space (an organization's: not as a viewer)
+    const project = await findProject(getDB(), req.space, uid(req), projectId, { need: "write" }).catch((err) => {
+      throw Object.assign(err.code === "PROJECT_NOT_FOUND" ? new AppError("Choose one of your projects.", 404, "NOT_FOUND") : err, { field: "projectId" });
+    });
     const repo = repoOf(project);
     if (!repo) throw Object.assign(new AppError("A workspace opens a project's GitHub repository: put this project on GitHub first.", 400, "NO_REPOSITORY"), { field: "projectId" });
 

@@ -1,7 +1,7 @@
 import { hashPassword, verifyPassword } from "../utils/hash.js";
 import { signToken } from "../utils/jwt.js";
 import { AppError } from "../errors/AppError.js";
-import { roleForNewUser, sessionVersion } from "../access/access.js";
+import { dir } from "../directory/directory.js";
 
 // Same message for unknown email, wrong password and GitHub-only accounts,
 // so the login form can't be used to discover which emails are registered.
@@ -34,12 +34,13 @@ export function createAuthService(db) {
     const userDoc = {
       email,
       passwordHash,
-      roleId: await roleForNewUser(db), // the default role for new users
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
     const { insertedId: userId } = await users.insertOne(userDoc);
+    // In the directory as a human, with the default role for new users
+    await dir.registerHuman({ id: String(userId), email, createdAt: userDoc.createdAt });
 
     // 2️⃣ Create execution state WITH userId (CRITICAL FIX)
     const executionStateDoc = {
@@ -93,7 +94,7 @@ export function createAuthService(db) {
       userId: user._id,
       email: user.email,
       authProvider: "local", // 🔥 ADD
-      tv: sessionVersion(user),
+      tv: await dir.sessionVersion(user._id),
     });
 
     return {

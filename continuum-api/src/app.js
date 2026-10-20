@@ -6,7 +6,7 @@ import { errorMiddleware } from "./middleware/error.middleware.js";
 import projectRoutes from "./routes/project.routes.js";
 import executionRoutes from "./routes/execution.routes.js";
 import bridgeRoutes from "./routes/bridge.routes.js";
-import { authed, requireFeature, requireFeatureByMethod, uses, requireFeatureFor } from "./middleware/access.js";
+import { authed, requireFeature, requireFeatureByMethod, uses, requireFeatureFor, withAccess } from "./middleware/access.js";
 import { AGENTS_RULES, CREATE_RULES, DATA_RULES, WORKSPACES_RULES } from "./access/rules.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import githubRoutes from "./auth/github.routes.js";
@@ -21,8 +21,10 @@ import { createWorkspacesRouter } from "./workspaces/routes.js";
 import { createServiceRouter } from "./service/routes.js";
 import { createBrainRouter, streamToken } from "./brain/routes.js";
 import { dataEngine } from "./data/engine.js";
-import { createAdminRouter } from "./admin/admin.routes.js";
 import { createSyncAdminRouter, createSyncCodeRoute, createSyncPublicRouter } from "./sync/sync.routes.js";
+import { directory } from "./directory/directory.js";
+import { requireAuthOrDirectoryToken } from "./middleware/directoryAuth.js";
+import { createOrgProjectsRouter } from "./spaces/orgProjects.routes.js";
 
 
 const app = express();
@@ -58,11 +60,16 @@ app.use("/support", authed, supportRoutes); // Contact us: callback requests (al
 // New Project wizard: catalogue and generated projects; its GitHub checks (your account, a free name) also serve "Put on GitHub"
 const createAccess = (req, res, next) => (req.path.startsWith("/github") ? requireFeature("create", "publish") : requireFeature("create"))(req, res, next);
 app.use("/create", authed, createAccess, requireFeatureFor(CREATE_RULES), uses("create"), createRoutes);
-app.post("/me/sync-codes", authed, createSyncCodeRoute()); // a one-time code to sync your account into this Continuum
+app.post("/me/sync-codes", requireAuthOrDirectoryToken, withAccess(), createSyncCodeRoute()); // a one-time code to sync your account into this Continuum (Profile, or the Directory's Production sync)
+// The directory (continuum-directory): your spaces, organizations, and Continuum's users, roles and
+// sign-ins (admins). From the Continuum UI, or the Directory's own page (its sign-in token)
+const directoryAuth = [requireAuthOrDirectoryToken, withAccess()];
+app.use("/directory/orgs/:orgId/projects", ...directoryAuth, createOrgProjectsRouter()); // an organization's projects (they're Continuum's)
+app.use("/directory", directory.router({ auth: [...directoryAuth, uses("directory")] }));
 app.use("/me", authed, meRoutes); // you: your access, and your preferences (theme), shared with Continuum Deploy
 app.use("/workspaces", authed, requireFeature("workspaces"), requireFeatureFor(WORKSPACES_RULES), uses("workspaces"), createWorkspacesRouter()); // development servers per project (continuum-workspaces)
-app.use("/admin/sync", authed, requireFeature("admin"), createSyncAdminRouter()); // Production sync: Preview and Merge (admins)
-app.use("/admin", authed, requireFeature("admin"), createAdminRouter()); // users, roles, sign-ins (admins only)
+// Production sync: Preview and Merge (admins; from the Directory's page too). Users, roles and sign-ins are the directory's
+app.use("/admin/sync", requireAuthOrDirectoryToken, withAccess(), requireFeature("admin"), createSyncAdminRouter());
 app.use("/service", createServiceRouter()); // read-only data for continuum-brain (its service token only)
 app.use("/brain", streamToken, authed, requireFeature("agents"), requireFeatureFor(AGENTS_RULES), uses("agents"), createBrainRouter()); // the Agents screen, relayed to continuum-brain
 if (dataEngine) app.use("/data", dataEngine.router({ auth: [...authed, requireFeature("data"), requireFeatureFor(DATA_RULES), uses("data")] })); // datasets: sources, versions, pipelines (continuum-data)

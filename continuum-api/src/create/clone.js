@@ -16,7 +16,7 @@ import git from "isomorphic-git";
 import http from "isomorphic-git/http/node";
 import { getDB } from "../config/db.js";
 import { AppError } from "../errors/AppError.js";
-import { PROJECT_COLLECTION } from "../models/project.model.js";
+import { findProject } from "../spaces/projectAccess.js";
 import { githubTokenOf } from "./github.js";
 import { tarGz } from "./tar.js";
 import { repoOf } from "../workspaces/routes.js";
@@ -42,8 +42,7 @@ async function listFiles(root, dir = root, out = []) {
  */
 router.get("/:id/clone", async (req, res) => {
   if (!ObjectId.isValid(req.params.id)) throw new AppError("Not a project.", 404, "NOT_FOUND");
-  const p = await getDB().collection(PROJECT_COLLECTION).findOne({ _id: new ObjectId(req.params.id), userId: new ObjectId(req.user.id) });
-  if (!p) throw new AppError("Not a project.", 404, "NOT_FOUND");
+  const p = await findProject(getDB(), req.space, req.user.id, req.params.id);
   const repo = repoOf(p);
   if (!repo) throw new AppError("This project has no GitHub repository to get.", 400, "NO_REPOSITORY");
   const token = await githubTokenOf(getDB(), req.user.id);

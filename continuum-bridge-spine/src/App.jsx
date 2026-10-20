@@ -3,36 +3,36 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { assertProject } from "./utils/assertions";
 
 import { useAuth } from "./state/authStore";
+import { deferred } from "./utils/deferred";
 import NoAccess from "./components/NoAccess";
-import AdminClaim from "./screens/admin/AdminClaim";
 import { useAppOpened } from "./state/useAppOpened";
-import AuthGate from "./auth/AuthGate";
-import SsoAuthorize from "./pages/SsoAuthorize";
+const AuthGate = deferred(() => import("./auth/AuthGate"));
+const SsoAuthorize = deferred(() => import("./pages/SsoAuthorize"));
 
 import ThreePanelLayout from "./layout/ThreePanelLayout";
 import PageShell from "./layout/PageShell";
 
-import ReEntry from "./screens/ReEntry";
-import CreateProject from "./screens/CreateProject";
-import Dashboard from "./components/Dashboard";
+const ReEntry = deferred(() => import("./screens/ReEntry"));
+const CreateProject = deferred(() => import("./screens/CreateProject"));
+const Dashboard = deferred(() => import("./components/Dashboard"));
 import { screenForPath } from "./screens/registry";
 import { setRunningInterval } from "./brain/runningInterval";
 import { IMPORT_EVENT } from "./utils/importFromDevice";
-import Welcome from "./screens/Welcome";
-import Landing from "./screens/Landing";
-import HelpPage from "./pages/HelpPage";
-import LegalPage from "./legal/LegalPage";
-import EmptyConsole from "./components/EmptyConsole";
-import PhoneCard from "./components/PhoneCard";
+const Welcome = deferred(() => import("./screens/Welcome"));
+const Landing = deferred(() => import("./screens/Landing"));
+const HelpPage = deferred(() => import("./pages/HelpPage"));
+const LegalPage = deferred(() => import("./legal/LegalPage"));
+const EmptyConsole = deferred(() => import("./components/EmptyConsole"));
+const PhoneCard = deferred(() => import("./components/PhoneCard"));
 
-import AgentBridge from "./components/AgentBridge";
-import BridgeDraftModal from "./components/BridgeDraftModal";
-import BridgeHistoryModal from "./components/BridgeHistoryModal";
-import ActivateProjectModal from "./components/ActivateProjectModal";
-import EditProjectModal from "./components/EditProjectModal";
-import DeleteProjectModal from "./components/DeleteProjectModal";
-import AuthCallback from "./pages/AuthCallback";
-import GithubImport from "./screens/GithubImport";
+const AgentBridge = deferred(() => import("./components/AgentBridge"));
+const BridgeDraftModal = deferred(() => import("./components/BridgeDraftModal"));
+const BridgeHistoryModal = deferred(() => import("./components/BridgeHistoryModal"));
+const ActivateProjectModal = deferred(() => import("./components/ActivateProjectModal"));
+const EditProjectModal = deferred(() => import("./components/EditProjectModal"));
+const DeleteProjectModal = deferred(() => import("./components/DeleteProjectModal"));
+const AuthCallback = deferred(() => import("./pages/AuthCallback"));
+const GithubImport = deferred(() => import("./screens/GithubImport"));
 // The wizard (and its technology logos) loads only when /new is opened
 const NewProject = lazy(() => import("./screens/NewProject/NewProject"));
 const Workspaces = lazy(() => import("./screens/Workspaces"));
@@ -55,7 +55,7 @@ import {
 
 // Last page on reopen (see App): only these pages are remembered
 const LAST_PATH_KEY = "continuum_last_path";
-const RESTORABLE_PATHS = ["/", "/console", "/brain", "/data", "/chat", "/dashboard", "/admin", "/help"];
+const RESTORABLE_PATHS = ["/", "/console", "/brain", "/data", "/chat", "/dashboard", "/help"];
 
 function readLastPath() {
   try {
@@ -643,11 +643,8 @@ export default function App() {
     </Suspense>
   );
 
-  // No admin yet: the Admin screen offers to claim it (the one-time setup code)
+  // A screen your role has switched off: "No feature access" in its panes
   const slots =
-    screen.id === "admin" && !can("admin") && access?.adminSetup
-      ? { left: <NoAccess feature="admin" compact />, center: <AdminClaim />, right: <NoAccess feature="admin" compact /> }
-      : // A screen your role has switched off: "No feature access" in its panes
     screen.feature && !can(screen.feature)
       ? { left: <NoAccess feature={screen.feature} compact />, center: <NoAccess feature={screen.feature} />, right: <NoAccess feature={screen.feature} compact /> }
       : screen.slots({ intervalCenter, dashboardCenter, workspacesCenter, navigate });

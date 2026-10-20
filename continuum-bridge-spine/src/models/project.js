@@ -21,6 +21,11 @@ export function normalizeProject(raw) {
 
     // existing
     bridgeCount: raw.bridgeCount ?? 0,
+
+    // Who added it, and (an organization's project) which space and departments see it (none: every member)
+    userId: raw.userId ? String(raw.userId) : null,
+    spaceId: raw.spaceId ?? null,
+    departmentIds: (raw.departmentIds ?? []).map(String),
   };
 
   // 🚨 Fail fast if contract is violated

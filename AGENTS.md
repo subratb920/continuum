@@ -7,6 +7,7 @@ Plain JavaScript (ES modules), Node 22. Each folder is its own app.
 - `continuum-api/` Express API (MongoDB), port 45170. Routes: `src/<area>/routes.js`. Tests: `test/*.test.js`.
 - `continuum-bridge-spine/` the web UI (React + Vite), port 45173. API calls: `src/api.js`; brain: `src/brain/`; screens: `src/screens/`.
 - `continuum-data/` data engine (sources, datasets, pipelines), mounted into continuum-api at `/data`.
+- `continuum-directory/` Continuum Directory: `server/` (users of every kind, roles and features, organizations, departments, sign-ins; its own Postgres) mounted into continuum-api at `/directory`, and `app/` (continuum-directory-app, port 45194) its own page, signed in through Continuum. Ports stay in 45170–45199.
 - `continuum-workspaces/` development servers per project (OpenVSCode Server).
 - `continuum-create/` the project generator (Backstage, yarn): leave it alone unless the task is about it.
 - `docker/` the local stack (docker-compose).

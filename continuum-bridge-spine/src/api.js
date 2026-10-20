@@ -1,5 +1,6 @@
 import { logger } from "./utils/logger";
 import { normalizeProject } from "./models/project";
+import { leftSpace, spaceHeaders } from "./state/space";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 const TOKEN_KEY = "continuum_token";
@@ -21,6 +22,7 @@ async function request(method, path, body, tokenOverride) {
   const headers = {
     "Content-Type": "application/json",
     ...(token && { Authorization: `Bearer ${token}` }),
+    ...spaceHeaders(),
   };
 
   logger.api("REQUEST", { method, path, body });
@@ -51,6 +53,9 @@ async function request(method, path, body, tokenOverride) {
   if (res.status === 401) {
     throw new Error("UNAUTHORIZED");
   }
+
+  // Not in that organization any more (left, or removed): back to your personal space
+  if (res.status === 403 && data?.code === "NOT_IN_SPACE") leftSpace();
 
   if (!res.ok) {
     // field: which input was wrong (e.g. the New Project wizard highlights it)
@@ -114,6 +119,7 @@ export function patchBridgeKeepalive(id, data, tokenOverride) {
       headers: {
         "Content-Type": "application/json",
         ...(token && { Authorization: `Bearer ${token}` }),
+        ...spaceHeaders(),
       },
       body: JSON.stringify(data),
     });
@@ -174,6 +180,7 @@ export async function fetchActiveProject() {
   const res = await fetch(`${API_BASE}/execution/active-project`, {
     headers: {
       Authorization: `Bearer ${localStorage.getItem("continuum_token")}`,
+      ...spaceHeaders(),
     },
   });
 
@@ -243,7 +250,7 @@ export async function deleteWorkspace(id) {
 /** Download from GitHub: the project's repository as a git clone (.tar.gz Response) */
 export async function downloadProjectClone(projectId) {
   const token = localStorage.getItem(TOKEN_KEY);
-  const res = await fetch(`${API_BASE}/projects/${projectId}/clone`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  const res = await fetch(`${API_BASE}/projects/${projectId}/clone`, { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...spaceHeaders() } });
   if (res.status === 401) throw new Error("UNAUTHORIZED");
   if (!res.ok) {
     const data = await res.json().catch(() => null);
@@ -262,7 +269,7 @@ export async function putProjectOnGithub(projectId, { name, isPrivate }, archive
   const q = new URLSearchParams({ name, private: isPrivate ? "1" : "0" });
   const res = await fetch(`${API_BASE}/projects/${projectId}/github?${q}`, {
     method: "POST",
-    headers: { ...(archive ? { "Content-Type": "application/gzip" } : {}), ...(token && { Authorization: `Bearer ${token}` }) },
+    headers: { ...(archive ? { "Content-Type": "application/gzip" } : {}), ...(token && { Authorization: `Bearer ${token}` }), ...spaceHeaders() },
     body: archive ?? undefined,
   });
   if (res.status === 401) throw new Error("UNAUTHORIZED");
@@ -280,7 +287,7 @@ export async function uploadFolderSnapshot(projectId, archive) {
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(`${API_BASE}/brain/projects/${projectId}/snapshot`, {
     method: "POST",
-    headers: { "Content-Type": "application/gzip", ...(token && { Authorization: `Bearer ${token}` }) },
+    headers: { "Content-Type": "application/gzip", ...(token && { Authorization: `Bearer ${token}` }), ...spaceHeaders() },
     body: archive,
   });
   if (res.status === 401) throw new Error("UNAUTHORIZED");
@@ -312,7 +319,7 @@ export async function generateNewProject(choices) {
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(`${API_BASE}/create/generate`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...(token && { Authorization: `Bearer ${token}` }) },
+    headers: { "Content-Type": "application/json", ...(token && { Authorization: `Bearer ${token}` }), ...spaceHeaders() },
     body: JSON.stringify(choices),
   });
   if (res.status === 401) throw new Error("UNAUTHORIZED");
@@ -346,32 +353,21 @@ export async function saveAccountTheme(theme) {
   return request("PATCH", "/me/preferences", { theme });
 }
 
-/* ==================================================
-   Admin (admins only): users, roles, sign-ins
-   ================================================== */
-
-export const adminApi = {
-  features: () => request("GET", "/admin/features"),
-  users: (query = {}) => request("GET", `/admin/users?${new URLSearchParams(Object.entries(query).filter(([, v]) => v !== "" && v != null))}`),
-  user: (id) => request("GET", `/admin/users/${id}`),
-  updateUser: (id, changes) => request("PATCH", `/admin/users/${id}`, changes),
-  signOutUser: (id) => request("POST", `/admin/users/${id}/signout`),
-  /** The first admin: the one-time setup code from continuum-api's log. */
-  claim: (code) => request("POST", "/me/claim-admin", { code }),
-  roles: () => request("GET", "/admin/roles"),
-  createRole: (role) => request("POST", "/admin/roles", role),
-  updateRole: (id, changes) => request("PATCH", `/admin/roles/${encodeURIComponent(id)}`, changes),
-  deleteRole: (id, moveTo) => request("DELETE", `/admin/roles/${encodeURIComponent(id)}?moveTo=${encodeURIComponent(moveTo)}`),
-  settings: () => request("GET", "/admin/settings"),
-  saveSettings: (s) => request("PUT", "/admin/settings", s),
-  activity: ({ failed = false } = {}) => request("GET", `/admin/activity?limit=200${failed ? "&failed=1" : ""}`),
-  changes: () => request("GET", "/admin/changes?limit=200"),
-  // Production sync: what Merge would send from here, and sending it with production's code
-  syncPreview: () => request("POST", "/admin/sync/preview"),
-  syncPush: (target, code) => request("POST", "/admin/sync/push", { target, code }),
-};
-
 /** A one-time code (10 minutes) to sync your account's records into this Continuum: { code, expiresAt }. */
 export async function createSyncCode() {
   return request("POST", "/me/sync-codes");
 }
+
+/* ==================================================
+   Your spaces (continuum-directory): personal and your organizations.
+   Running an organization is the Directory's page (directoryLinks.js)
+   ================================================== */
+
+export const orgsApi = {
+  /** { spaces: [{ id, kind, name, orgId?, orgRole?, departmentIds? }], lastSpaceId, invites } */
+  spaces: () => request("GET", "/directory/me/spaces"),
+  setActive: (spaceId) => request("PUT", "/directory/me/spaces/active", { spaceId }),
+  create: (name) => request("POST", "/directory/orgs", { name }),
+  acceptInvite: (id) => request("POST", `/directory/me/invites/${id}/accept`),
+  declineInvite: (id) => request("POST", `/directory/me/invites/${id}/decline`),
+};
