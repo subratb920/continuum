@@ -4,7 +4,7 @@
  * VITE_SUPPORT_EMAIL / VITE_SUPPORT_PHONE in the app's settings; without a
  * phone number, "Call us" says it's coming soon.
  */
-export const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || "support@continuum-console.one";
+export const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || "continuum.console@gmail.com";
 export const SUPPORT_PHONE = import.meta.env.VITE_SUPPORT_PHONE || "";
 
 /** When this build was made (shown as the app's version). */
