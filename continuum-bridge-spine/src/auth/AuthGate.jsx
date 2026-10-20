@@ -49,7 +49,7 @@ export default function AuthGate() {
       }
 
       login(data.token);
-      navigate("/chat", { replace: true }); // sign-in lands on Chat (App sends roles without Agents home)
+      navigate("/workflows", { replace: true }); // sign-in lands on Workflows (App sends roles without Agents home)
     } catch (err) {
       setError(err.message);
     } finally {

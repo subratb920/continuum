@@ -27,7 +27,7 @@ export default function AuthCallback() {
       // ✅ This callback is only used by GitHub sign-in: it lands on Chat,
       // as every sign-in does (Import from GitHub is in Create/Import).
       // replace() also drops the address with the token from history.
-      window.location.replace("/chat");
+      window.location.replace("/workflows");
     } catch (err) {
       console.error("AuthCallback error:", err);
       window.location.replace("/");

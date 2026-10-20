@@ -10,6 +10,9 @@ import { newStep, WorkflowsContext } from "./workflowModel";
  * Samples (samples.js) open read-only and play a pretend run; a copy of one
  * becomes your template.
  */
+// What the Workflows screen opens on when nothing else is open
+const OPENING_SAMPLE = "sample-mf-cobol-java";
+
 export function WorkflowsProvider({ children }) {
   const brain = useBrain();
   const wf = brain?.wf ?? null;
@@ -25,10 +28,32 @@ export function WorkflowsProvider({ children }) {
   const [playing, setPlaying] = useState(false); // a sample's pretend run
   const [samples, setSamples] = useState([]); // loaded with the Workflows screen (samples.js), not before
 
-  /** The samples, fetched the first time the screen asks for them. */
-  const loadSamples = useCallback(() => {
-    import("./samples").then((m) => setSamples(m.SAMPLE_WORKFLOWS)).catch(() => {});
+  /** A sample on the canvas (read-only), its pretend run playing. */
+  const showSample = useCallback((list, id) => {
+    const s = list.find((x) => x.id === id);
+    if (!s) return;
+    setOpenId(null);
+    setDraft({ ...structuredClone(s), id: null, sampleId: s.id, kind: "sample", status: "sample", createdBy: "you" });
+    setDirty(false);
+    setSelected(null);
+    setPlaying(true);
   }, []);
+
+  /**
+   * The samples, fetched the first time the screen asks for them. With
+   * nothing open yet, the screen opens on the COBOL to Java sample, playing.
+   */
+  const loadSamples = useCallback(() => {
+    import("./samples")
+      .then((m) => {
+        setSamples(m.SAMPLE_WORKFLOWS);
+        setDraft((d) => {
+          if (!d) queueMicrotask(() => showSample(m.SAMPLE_WORKFLOWS, OPENING_SAMPLE));
+          return d;
+        });
+      })
+      .catch(() => {});
+  }, [showSample]);
 
   const reload = useCallback(async () => {
     if (!wf) return;
@@ -130,15 +155,7 @@ export function WorkflowsProvider({ children }) {
       playing,
       setPlaying,
       /** A sample on the canvas (read-only), its pretend run playing. */
-      openSample: (id) => {
-        const s = samples.find((x) => x.id === id);
-        if (!s) return;
-        setOpenId(null);
-        setDraft({ ...structuredClone(s), id: null, sampleId: s.id, kind: "sample", status: "sample", createdBy: "you" });
-        setDirty(false);
-        setSelected(null);
-        setPlaying(true);
-      },
+      openSample: (id) => showSample(samples, id),
       /** A sample copied into your templates (then yours to change). */
       copySample: () =>
         act(async () => {
@@ -177,7 +194,7 @@ export function WorkflowsProvider({ children }) {
       /** An approval sent back along its loop arrow, with what to change. */
       sendBackStep: (stepId, note) => act(async () => setDraft(await wf.sendBackStep(draft.id, stepId, note))),
     }),
-    [wf, list, run, bridgeId, brain?.interval, brain?.live?.workers, draft, dirty, editable, selected, busy, error, open, change, reload, act, playing, samples, loadSamples]
+    [wf, list, run, bridgeId, brain?.interval, brain?.live?.workers, draft, dirty, editable, selected, busy, error, open, change, reload, act, playing, samples, loadSamples, showSample]
   );
 
   return <WorkflowsContext.Provider value={value}>{children}</WorkflowsContext.Provider>;

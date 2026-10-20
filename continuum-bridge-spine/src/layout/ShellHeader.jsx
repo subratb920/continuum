@@ -13,6 +13,7 @@ import { createItems, deployItems } from "./menuItems";
 import MenuItem from "./MenuItem";
 import { BUILD } from "../utils/support";
 import { SCREENS, screenForPath } from "../screens/registry";
+import { SWITCHER } from "../screens/switcher";
 import { deferred } from "../utils/deferred";
 import { DIRECTORY_AVAILABLE, openDirectory } from "../directoryLinks";
 
@@ -127,7 +128,7 @@ export default function ShellHeader({ selectedProject = null }) {
   // Small screens: the ☰ menu, in groups. The screen's own parts aren't in it:
   // the parts bar under the header moves between them (PhoneNav)
   const MENU = [
-    { title: "Screens", items: SCREENS.filter((s) => s.switcher).map((s) => [`screen:${s.id}`, s.label, s.icon]) },
+    { title: "Screens", items: SWITCHER.map((s) => [`screen:${s.id}`, s.label, s.icon]) },
     { title: "Pages", items: [["workspaces", "Workspaces", "💻"]] },
     { title: "Create & deploy", items: [["create", "Create/Import", "＋"], ...(DEPLOY_AVAILABLE ? [["deploy", "Deploy", "🚀"]] : [])] },
   ];
@@ -242,7 +243,7 @@ export default function ShellHeader({ selectedProject = null }) {
         <div className="shell-nav-inner">
           {/* The screen switcher: Interval Setup, Agents… (screens/registry.jsx) */}
           <div className="shell-switcher" role="group" aria-label="Screens">
-            {SCREENS.filter((s) => s.switcher).map((s) => (
+            {SWITCHER.map((s) => (
               <ScreenButton key={s.id} screen={s} current={screen === s} onClick={() => showScreen(s)} />
             ))}
           </div>

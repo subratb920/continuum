@@ -28,6 +28,9 @@ const DataInspector = deferred(() => import("./data/DataInspector"));
  *
  *   id, path, label, icon
  *   switcher: shown in the header's switcher (false: reached some other way)
+ *   tab: its place in the switcher (Workflows first). The list's own order is
+ *     how the screens' state nests (Workflows uses the brain's, so Agents comes
+ *     before it here)
  *   left / center / right: { label, icon } of each pane, for the ☰ menu
  *   slots(ctx): { left?, center, right? }, the panes' content; a missing side
  *     pane keeps the console's own (Projects on the left, Bridge Spine on the right)
@@ -43,6 +46,7 @@ const DataInspector = deferred(() => import("./data/DataInspector"));
 export const SCREENS = [
   {
     id: "interval",
+    tab: 3,
     feature: "interval",
     path: "/console",
     label: "Interval Setup",
@@ -68,6 +72,7 @@ export const SCREENS = [
   },
   {
     id: "agents",
+    tab: 2,
     feature: "agents",
     path: "/brain",
     label: "Agents",
@@ -83,6 +88,7 @@ export const SCREENS = [
   // Workflows: draw them, keep templates, approve the brain's draft and watch it run (after Agents: it uses the brain's state)
   {
     id: "workflows",
+    tab: 1,
     feature: "agents",
     path: "/workflows",
     label: "Workflows",
@@ -99,6 +105,7 @@ export const SCREENS = [
     ? [
         {
           id: "data",
+          tab: 5,
           feature: "data",
           path: "/data",
           label: "Data",
@@ -117,6 +124,7 @@ export const SCREENS = [
   // Wide screens: how the brain works on the left, sample flows on the right; phones: the chat alone
   {
     id: "chat",
+    tab: 4,
     feature: "agents",
     path: "/chat",
     label: "Chat",

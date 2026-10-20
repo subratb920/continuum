@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { SCREENS, screenForPath } from "../screens/registry";
+import { screenForPath } from "../screens/registry";
+import { SWITCHER } from "../screens/switcher";
 import { usePanels } from "./PanelsContext";
 import { rememberedPart } from "./parts";
 
@@ -19,7 +20,7 @@ export default function PhoneNav() {
   const navigate = useNavigate();
   const panels = usePanels();
   const screen = screenForPath(pathname);
-  const tabs = SCREENS.filter((s) => s.switcher);
+  const tabs = SWITCHER;
 
   function go(s) {
     if (s === screen) return panels.close();
