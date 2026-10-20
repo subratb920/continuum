@@ -4,7 +4,7 @@
 // and Twitter cards and structured data (JSON-LD); the site gets robots.txt
 // and sitemap.xml. No dependencies.
 //
-//   SITE_URL  where the site lives (default https://continuum-console.one)
+//   SITE_URL  where the site lives (default https://www.continuum-console.one)
 //   APP_URL   Continuum itself, for Sign in (default https://app.continuum-console.one)
 
 import { createHash } from "node:crypto";
@@ -16,7 +16,7 @@ import { BLURB, LOGO, MENU, MENU_LINKS, icon } from "./src/menu.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const trim = (u) => u.replace(/\/+$/, "");
-export const SITE_URL = trim(process.env.SITE_URL || "https://continuum-console.one");
+export const SITE_URL = trim(process.env.SITE_URL || "https://www.continuum-console.one");
 export const APP_URL = trim(process.env.APP_URL || "https://app.continuum-console.one");
 const OUT = join(here, "dist");
 const TODAY = new Date().toISOString().slice(0, 10);
