@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useWorkflows } from "./workflowModel";
 import "./workflows.css";
 
@@ -5,12 +6,44 @@ const STATUS_WORD = { draft: "draft", approved: "approved", running: "running", 
 
 /**
  * Workflows (left pane): the running interval's workflow on top (a draft
- * waits for your approval), then your templates. Open one on the canvas, or
- * start a new one.
+ * waits for your approval), then your templates, then samples to watch run
+ * and copy. Open one on the canvas, or start a new one.
  */
 export default function WorkflowLibrary() {
   const w = useWorkflows();
-  if (!w?.available) return null;
+  const loadSamples = w?.loadSamples;
+  useEffect(() => {
+    loadSamples?.();
+  }, [loadSamples]);
+  if (!w) return null;
+  const samples = (
+    <section>
+      <h3 className="wf-lib-h">Samples</h3>
+      <p className="brain-hint">Watch one run (played here: nothing starts), then copy it to your templates.</p>
+      <ul className="wf-lib-list">
+        {w.samples.map((x) => (
+          <li key={x.id}>
+            <button type="button" className={`wf-lib-item${w.draft?.sampleId === x.id ? " is-open" : ""}`} onClick={() => w.openSample(x.id)}>
+              <span className="wf-lib-name">▶ {x.name}</span>
+              <span className="wf-lib-meta">
+                {x.steps.length} steps · sample
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+  if (!w.available) {
+    return (
+      <div className="wf-lib">
+        <div className="brain-pane-head">
+          <h2 className="brain-pane-title">Workflows</h2>
+        </div>
+        {samples}
+      </div>
+    );
+  }
   const templates = (w.list ?? []).filter((x) => x.kind === "template");
   const row = (x) => (
     <li key={x.id}>
@@ -51,6 +84,7 @@ export default function WorkflowLibrary() {
           + New workflow
         </button>
       </section>
+      {samples}
     </div>
   );
 }

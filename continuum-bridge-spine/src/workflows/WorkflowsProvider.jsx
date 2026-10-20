@@ -7,6 +7,8 @@ import { newStep, WorkflowsContext } from "./workflowModel";
  * the running interval's workflow, the one open on the canvas (a copy you
  * edit until you save), and the selected step. A running workflow is read
  * again every few seconds, so its steps' states and workers stay live.
+ * Samples (samples.js) open read-only and play a pretend run; a copy of one
+ * becomes your template.
  */
 export function WorkflowsProvider({ children }) {
   const brain = useBrain();
@@ -20,6 +22,13 @@ export function WorkflowsProvider({ children }) {
   const [selected, setSelected] = useState(null); // step id
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [playing, setPlaying] = useState(false); // a sample's pretend run
+  const [samples, setSamples] = useState([]); // loaded with the Workflows screen (samples.js), not before
+
+  /** The samples, fetched the first time the screen asks for them. */
+  const loadSamples = useCallback(() => {
+    import("./samples").then((m) => setSamples(m.SAMPLE_WORKFLOWS)).catch(() => {});
+  }, []);
 
   const reload = useCallback(async () => {
     if (!wf) return;
@@ -42,6 +51,7 @@ export function WorkflowsProvider({ children }) {
       setError("");
       try {
         const w = await wf.workflow(id);
+        setPlaying(false);
         setOpenId(id);
         setDraft(w);
         setDirty(false);
@@ -115,8 +125,31 @@ export function WorkflowsProvider({ children }) {
       open,
       change,
       reload,
+      samples,
+      loadSamples,
+      playing,
+      setPlaying,
+      /** A sample on the canvas (read-only), its pretend run playing. */
+      openSample: (id) => {
+        const s = samples.find((x) => x.id === id);
+        if (!s) return;
+        setOpenId(null);
+        setDraft({ ...structuredClone(s), id: null, sampleId: s.id, kind: "sample", status: "sample", createdBy: "you" });
+        setDirty(false);
+        setSelected(null);
+        setPlaying(true);
+      },
+      /** A sample copied into your templates (then yours to change). */
+      copySample: () =>
+        act(async () => {
+          const s = samples.find((x) => x.id === draft?.sampleId);
+          const saved = await wf.saveWorkflow({ name: s.name, description: s.description, steps: structuredClone(s.steps), edges: structuredClone(s.edges) });
+          await open(saved.id);
+          return saved;
+        }),
       /** A blank template on the canvas (saved when you press Save). */
       startNew: () => {
+        setPlaying(false);
         setOpenId(null);
         setDraft({ id: null, kind: "template", name: "New workflow", description: "", status: "draft", steps: [newStep("task", [], 120, 140)], edges: [] });
         setDirty(true);
@@ -142,7 +175,7 @@ export function WorkflowsProvider({ children }) {
       useForInterval: () => act(async () => open((await wf.useWorkflow(draft.id, bridgeId)).id)),
       approveStep: (stepId) => act(async () => setDraft(await wf.approveStep(draft.id, stepId))),
     }),
-    [wf, list, run, bridgeId, brain?.interval, brain?.live?.workers, draft, dirty, editable, selected, busy, error, open, change, reload, act]
+    [wf, list, run, bridgeId, brain?.interval, brain?.live?.workers, draft, dirty, editable, selected, busy, error, open, change, reload, act, playing, samples, loadSamples]
   );
 
   return <WorkflowsContext.Provider value={value}>{children}</WorkflowsContext.Provider>;

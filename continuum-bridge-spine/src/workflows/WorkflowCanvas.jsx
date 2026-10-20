@@ -3,6 +3,7 @@ import { Background, Controls, Handle, MarkerType, MiniMap, Position, ReactFlow,
 import "@xyflow/react/dist/style.css";
 import { agentName } from "../screens/brain/agentDisplay";
 import { KIND, newStep, useWorkflows } from "./workflowModel";
+import { SAMPLE_WORKFLOWS, useSampleRun } from "./samples";
 import "./workflows.css";
 
 const MINIMAP_COLOR = { task: "#6366f1", approval: "#d97706", review: "#0ea5e9", final: "#16a34a" };
@@ -46,11 +47,15 @@ const nodeTypes = { step: StepNode };
 export default function WorkflowCanvas() {
   const w = useWorkflows();
   const d = w?.draft;
-  const live = !!d && d.kind === "run" && d.status !== "draft";
+  // A sample: its pretend run's steps while it plays
+  const sample = d?.kind === "sample" ? (SAMPLE_WORKFLOWS.find((s) => s.id === d.sampleId) ?? null) : null;
+  const played = useSampleRun(sample, !!w?.playing);
+  const steps = useMemo(() => played ?? d?.steps ?? [], [played, d]);
+  const live = sample ? !!played : !!d && d.kind === "run" && d.status !== "draft";
 
   const nodes = useMemo(
     () =>
-      (d?.steps ?? []).map((s) => {
+      steps.map((s) => {
         const agent = s.agentId ? w.workers.find((x) => x._id === s.agentId) : null;
         return {
           id: s.id,
@@ -58,19 +63,19 @@ export default function WorkflowCanvas() {
           position: { x: s.x, y: s.y },
           selected: w.selected === s.id,
           draggable: w.editable,
-          data: { step: s, live, worker: agent ? agentName(agent, w.workers) : s.agentId ? `worker ${s.agentId.slice(-4)}` : null, onApprove: w.approveStep },
+          data: { step: s, live, worker: sample ? s.worker : agent ? agentName(agent, w.workers) : s.agentId ? `worker ${s.agentId.slice(-4)}` : null, onApprove: sample ? () => {} : w.approveStep },
         };
       }),
-    [d, w.selected, w.editable, w.workers, w.approveStep, live]
+    [steps, sample, w.selected, w.editable, w.workers, w.approveStep, live]
   );
   const edges = useMemo(
     () =>
       (d?.edges ?? []).map((e) => {
-        const to = d.steps.find((s) => s.id === e.to);
+        const to = steps.find((s) => s.id === e.to);
         const flowing = live && (to?.state === "working" || to?.state === "ready");
         return { id: `${e.from}>${e.to}`, source: e.from, target: e.to, animated: flowing, className: flowing ? "is-flowing" : undefined, markerEnd: { type: MarkerType.ArrowClosed } };
       }),
-    [d, live]
+    [d, steps, live]
   );
 
   const onNodesChange = useCallback(
@@ -113,8 +118,8 @@ export default function WorkflowCanvas() {
     [w]
   );
 
-  if (!w?.available) return <div className="wf-empty">Workflows need Continuum's brain (it isn't connected here).</div>;
-  if (!d) return <div className="wf-empty">Open a workflow on the left, or start a new one.</div>;
+  if (!w?.available && !sample) return <div className="wf-empty">Workflows need Continuum's brain (it isn't connected here). The samples on the left play without it.</div>;
+  if (!d) return <div className="wf-empty">Open a workflow on the left, start a new one, or watch a sample run.</div>;
 
   const add = (kind) => {
     const right = Math.max(80, ...d.steps.map((s) => s.x + 260));
@@ -125,6 +130,18 @@ export default function WorkflowCanvas() {
 
   return (
     <div className="wf-canvas">
+      {sample && (
+        <div className="wf-toolbar wf-sample-bar">
+          <span className="wf-sample-tag">Sample</span>
+          <button type="button" className="brain-btn" onClick={() => w.setPlaying(!w.playing)}>
+            {w.playing ? "■ Pause" : "▶ Play the run"}
+          </button>
+          <button type="button" className="brain-btn is-primary" onClick={w.copySample} disabled={!w.available || w.busy} title={w.available ? undefined : "Needs Continuum's brain"}>
+            Copy to my templates
+          </button>
+          <span className="wf-toolbar-hint">A pretend run, played here: nothing starts and no worker is used.</span>
+        </div>
+      )}
       {w.editable && (
         <div className="wf-toolbar">
           {Object.entries(KIND).map(([k, v]) => (

@@ -253,3 +253,18 @@ html.reduce-motion .wf-node.is-live.state-working {
   width: 100%;
   margin: 0;
 }
+
+/* A sample on the canvas (samples.js): a pretend run, played here */
+.wf-sample-bar {
+  align-items: center;
+}
+.wf-sample-tag {
+  padding: 2px 8px;
+  border: 1px solid var(--brand);
+  border-radius: 999px;
+  color: var(--brand);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}

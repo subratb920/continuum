@@ -3,6 +3,7 @@ import { useBrain, lastEvent } from "../../brain/brainContext";
 import { STATE_LABEL } from "../../brain/brainTypes";
 import { agentGlyph, agentName, useNow } from "./agentDisplay";
 import ReplayBar from "./ReplayBar";
+import { STAGE_SAMPLES, useStageSample } from "./stageSamples";
 import "./brain.css";
 
 /**
@@ -12,6 +13,8 @@ import "./brain.css";
  * the links from the core; a tool call floats up from the node for a moment.
  * Finished workers (stopped, or failed and retried) rest on the shelf at the
  * bottom. Click a node to inspect it. The replay bar below winds the stage back.
+ * While your brain has no workers here, sample runs can play on the stage
+ * (stageSamples.js: in the page only, nothing starts).
  */
 const TOOL_SHOWN_MS = 4500;
 
@@ -35,6 +38,8 @@ export default function AgentStage() {
   const brain = useBrain();
   const now = useNow(500);
   const [boxRef, { w: W, h: H }] = useBoxSize();
+  const [sampleId, setSampleId] = useState(null);
+  const sample = useStageSample(sampleId);
   if (!brain) return null;
 
   // The ring fits the stage, leaving room for labels, tool calls and the shelf
@@ -44,7 +49,13 @@ export default function AgentStage() {
   const RY = Math.max(90, Math.min(H / 2 - 90, 230));
   const RING = Math.min(RX, RY);
 
-  const { core, workers, events, pending, selectedId, select, replay } = brain;
+  // Your own active workers take the stage back from a sample (finished ones don't)
+  const ownWorkers = brain.workers.some((w) => !(w.state === "stopped" || (w.state === "failed" && w.retriedBy)));
+  const showing = sample && !ownWorkers ? sample : null;
+  const { core, workers, events, pending } = showing ?? brain;
+  const { replay } = brain;
+  const selectedId = showing ? null : brain.selectedId;
+  const select = showing ? () => {} : brain.select;
   const at = replay.live ? now : replay.at; // tool calls float relative to the time shown
   const asking = new Set(pending.map((e) => e.agentId));
   const settled = (w) => w.state === "stopped" || (w.state === "failed" && w.retriedBy);
@@ -120,7 +131,7 @@ export default function AgentStage() {
   return (
     <div className={`agent-stage${replay.live ? "" : " replaying"}`}>
       <div className="agent-stage-head">
-        <h2 className="agent-stage-title">{replay.live ? "Agent Stage" : "Agent Stage · replay"}</h2>
+        <h2 className="agent-stage-title">{showing ? `Agent Stage · sample: ${showing.sample.title}` : replay.live ? "Agent Stage" : "Agent Stage · replay"}</h2>
         <ul className="agent-legend">
           {["working", "idle", "failed", "stopped"].map((s) => (
             <li key={s} className={`state-${s}`}>
@@ -133,7 +144,26 @@ export default function AgentStage() {
         </ul>
       </div>
 
-      <div className="agent-stage-box" ref={boxRef}>
+      {!ownWorkers && replay.live && (
+        <div className="stage-samples" role="group" aria-label="Sample runs">
+          <span className="stage-samples-label">{showing ? "Sample: nothing runs" : "Watch a sample run:"}</span>
+          {STAGE_SAMPLES.map((s) => (
+            <button key={s.id} type="button" className={`brain-btn stage-sample${sampleId === s.id ? " is-on" : ""}`} aria-pressed={sampleId === s.id} title={s.line} onClick={() => setSampleId(sampleId === s.id ? null : s.id)}>
+              {s.title}
+            </button>
+          ))}
+          {showing && (
+            <>
+              <span className="stage-samples-line">{showing.sample.line}</span>
+              <button type="button" className="brain-btn" onClick={() => setSampleId(null)}>
+                Stop
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      <div className={`agent-stage-box${showing ? " is-sample" : ""}`} ref={boxRef}>
       <svg className="agent-stage-svg" width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="group" aria-label="Agents">
         <ellipse className="stage-guide" cx={CX} cy={CY} rx={RX} ry={RY} />
         <ellipse className="stage-guide faint" cx={CX} cy={CY} rx={RX * 1.4} ry={RY * 1.4} />

@@ -11,7 +11,7 @@ import "./workflows.css";
 export default function WorkflowInspector() {
   const w = useWorkflows();
   const [confirm, setConfirm] = useState(null); // "delete" | "cancel"
-  if (!w?.available || !w.draft) return <div className="wf-insp brain-hint">Select a workflow, or a step on the canvas.</div>;
+  if (!w?.draft || (!w.available && w.draft.kind !== "sample")) return <div className="wf-insp brain-hint">Select a workflow, or a step on the canvas.</div>;
   const d = w.draft;
   const step = d.steps.find((s) => s.id === w.selected) ?? null;
   const ro = !w.editable;
@@ -88,9 +88,14 @@ export default function WorkflowInspector() {
             <textarea rows={3} value={d.description} readOnly={ro} onChange={(e) => w.change((x) => ({ ...x, description: e.target.value }))} />
           </label>
           <p className="brain-hint">
-            {d.kind === "template" ? "A template: use it for an agent interval, or let the brain start from it." : `This interval's workflow · ${d.status}${d.createdBy === "brain" ? " · drafted by the brain" : ""}.`} {d.steps.length} steps, {d.edges.length} arrows.
+            {d.kind === "sample" ? "A sample: watch its run on the canvas, then copy it to your templates to change it or use it." : d.kind === "template" ? "A template: use it for an agent interval, or let the brain start from it." : `This interval's workflow · ${d.status}${d.createdBy === "brain" ? " · drafted by the brain" : ""}.`} {d.steps.length} steps, {d.edges.length} arrows.
           </p>
           <div className="wf-actions">
+            {d.kind === "sample" && (
+              <button type="button" className="brain-btn is-primary" onClick={w.copySample} disabled={!w.available || w.busy}>
+                Copy to my templates
+              </button>
+            )}
             {w.editable && (
               <button type="button" className="brain-btn" onClick={w.save} disabled={w.busy || !w.dirty}>
                 {w.busy ? "Saving…" : w.dirty ? "Save" : "Saved"}

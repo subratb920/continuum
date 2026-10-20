@@ -982,3 +982,30 @@ button.goal-agent:hover { background: rgb(var(--c-rgb, var(--agent-off-rgb)) / 0
 .model-helpers { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--text-muted); cursor: pointer; }
 .model-modes-sub { margin-top: 6px; color: var(--text-muted); font-weight: 600; font-size: 12px; }
 .model-skills { display: inline-block; margin-top: 6px; font-size: 12px; }
+
+/* Sample runs on the Agent Stage (stageSamples.js): played in the page, nothing starts */
+.stage-samples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 12px;
+}
+.stage-samples-label {
+  color: var(--text-muted);
+}
+.stage-samples-line {
+  flex: 1 1 200px;
+  min-width: 0;
+  color: var(--text-muted);
+}
+.stage-sample.is-on {
+  border-color: var(--brand);
+  background: var(--selected);
+  color: var(--text);
+}
+.agent-stage-box.is-sample {
+  background-image: radial-gradient(circle at 50% 45%, rgb(var(--brand-rgb) / 0.06), transparent 60%);
+}
