@@ -20,18 +20,24 @@ export default function WorkflowLibrary() {
     <section>
       <h3 className="wf-lib-h">Samples</h3>
       <p className="brain-hint">Watch one run (played here: nothing starts), then copy it to your templates.</p>
-      <ul className="wf-lib-list">
-        {w.samples.map((x) => (
-          <li key={x.id}>
-            <button type="button" className={`wf-lib-item${w.draft?.sampleId === x.id ? " is-open" : ""}`} onClick={() => w.openSample(x.id)}>
-              <span className="wf-lib-name">▶ {x.name}</span>
-              <span className="wf-lib-meta">
-                {x.steps.length} steps · sample
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
+      {/* By group: everyday work first, then e.g. Mainframe migration */}
+      {[...new Set(w.samples.map((x) => x.group ?? "Everyday work"))].map((group) => (
+        <div key={group} className="wf-lib-group">
+          <h4 className="wf-lib-subh">{group}</h4>
+          <ul className="wf-lib-list">
+            {w.samples
+              .filter((x) => (x.group ?? "Everyday work") === group)
+              .map((x) => (
+                <li key={x.id}>
+                  <button type="button" className={`wf-lib-item${w.draft?.sampleId === x.id ? " is-open" : ""}`} onClick={() => w.openSample(x.id)} title={x.description}>
+                    <span className="wf-lib-name">▶ {x.name}</span>
+                    <span className="wf-lib-meta">{x.steps.length} steps · sample</span>
+                  </button>
+                </li>
+              ))}
+          </ul>
+        </div>
+      ))}
     </section>
   );
   if (!w.available) {

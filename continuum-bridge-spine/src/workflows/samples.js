@@ -67,6 +67,189 @@ export const SAMPLE_WORKFLOWS = [
     ],
     edges: edges(["plan", "p1"], ["plan", "p2"], ["plan", "p3"], ["p1", "ok"], ["p2", "ok"], ["p3", "ok"], ["ok", "merge"]),
   },
+
+  // ── Mainframe migration (COBOL, PL/I) ─────────────────────────
+  // The usual path: know the estate, decide the target and the waves with
+  // you, convert code, copybooks, JCL and data in parallel, prove the new
+  // system gives the same results (same input, same output; parallel runs),
+  // then you approve the move. Each wave is one run of a template.
+  {
+    id: "sample-mf-cobol-java",
+    group: "Mainframe migration",
+    name: "COBOL to Java (refactor, one wave)",
+    description:
+      "Inventory the COBOL estate, map dependencies and business rules, agree the target and the wave with you, convert programs, copybooks, JCL and data at once, prove equivalence on the same inputs, then you approve the parallel run before it merges.",
+    steps: [
+      step("inv", "task", "Inventory the estate", 40, 260, {
+        instructions:
+          "From the source export, list every COBOL program, copybook, JCL job and PROC, CICS map and transaction, DB2 table, VSAM file and IMS segment, with size, last change and owner. Flag dead code (programs no job or transaction reaches).",
+        scope: ["migration/inventory/"],
+        check: "migration/inventory/catalog.csv lists every member of the export; no member unaccounted for",
+      }),
+      step("deps", "task", "Call and data dependencies", 320, 120, {
+        instructions: "Build the graph: CALL and dynamic CALL targets, COPY members, JCL steps and their DD datasets, DB2 tables per program, CICS LINK/XCTL. Find clusters that can move together.",
+        scope: ["migration/dependencies/"],
+        check: "every program in the catalog appears in the graph; clusters.json has no program in two clusters",
+      }),
+      step("rules", "task", "Business rules from the code", 320, 400, {
+        instructions:
+          "From each PROCEDURE DIVISION in scope, write the business rules in plain words (calculations, validations, rounding, date handling) with the paragraph each comes from. Note rules hidden in copybook REDEFINES and 88-levels.",
+        scope: ["migration/rules/"],
+        check: "every paragraph that changes data has a rule or a note saying why not",
+      }),
+      step("plan", "review", "Brain plans target and wave", 600, 260, {
+        instructions: "Choose the first wave: a low-risk cluster with few callers. Target: Java services and batch jobs on the cloud; DB2 and VSAM data to PostgreSQL. List what the wave needs from outside it (shared copybooks, files other jobs still write).",
+      }),
+      step("ok-plan", "approval", "Your approval: target and wave 1", 880, 260, { instructions: "The wave's programs, what stays on the mainframe for now, and the interfaces in between." }),
+      step("code", "task", "Programs to Java", 1160, 40, {
+        instructions: "Convert the wave's programs to Java, one class per program, paragraphs as methods; keep the rules' names. Fixed-point arithmetic stays exact (BigDecimal, the same rounding as ROUNDED).",
+        scope: ["app/src/main/java/programs/"],
+        check: "./gradlew build",
+      }),
+      step("copy", "task", "Copybooks to records", 1160, 190, {
+        instructions: "Each copybook becomes a record type with readers and writers for the original layout: COMP-3 packed decimal, signed zoned decimal, OCCURS DEPENDING ON, REDEFINES as alternatives.",
+        scope: ["app/src/main/java/records/"],
+        check: "round-trip tests: every sample record reads and writes back byte for byte",
+      }),
+      step("jcl", "task", "JCL to batch jobs", 1160, 340, {
+        instructions: "Each job becomes a batch job: steps in order, COND and RC handling, restart points, GDG generations as dated files, SORT steps as code or a sort tool with the same collating order.",
+        scope: ["app/src/main/java/jobs/", "ops/schedule/"],
+        check: "every job step in the wave maps to a step here; dry run passes",
+      }),
+      step("data", "task", "Data conversion", 1160, 490, {
+        instructions: "Scripts that move the wave's data: EBCDIC to UTF-8 (only text fields), packed and zoned decimals to numbers, dates (YYDDD, CYYMMDD) to dates, LOW-VALUES and HIGH-VALUES to agreed values; VSAM KSDS to tables with the key as primary key.",
+        scope: ["migration/data/"],
+        check: "control totals (row counts, sums of amounts) match the source extract",
+      }),
+      step("equiv", "task", "Equivalence tests", 1440, 260, {
+        instructions: "Run the same production-like inputs through the mainframe and the new code; compare outputs field by field after normalising known differences (encoding, trailing spaces). Every difference is either fixed or written down and agreed.",
+        scope: ["migration/equivalence/"],
+        check: "migration/equivalence/report.md: 0 unexplained differences",
+      }),
+      step("review", "review", "Brain review: equivalence, performance, gaps", 1720, 260, {
+        instructions: "Differences explained; the batch window still fits; nothing in the wave still reads a dataset only the mainframe writes.",
+      }),
+      step("ok-run", "approval", "Your approval: parallel run", 2000, 260, { instructions: "Both systems ran side by side for the agreed days with the same results. Approve to cut this wave over." }),
+      step("merge", "final", "Merge wave 1", 2280, 260),
+    ],
+    edges: edges(
+      ["inv", "deps"], ["inv", "rules"], ["deps", "plan"], ["rules", "plan"], ["plan", "ok-plan"],
+      ["ok-plan", "code"], ["ok-plan", "copy"], ["ok-plan", "jcl"], ["ok-plan", "data"],
+      ["code", "equiv"], ["copy", "equiv"], ["jcl", "equiv"], ["data", "equiv"],
+      ["equiv", "review"], ["review", "ok-run"], ["ok-run", "merge"]
+    ),
+  },
+  {
+    id: "sample-mf-pli-batch",
+    group: "Mainframe migration",
+    name: "PL/I batch to the cloud (replatform)",
+    description: "Keep the PL/I code, compile and run it off the mainframe: fix platform differences, replace JCL and datasets, prove the same results inside the batch window.",
+    steps: [
+      step("inv", "task", "Inventory PL/I and its jobs", 40, 200, {
+        instructions: "List PL/I programs and %INCLUDE members, the JCL that runs them, the datasets they read and write (RECFM, LRECL), and the utilities used (SORT, IDCAMS, IEBGENER).",
+        scope: ["migration/inventory/"],
+        check: "every program, include and job is listed with its datasets",
+      }),
+      step("compile", "task", "Compile on the target", 320, 60, {
+        instructions: "Build every program with the target platform's PL/I compiler; list what doesn't compile and why (built-ins, compile options, mainframe-only calls).",
+        scope: ["build/"],
+        check: "build log: every program compiles, or has a listed fix",
+      }),
+      step("platform", "task", "Fix platform differences", 320, 200, {
+        instructions: "EBCDIC versus ASCII order in compares and SORT keys, FIXED DECIMAL and PICTURE edits, record formats (FB, VB with record descriptors), ON-units and condition codes, calls to system services.",
+        scope: ["src/"],
+        check: "unit runs with sample records give the mainframe's output",
+      }),
+      step("jcl", "task", "JCL and datasets to scripts and storage", 320, 340, {
+        instructions: "Each job as a script or scheduler job; datasets as files in object storage with the same names mapped; GDGs as dated generations; SORT and IDCAMS steps with equivalent tools.",
+        scope: ["ops/jobs/", "ops/storage-map.yaml"],
+        check: "dry run of every job in the right order",
+      }),
+      step("regress", "task", "Regression with production-like input", 600, 200, {
+        instructions: "Run a full night's input; compare every output dataset with the mainframe's from the same input.",
+        scope: ["migration/regression/"],
+        check: "0 unexplained differences",
+      }),
+      step("window", "review", "Brain review: batch window and restarts", 880, 200, { instructions: "The whole chain finishes inside the window with margin; a failed step restarts from its checkpoint." }),
+      step("ok", "approval", "Your approval: cut over the batch", 1160, 200),
+      step("merge", "final", "Merge", 1440, 200),
+    ],
+    edges: edges(["inv", "compile"], ["inv", "platform"], ["inv", "jcl"], ["compile", "regress"], ["platform", "regress"], ["jcl", "regress"], ["regress", "window"], ["window", "ok"], ["ok", "merge"]),
+  },
+  {
+    id: "sample-mf-data",
+    group: "Mainframe migration",
+    name: "Mainframe data to PostgreSQL",
+    description: "DB2, VSAM and IMS data to PostgreSQL: map the layouts, convert the encodings and numbers, load and reconcile to the cent before you sign off.",
+    steps: [
+      step("profile", "task", "Profile the data", 40, 200, {
+        instructions: "For each DB2 table, VSAM file and IMS segment: record counts, key uniqueness, fields that hold LOW-VALUES, spaces or invalid packed decimals, dates in each format.",
+        scope: ["migration/data/profile/"],
+        check: "a profile per source with counts and anomalies",
+      }),
+      step("schema", "task", "Layouts to tables", 320, 100, {
+        instructions: "Copybook and DCLGEN layouts to PostgreSQL DDL: OCCURS as child tables, REDEFINES as typed alternatives, packed decimals as NUMERIC with the same precision, keys and indexes.",
+        scope: ["migration/data/ddl/"],
+        check: "DDL applies to an empty database; every source field has a column or a reason",
+      }),
+      step("convert", "task", "Conversion scripts", 320, 300, {
+        instructions: "Extract, convert and load: EBCDIC text to UTF-8 (code page agreed), COMP-3 and zoned decimals to numbers, dates to DATE, binary fields kept as numbers; bad values to a reject file, never dropped.",
+        scope: ["migration/data/convert/"],
+        check: "a sample extract converts with 0 silent changes; rejects listed",
+      }),
+      step("load", "task", "Trial load and reconciliation", 600, 200, {
+        instructions: "Load a full copy; reconcile per table: row counts, sums of every amount field, hash totals of keys, a field-by-field sample.",
+        scope: ["migration/data/reconcile/"],
+        check: "counts and control totals equal the source extract",
+      }),
+      step("ri", "review", "Brain review: integrity and rejects", 880, 200, { instructions: "Foreign keys hold; every reject has a cause and a fix or an agreed decision." }),
+      step("ok", "approval", "Your sign-off on the data", 1160, 200),
+      step("merge", "final", "Merge", 1440, 200),
+    ],
+    edges: edges(["profile", "schema"], ["profile", "convert"], ["schema", "load"], ["convert", "load"], ["load", "ri"], ["ri", "ok"], ["ok", "merge"]),
+  },
+  {
+    id: "sample-mf-cics",
+    group: "Mainframe migration",
+    name: "CICS screens to APIs and web pages",
+    description: "Online CICS transactions become APIs and web pages: same rules, same security, tested end to end against the 3270 screens.",
+    steps: [
+      step("inv", "task", "Transactions and screens", 40, 200, {
+        instructions: "List CICS transactions, their programs, BMS maps and the flow between screens (pseudo-conversational: what each keeps in the COMMAREA or a TS queue).",
+        scope: ["migration/online/inventory/"],
+        check: "every transaction ID has its programs, maps and next screens",
+      }),
+      step("api", "task", "API design", 320, 80, {
+        instructions: "One API call per business action (not per screen); requests and responses from the maps' fields; errors from the programs' messages.",
+        scope: ["api/openapi.yaml"],
+        check: "OpenAPI file validates; every transaction's actions are covered",
+      }),
+      step("security", "task", "Security mapping", 320, 320, {
+        instructions: "RACF profiles and transaction security to roles and permissions on the new APIs; sign-on to the company's single sign-on.",
+        scope: ["api/security/"],
+        check: "each transaction's allowed groups map to a role",
+      }),
+      step("services", "task", "Services", 600, 80, {
+        instructions: "Implement the APIs with the business rules from the programs; data through the migrated tables.",
+        scope: ["api/src/"],
+        check: "npm test",
+      }),
+      step("pages", "task", "Web pages from the maps", 600, 320, {
+        instructions: "Pages for the screens people use, with the same fields and keys where it helps (PF keys as buttons); flows as in the inventory.",
+        scope: ["web/src/"],
+        check: "npm run build",
+      }),
+      step("e2e", "task", "End-to-end against the 3270 screens", 880, 200, {
+        instructions: "The same scripted inputs on the old screens and the new pages give the same results and messages.",
+        scope: ["e2e/"],
+        check: "npm run e2e",
+      }),
+      step("review", "review", "Brain review", 1160, 200, { instructions: "Rules, security and messages match; response times inside the agreed limits." }),
+      step("ok", "approval", "Your approval: switch users over", 1440, 200),
+      step("merge", "final", "Merge", 1720, 200),
+    ],
+    edges: edges(["inv", "api"], ["inv", "security"], ["api", "services"], ["security", "services"], ["inv", "pages"], ["services", "e2e"], ["pages", "e2e"], ["e2e", "review"], ["review", "ok"], ["ok", "merge"]),
+  },
 ];
 
 /** A sample's steps after this many ticks of a pretend run (from the start; it loops). */

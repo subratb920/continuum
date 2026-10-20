@@ -153,6 +153,8 @@ export default function WorkflowCanvas() {
         </div>
       )}
       <ReactFlow
+        // A different workflow: drawn afresh, fitted to the canvas (wide ones too)
+        key={d.id ?? d.sampleId ?? "new"}
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
@@ -165,7 +167,8 @@ export default function WorkflowCanvas() {
         deleteKeyCode={w.editable ? ["Backspace", "Delete"] : null}
         colorMode={document.documentElement.dataset.theme === "light" ? "light" : "dark"}
         fitView
-        fitViewOptions={{ padding: 0.25 }}
+        fitViewOptions={{ padding: 0.12 }}
+        minZoom={0.2}
       >
         <Background gap={20} />
         <MiniMap pannable zoomable className="wf-minimap" style={{ width: 150, height: 96 }} nodeColor={(n) => MINIMAP_COLOR[n.data?.step?.kind] ?? "#888"} maskColor="rgb(0 0 0 / 0.25)" />
