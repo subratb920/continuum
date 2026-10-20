@@ -245,3 +245,6 @@ html.reduce-motion .admin-switch-knob { transition: none; }
 .sync-result > p:first-child { margin: 0; color: var(--success-text); font-weight: 600; }
 .sync-code code { font-size: 14px; padding: 2px 6px; border-radius: 4px; background: var(--surface); user-select: all; }
 .sync-table td { padding: 3px 8px; font-size: 13px; }
+.callback-note { max-width: 320px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.callback-act { white-space: nowrap; }
+.callback-act .admin-link { margin-left: 10px; }

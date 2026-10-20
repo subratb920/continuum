@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { normalizeCallback } from "../src/services/supportRequests.js";
+import { callbackEmail, normalizeCallback } from "../src/services/supportRequests.js";
 
 test("callback: a phone number with a country code is kept as typed", () => {
   const c = normalizeCallback({ name: " Subrat ", phone: "+91 98765 43210", bestTime: "evening", timezone: "Asia/Kolkata", note: " after 6 " });
@@ -26,4 +26,19 @@ test("callback: long fields are cut", () => {
   const c = normalizeCallback({ phone: "+44 20 7946 0958", name: "x".repeat(300), note: "y".repeat(5000) });
   assert.equal(c.name.length, 100);
   assert.equal(c.note.length, 1000);
+});
+
+test("callback email: who, the number, when, the note, and a link to the Directory", () => {
+  const m = callbackEmail({ name: "Subrat", email: "s@example.com", phone: "+91 98765 43210", bestTime: "evening", timezone: "Asia/Kolkata", note: "Pricing", source: "deploy" }, "https://directory.continuum-console.one/");
+  assert.equal(m.subject, "Callback request: Subrat, +91 98765 43210");
+  assert.equal(m.replyTo, "s@example.com");
+  assert.match(m.text, /from Continuum Deploy/);
+  assert.match(m.text, /Best time: evening \(17–20\) \(Asia\/Kolkata\)/);
+  assert.match(m.text, /What it's about:\nPricing/);
+  assert.match(m.text, /https:\/\/directory\.continuum-console\.one\/callbacks$/);
+});
+
+test("callback email: without a name it says the account; a name can't break the subject line", () => {
+  assert.equal(callbackEmail({ email: "s@example.com", phone: "+44 20 7946 0958", bestTime: "asap" }, "").subject, "Callback request: s@example.com, +44 20 7946 0958");
+  assert.doesNotMatch(callbackEmail({ name: "A\r\nBcc: x@y.z", phone: "+44 20 7946 0958" }, "").subject, /[\r\n]/);
 });

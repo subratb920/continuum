@@ -73,7 +73,7 @@ router.get("/me/appearance", requireDeployToken, async (req, res) => {
 });
 
 router.post("/support/callbacks", requireDeployToken, async (req, res) => {
-  const saved = await createSupportService(getDB()).requestCallback({ id: req.deployUser.id }, { ...req.body, source: "deploy" });
+  const saved = await createSupportService(getDB(), { log: req.log }).requestCallback({ id: req.deployUser.id }, { ...req.body, source: "deploy" });
   req.log.info({ userId: req.deployUser.id, requestId: String(saved.id), bestTime: saved.bestTime, source: "deploy" }, "Callback requested");
   res.status(201).json({ id: saved.id, bestTime: saved.bestTime, createdAt: saved.createdAt });
 });

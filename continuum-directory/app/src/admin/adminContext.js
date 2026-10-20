@@ -13,6 +13,7 @@ export const ADMIN_SECTIONS = [
   ["roles", "Roles", "🛡"],
   ["signins", "Sign-ins", "🔑"],
   ["changes", "Admin changes", "📝"],
+  ["callbacks", "Callback requests", "☎"],
   ["sync", "Production sync", "⇅"],
 ];
 

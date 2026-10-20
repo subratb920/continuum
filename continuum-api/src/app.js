@@ -12,7 +12,7 @@ import { requestLogger } from "./middleware/requestLogger.js";
 import githubRoutes from "./auth/github.routes.js";
 import oauthRoutes from "./oauth/oauth.routes.js";
 import deployRoutes from "./oauth/deploy.routes.js";
-import supportRoutes from "./routes/support.routes.js";
+import supportRoutes, { createCallbacksAdminRouter } from "./routes/support.routes.js";
 import createRoutes from "./create/routes.js";
 import publishRoutes from "./create/publish.js";
 import cloneRoutes from "./create/clone.js";
@@ -65,6 +65,7 @@ app.post("/me/sync-codes", requireAuthOrDirectoryToken, withAccess(), createSync
 // sign-ins (admins). From the Continuum UI, or the Directory's own page (its sign-in token)
 const directoryAuth = [requireAuthOrDirectoryToken, withAccess()];
 app.use("/directory/orgs/:orgId/projects", ...directoryAuth, createOrgProjectsRouter()); // an organization's projects (they're Continuum's)
+app.use("/directory/admin/callbacks", ...directoryAuth, requireFeature("admin"), createCallbacksAdminRouter()); // Contact us's callback requests (they're Continuum's; admins)
 app.use("/directory", directory.router({ auth: [...directoryAuth, uses("directory")] }));
 app.use("/me", authed, meRoutes); // you: your access, and your preferences (theme), shared with Continuum Deploy
 app.use("/workspaces", authed, requireFeature("workspaces"), requireFeatureFor(WORKSPACES_RULES), uses("workspaces"), createWorkspacesRouter()); // development servers per project (continuum-workspaces)

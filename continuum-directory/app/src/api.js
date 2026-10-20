@@ -73,4 +73,7 @@ export const adminApi = {
   syncPreview: () => request("POST", "/admin/sync/preview"),
   syncPush: (target, code) => request("POST", "/admin/sync/push", { target, code }),
   createSyncCode: () => request("POST", "/me/sync-codes"),
+  // Contact us's callback requests (kept by Continuum)
+  callbacks: (status = "") => request("GET", `/directory/admin/callbacks?${q({ status })}`),
+  markCallback: (id, status) => request("PATCH", `/directory/admin/callbacks/${id}`, { status }),
 };

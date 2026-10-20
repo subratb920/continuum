@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { deviceText, networkText, placeText, since, useAdmin } from "./adminContext";
 import ProductionSync from "./ProductionSync";
 import "./admin.css";
 
+const Callbacks = lazy(() => import("./Callbacks"));
+
 /**
  * Admin (centre): the section showing — Users (search, filters, the list),
  * Roles (each feature a switch, per role), Sign-ins (everyone's, refused ones
- * too) and Admin changes. Picking a user or a role opens it on the right.
+ * too), Admin changes and Callback requests. Picking a user or a role opens it on the right.
  */
 export default function AdminMain() {
   const admin = useAdmin();
@@ -23,6 +25,11 @@ export default function AdminMain() {
       {admin.section === "signins" && <SignIns />}
       {admin.section === "changes" && <Changes />}
       {admin.section === "sync" && <ProductionSync />}
+      {admin.section === "callbacks" && (
+        <Suspense fallback={<p className="admin-muted">Loading…</p>}>
+          <Callbacks />
+        </Suspense>
+      )}
     </div>
   );
 }
@@ -238,7 +245,7 @@ function Roles() {
   );
 }
 
-const METHOD = { email: "Email", github: "GitHub", deploy: "Continuum Deploy" };
+const METHOD = { email: "Email", github: "GitHub", google: "Google", deploy: "Continuum Deploy" };
 
 function SignIns() {
   const { signins, select } = useAdmin();
