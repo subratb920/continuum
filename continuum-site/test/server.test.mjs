@@ -35,6 +35,15 @@ test("www goes to the one address (the domain itself), same page", async () => {
   assert.equal(r.headers.location, "https://continuum-console.one/teams?x=1");
 });
 
+test("plain http through the load balancer goes to https; its health checks (no such header) are answered", async () => {
+  const r = await get("/ai-ide?x=1", { host: "continuum-console.one", "x-forwarded-proto": "http" });
+  assert.equal(r.status, 301);
+  assert.equal(r.headers.location, "https://continuum-console.one/ai-ide?x=1");
+  assert.equal((await get("/", { host: "continuum-console.one", "x-forwarded-proto": "https" })).status, 200);
+  assert.equal((await get("/healthz")).status, 200);
+  assert.equal((await get("/")).status, 200, "no header: as it is");
+});
+
 test("unknown pages are a real 404 (not a soft one); text is gzipped", async () => {
   const r = await get("/nope");
   assert.equal(r.status, 404);

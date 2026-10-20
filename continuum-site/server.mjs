@@ -1,6 +1,7 @@
 // continuum-site: serves dist/ (built by build.mjs) on $PORT (45195).
 //   /topic → dist/topic/index.html; /topic/ → 301 /topic; unknown → 404.html
 //   the domain with or without www (whichever isn't SITE_URL's) → 301 to SITE_URL, same path (one address for search engines)
+//   http (as the load balancer reports it) → 301 to https
 // Everything is read once at start, with a gzip copy of text files.
 
 import { createServer } from "node:http";
@@ -72,6 +73,8 @@ export const server = createServer((req, res) => {
   if (pathname === "/healthz") return res.writeHead(200, { "Content-Type": "text/plain" }), res.end("ok");
   // The other name → the one address (keeps search engines from splitting a page in two)
   if (host === OTHER_HOST) return redirect(res, `${SITE_URL}${pathname}${search}`);
+  // Plain http through the load balancer (it says so in X-Forwarded-Proto) → https, when the site's address is https
+  if (host === SITE_HOST && req.headers["x-forwarded-proto"] === "http" && SITE_URL.startsWith("https:")) return redirect(res, `${SITE_URL}${pathname}${search}`);
   if (pathname.length > 1 && pathname.endsWith("/")) return redirect(res, `${pathname.replace(/\/+$/, "")}${search}`);
   if (pathname.endsWith("/index.html")) return redirect(res, `${pathname.slice(0, -"index.html".length).replace(/(.)\/$/, "$1")}${search}`);
   const file = FILES.get(pathname) ?? FILES.get(pathname === "/" ? "/index.html" : `${pathname}/index.html`);
