@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { deviceText, networkText, placeText, since, useAdmin } from "./adminContext";
+import ProductionSync from "./ProductionSync";
 import "./admin.css";
 
 /**
@@ -21,6 +22,7 @@ export default function AdminMain() {
       {admin.section === "roles" && <Roles />}
       {admin.section === "signins" && <SignIns />}
       {admin.section === "changes" && <Changes />}
+      {admin.section === "sync" && <ProductionSync />}
     </div>
   );
 }

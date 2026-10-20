@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchProjects, requestCallback, saveAccountTheme } from "../api";
+import { createSyncCode, fetchProjects, requestCallback, saveAccountTheme } from "../api";
 import { getPreferences, resetPreferences, resolvedTheme, setPreference, THEMES, usePreferences } from "../utils/preferences";
 import { DEPLOY_AVAILABLE, deployHomeUrl } from "../deployLinks";
 import { useAuth } from "../state/authStore";
@@ -252,6 +252,24 @@ function Integration({ icon, name, status, on, children }) {
   );
 }
 
+/** A one-time code (10 minutes) for another Continuum to add your records from there into this account (Admin → Production sync there). */
+function SyncCode() {
+  const [made, setMade] = useState(null);
+  const [problem, setProblem] = useState(null);
+  return (
+    <Integration icon="⇅" name="Sync from another Continuum" on={Boolean(made)} status={made ? `Code ${made.code} · valid until ${new Date(made.expiresAt).toLocaleTimeString()}, once` : problem ?? "Add your records from another Continuum (e.g. your own computer's) into this account"}>
+      <button type="button" className="pcard-btn small" onClick={() => createSyncCode().then(setMade, (e) => setProblem(e.message))}>
+        {made ? "New code" : "Create a sync code"}
+      </button>
+      {made && (
+        <button type="button" className="pcard-btn small" onClick={() => navigator.clipboard?.writeText(made.code)}>
+          Copy
+        </button>
+      )}
+    </Integration>
+  );
+}
+
 function IntegrationsSection() {
   const { githubConnected, connectGithub, access } = useAuth();
   const [problem, setProblem] = useState(null);
@@ -272,6 +290,7 @@ function IntegrationsSection() {
           </a>
         )}
       </Integration>
+      <SyncCode />
       <Integration icon="🧱" name="Backstage" on={Boolean(CREATE_URL)} status={CREATE_URL ? "Available: create projects from templates" : "Not set up for this Continuum"}>
         {CREATE_URL && (
           <a className="pcard-btn small" href={CREATE_URL} target="_blank" rel="noopener noreferrer">

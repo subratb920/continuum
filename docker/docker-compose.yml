@@ -68,6 +68,8 @@ services:
       WORKSPACES_PUBLIC_URL: http://localhost:45176
       # continuum-brain's brain-api (the Agents screen); its token is in continuum-api/.env.local
       BRAIN_URL: http://continuum-brain-api:45179
+      # Continuum Deploy (Production sync reads and writes your Deploy records there)
+      DEPLOY_API_URL: http://continuum-deploy-api:45180
       # Continuum Data (datasets): off unless DATA_ENABLED=true in docker/.env.
       # Its code is mounted from ../continuum-data; files live in
       # ~/.continuum/data-store; steps run through continuum-data-runner-proxy.

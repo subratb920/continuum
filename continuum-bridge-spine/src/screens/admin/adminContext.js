@@ -13,6 +13,7 @@ export const ADMIN_SECTIONS = [
   ["roles", "Roles", "🛡"],
   ["signins", "Sign-ins", "🔑"],
   ["changes", "Admin changes", "📝"],
+  ["sync", "Production sync", "⇅"],
 ];
 
 const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });

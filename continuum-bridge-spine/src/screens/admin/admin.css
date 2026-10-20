@@ -228,3 +228,20 @@ html.reduce-motion .admin-switch-knob { transition: none; }
 .admin-app-title { margin: 0 0 6px; font-size: 14px; font-weight: 700; color: var(--text); }
 .admin-matrix thead th.is-sub { font-weight: 500; color: var(--text-muted, inherit); }
 .admin-feature-list li.is-sub { padding-left: 14px; }
+
+/* Production sync: send from here, receive here */
+.sync { display: grid; gap: 14px; }
+.sync-card { display: grid; gap: 10px; padding: 14px 16px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface-subtle); }
+.sync-card h3 { margin: 0; font-size: 15px; color: var(--text); }
+.sync-steps { margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-2); display: grid; gap: 4px; }
+.sync-field { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.sync-field input { font: inherit; font-size: 13px; font-weight: 400; padding: 7px 9px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text); }
+.sync-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sync-counts { display: flex; flex-wrap: wrap; gap: 12px; }
+.sync-table { width: auto; min-width: 220px; }
+.sync-table caption { text-align: left; font-weight: 600; font-size: 12px; color: var(--text-muted); padding-bottom: 4px; }
+.sync-n { text-align: right; font-variant-numeric: tabular-nums; }
+.sync-result { display: grid; gap: 6px; }
+.sync-result > p:first-child { margin: 0; color: var(--success-text); font-weight: 600; }
+.sync-code code { font-size: 14px; padding: 2px 6px; border-radius: 4px; background: var(--surface); user-select: all; }
+.sync-table td { padding: 3px 8px; font-size: 13px; }

@@ -22,6 +22,7 @@ import { createServiceRouter } from "./service/routes.js";
 import { createBrainRouter, streamToken } from "./brain/routes.js";
 import { dataEngine } from "./data/engine.js";
 import { createAdminRouter } from "./admin/admin.routes.js";
+import { createSyncAdminRouter, createSyncCodeRoute, createSyncPublicRouter } from "./sync/sync.routes.js";
 
 
 const app = express();
@@ -30,6 +31,8 @@ const app = express();
 if (process.env.TRUST_PROXY) app.set("trust proxy", /^\d+$/.test(process.env.TRUST_PROXY) ? Number(process.env.TRUST_PROXY) : process.env.TRUST_PROXY);
 
 app.use(corsMiddleware());
+// Production sync: an account's records from another Continuum (its own body parser, larger than 1 MB; see sync/)
+app.use("/sync", createSyncPublicRouter());
 // 1 MB: a device import sends its file list (paths and sizes, at most 5000)
 app.use(express.json({ limit: "1mb" }));
 
@@ -55,8 +58,10 @@ app.use("/support", authed, supportRoutes); // Contact us: callback requests (al
 // New Project wizard: catalogue and generated projects; its GitHub checks (your account, a free name) also serve "Put on GitHub"
 const createAccess = (req, res, next) => (req.path.startsWith("/github") ? requireFeature("create", "publish") : requireFeature("create"))(req, res, next);
 app.use("/create", authed, createAccess, requireFeatureFor(CREATE_RULES), uses("create"), createRoutes);
+app.post("/me/sync-codes", authed, createSyncCodeRoute()); // a one-time code to sync your account into this Continuum
 app.use("/me", authed, meRoutes); // you: your access, and your preferences (theme), shared with Continuum Deploy
 app.use("/workspaces", authed, requireFeature("workspaces"), requireFeatureFor(WORKSPACES_RULES), uses("workspaces"), createWorkspacesRouter()); // development servers per project (continuum-workspaces)
+app.use("/admin/sync", authed, requireFeature("admin"), createSyncAdminRouter()); // Production sync: Preview and Merge (admins)
 app.use("/admin", authed, requireFeature("admin"), createAdminRouter()); // users, roles, sign-ins (admins only)
 app.use("/service", createServiceRouter()); // read-only data for continuum-brain (its service token only)
 app.use("/brain", streamToken, authed, requireFeature("agents"), requireFeatureFor(AGENTS_RULES), uses("agents"), createBrainRouter()); // the Agents screen, relayed to continuum-brain

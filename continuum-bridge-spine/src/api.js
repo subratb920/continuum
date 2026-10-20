@@ -366,4 +366,12 @@ export const adminApi = {
   saveSettings: (s) => request("PUT", "/admin/settings", s),
   activity: ({ failed = false } = {}) => request("GET", `/admin/activity?limit=200${failed ? "&failed=1" : ""}`),
   changes: () => request("GET", "/admin/changes?limit=200"),
+  // Production sync: what Merge would send from here, and sending it with production's code
+  syncPreview: () => request("POST", "/admin/sync/preview"),
+  syncPush: (target, code) => request("POST", "/admin/sync/push", { target, code }),
 };
+
+/** A one-time code (10 minutes) to sync your account's records into this Continuum: { code, expiresAt }. */
+export async function createSyncCode() {
+  return request("POST", "/me/sync-codes");
+}
