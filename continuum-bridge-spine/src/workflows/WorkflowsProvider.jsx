@@ -174,6 +174,8 @@ export function WorkflowsProvider({ children }) {
       saveAsTemplate: () => act(async () => open((await wf.saveAsTemplate(draft.id)).id)),
       useForInterval: () => act(async () => open((await wf.useWorkflow(draft.id, bridgeId)).id)),
       approveStep: (stepId) => act(async () => setDraft(await wf.approveStep(draft.id, stepId))),
+      /** An approval sent back along its loop arrow, with what to change. */
+      sendBackStep: (stepId, note) => act(async () => setDraft(await wf.sendBackStep(draft.id, stepId, note))),
     }),
     [wf, list, run, bridgeId, brain?.interval, brain?.live?.workers, draft, dirty, editable, selected, busy, error, open, change, reload, act, playing, samples, loadSamples]
   );

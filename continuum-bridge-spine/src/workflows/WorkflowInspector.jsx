@@ -11,12 +11,16 @@ import "./workflows.css";
 export default function WorkflowInspector() {
   const w = useWorkflows();
   const [confirm, setConfirm] = useState(null); // "delete" | "cancel"
+  const [backNote, setBackNote] = useState("");
   if (!w?.draft || (!w.available && w.draft.kind !== "sample")) return <div className="wf-insp brain-hint">Select a workflow, or a step on the canvas.</div>;
   const d = w.draft;
   const step = d.steps.find((s) => s.id === w.selected) ?? null;
   const ro = !w.editable;
   const setStep = (patch) => w.change((x) => ({ ...x, steps: x.steps.map((s) => (s.id === step.id ? { ...s, ...patch } : s)) }));
-  const waitsFor = step ? d.edges.filter((e) => e.to === step.id).map((e) => d.steps.find((s) => s.id === e.from)?.title ?? e.from) : [];
+  const waitsFor = step ? d.edges.filter((e) => e.to === step.id && !e.loop).map((e) => d.steps.find((s) => s.id === e.from)?.title ?? e.from) : [];
+  // Its loop arrow, if any: where the work goes back to when it fails (or is sent back)
+  const loopOut = step ? d.edges.find((e) => e.loop && e.from === step.id) : null;
+  const setLoop = (patch) => w.change((x) => ({ ...x, edges: x.edges.map((e) => (e.loop && e.from === step.id ? { ...e, ...patch } : e)) }));
   const goals = w.interval?.goals ?? [];
 
   return (
@@ -70,11 +74,40 @@ export default function WorkflowInspector() {
             </label>
           )}
           <p className="brain-hint">{waitsFor.length ? `Waits for: ${waitsFor.join(", ")}.` : "Starts first (nothing before it)."}</p>
+          {loopOut && (
+            <div className="wf-loop-edit">
+              <span className="brain-hint">
+                ↺ When it {step.kind === "approval" ? "is sent back" : "fails"}: back to <strong>{d.steps.find((s) => s.id === loopOut.to)?.title ?? loopOut.to}</strong>
+              </span>
+              <label>
+                Why it goes back
+                <input value={loopOut.label ?? ""} readOnly={ro} maxLength={60} placeholder="tests fail" onChange={(e) => setLoop({ label: e.target.value })} />
+              </label>
+              <label>
+                At most (times round)
+                <input type="number" min={1} max={20} value={loopOut.max ?? 5} readOnly={ro} onChange={(e) => setLoop({ max: Math.min(20, Math.max(1, Number(e.target.value) || 5)) })} />
+              </label>
+              {step.tries > 0 && <span className="brain-hint">Sent back {step.tries} {step.tries === 1 ? "time" : "times"} so far.</span>}
+            </div>
+          )}
           {step.note && <p className="brain-hint">Note: {step.note}</p>}
           {d.kind === "run" && d.status === "running" && step.kind === "approval" && step.state === "ready" && (
-            <button type="button" className="brain-btn is-primary" onClick={() => w.approveStep(step.id)} disabled={w.busy}>
-              Approve this step
-            </button>
+            <>
+              <button type="button" className="brain-btn is-primary" onClick={() => w.approveStep(step.id)} disabled={w.busy}>
+                Approve this step
+              </button>
+              {loopOut && (
+                <div className="wf-loop-edit">
+                  <label>
+                    Or send it back: what to change
+                    <textarea rows={3} value={backNote} onChange={(e) => setBackNote(e.target.value)} placeholder="Split the search into two steps; keep the old API." />
+                  </label>
+                  <button type="button" className="brain-btn" disabled={w.busy || !backNote.trim()} onClick={() => (w.sendBackStep(step.id, backNote.trim()), setBackNote(""))}>
+                    Send back
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       ) : (

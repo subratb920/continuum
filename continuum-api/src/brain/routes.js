@@ -22,7 +22,7 @@
 //   POST   /brain/projects/:id/snapshot     your project folder (.tar.gz, from your computer): workers of
 //                                           an interval that works in your folder start from it
 //   GET    /brain/models   GET|PUT /brain/settings {model?, mode?}   the one model all your agents run on, and its speed
-//   GET|POST /brain/workflows[?bridgeId=]   GET|PUT|DELETE /brain/workflows/:id   POST …/{use|approve|cancel|template}   POST …/steps/:stepId/approve
+//   GET|POST /brain/workflows[?bridgeId=]   GET|PUT|DELETE /brain/workflows/:id   POST …/{use|approve|cancel|template}   POST …/steps/:stepId/{approve|send-back}
 //   GET|POST /brain/skills   PUT|DELETE /brain/skills/:id   your own skills
 //   GET    /brain/reviews?bridgeId=   POST /brain/reviews/:id/{approvals|decisions|changes|applied}   the final review (works in your folder)
 
@@ -268,11 +268,14 @@ export function createBrainRouter(opts = {}) {
     router.post(`/workflows/:id/${action}`, async (req, res) => res.json(await brain(req, "POST", `/workflows/${workflowId(req)}/${action}`, {})));
   }
   router.post("/workflows/:id/template", async (req, res) => res.status(201).json(await brain(req, "POST", `/workflows/${workflowId(req)}/template`, { name: req.body?.name })));
-  router.post("/workflows/:id/steps/:stepId/approve", async (req, res) => {
-    const stepId = String(req.params.stepId);
-    if (!/^[\w.-]{1,40}$/.test(stepId)) throw new AppError("No such step.", 404, "NOT_FOUND");
-    res.json(await brain(req, "POST", `/workflows/${workflowId(req)}/steps/${stepId}/approve`, {}));
-  });
+  // An approval gate: pass it, or send it back (along its loop arrow, with what to change)
+  for (const action of ["approve", "send-back"]) {
+    router.post(`/workflows/:id/steps/:stepId/${action}`, async (req, res) => {
+      const stepId = String(req.params.stepId);
+      if (!/^[\w.-]{1,40}$/.test(stepId)) throw new AppError("No such step.", 404, "NOT_FOUND");
+      res.json(await brain(req, "POST", `/workflows/${workflowId(req)}/steps/${stepId}/${action}`, action === "send-back" ? { note: typeof req.body?.note === "string" ? req.body.note.slice(0, 2000) : "" } : {}));
+    });
+  }
 
   // Your own skills (know-how your agents load when it fits): list, add, change, delete
   const skillId = (req) => {

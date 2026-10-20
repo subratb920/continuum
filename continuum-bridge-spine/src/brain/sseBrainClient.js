@@ -99,6 +99,7 @@ export function createSseBrainClient(base = import.meta.env.VITE_BRAIN_API_URL) 
     cancelWorkflow: (id) => call("POST", `/brain/workflows/${id}/cancel`),
     saveAsTemplate: (id, name) => call("POST", `/brain/workflows/${id}/template`, name ? { name } : {}),
     approveStep: (id, stepId) => call("POST", `/brain/workflows/${id}/steps/${encodeURIComponent(stepId)}/approve`),
+    sendBackStep: (id, stepId, note) => call("POST", `/brain/workflows/${id}/steps/${encodeURIComponent(stepId)}/send-back`, { note }),
     // Your own skills (Skills page)
     skills: () => call("GET", "/brain/skills"),
     saveSkill: (skill) => (skill.id ? call("PUT", `/brain/skills/${skill.id}`, skill) : call("POST", "/brain/skills", skill)),
