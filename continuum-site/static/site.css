@@ -208,11 +208,13 @@ h1 { max-width: 860px; margin: 0 auto 18px; font-size: clamp(30px, 5vw, 52px); l
 .foot-nav { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; }
 .foot h3 { margin: 0 0 10px; color: var(--text); font-size: 13px; }
 .foot ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.foot > p { grid-column: 1 / -1; margin: 0; }
+/* The bottom line: © on the left, how to reach us on the right, under a thin rule */
+.foot-bottom { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 24px; margin-top: 4px; padding-top: 18px; border-top: 1px solid var(--border); font-size: 12.5px; }
+.foot-bottom p { margin: 0; }
+.foot-bottom a { text-decoration: underline; text-decoration-color: var(--border); text-underline-offset: 3px; }
 .foot a { color: var(--text-muted); text-decoration: none; }
 .foot a:hover { color: var(--text); }
 .foot .brand { color: var(--text); }
-.fine { font-size: 12px; }
 
 @media (max-width: 640px) {
   .top { padding: 10px 16px; gap: 8px; }

@@ -176,8 +176,10 @@ ${main}
 <footer class="foot">
   <div class="foot-brand"><a class="brand" href="/">${LOGO(22, "lf")}<span>continuum</span></a><p>${esc(SITE.tagline)}.</p></div>
   <nav class="foot-nav" aria-label="All topics">${footerNav(page.path)}</nav>
-  <p>Questions? Write to <a href="mailto:${SITE.email}">${SITE.email}</a>, or ask for a callback from <a href="${APP_URL}/">Continuum</a>'s Contact us.</p>
-  <p class="fine">© ${YEAR} ${esc(SITE.fullName)}.</p>
+  <div class="foot-bottom">
+    <p>© ${YEAR} ${esc(SITE.fullName)}</p>
+    <p>Questions? Write to <a href="mailto:${SITE.email}">${SITE.email}</a> or ask for a callback in <a href="${APP_URL}/">Continuum</a>'s Contact us.</p>
+  </div>
 </footer>
 </body>
 </html>
