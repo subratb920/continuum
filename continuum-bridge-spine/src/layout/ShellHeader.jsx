@@ -13,7 +13,6 @@ import { createItems, deployItems } from "./menuItems";
 import MenuItem from "./MenuItem";
 import { BUILD } from "../utils/support";
 import { SCREENS, screenForPath } from "../screens/registry";
-import SpaceSwitcher from "./SpaceSwitcher";
 import { deferred } from "../utils/deferred";
 import { DIRECTORY_AVAILABLE, openDirectory } from "../directoryLinks";
 
@@ -22,6 +21,8 @@ const ProfileCard = deferred(() => import("../components/ProfileCards"), "Profil
 const SettingsCard = deferred(() => import("../components/ProfileCards"), "SettingsCard");
 const SupportCard = deferred(() => import("../components/ProfileCards"), "SupportCard");
 const ContactCard = deferred(() => import("../components/ProfileCards"), "ContactCard");
+// Where you work (personal or an organization), in the profile menu: loads when opened
+const SpaceMenu = deferred(() => import("./SpaceMenu"));
 
 /** A screen without hover (phones, tablets): menus open on a tap instead. */
 const noHover = () => typeof window !== "undefined" && window.matchMedia?.("(hover: none)").matches;
@@ -58,11 +59,14 @@ function getInitials(email) {
  * GitHub repository; without one it opens that cloud's deployments list.
  */
 export default function ShellHeader({ selectedProject = null }) {
-  const { user, authProvider, logout, access, githubConnected } = useAuth();
+  const { user, authProvider, logout, access, githubConnected, space, invites } = useAuth();
+  // The profile menu's "Working in": its list of spaces shown or folded
+  const [spacesOpen, setSpacesOpen] = useState(false);
+  const isOrg = space?.kind === "org";
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  const [openMenu, setOpenMenu] = useState(null); // null | "nav" | "create" | "deploy" | "space" | "profile"
+  const [openMenu, setOpenMenu] = useState(null); // null | "nav" | "create" | "deploy" | "profile"
   const panels = usePanels();
 
   // Close on outside click (outside any header menu) or Escape
@@ -317,9 +321,6 @@ export default function ShellHeader({ selectedProject = null }) {
       </nav>
 
       <div className="shell-actions">
-        {/* Where you work: personal or an organization */}
-        <SpaceSwitcher open={openMenu === "space"} onToggle={() => toggle("space")} onClose={() => setOpenMenu(null)} />
-
         {/* Profile avatar */}
         <div className="shell-menu">
           <button
@@ -327,12 +328,14 @@ export default function ShellHeader({ selectedProject = null }) {
             type="button"
             className="shell-avatar"
             onClick={() => toggle("profile")}
-            title={user?.email}
-            aria-label="Account menu"
+            title={isOrg ? `${user?.email} · working in ${space.name}` : user?.email}
+            aria-label={invites.length ? `Account menu (${invites.length} invite${invites.length === 1 ? "" : "s"})` : "Account menu"}
             aria-haspopup="menu"
             aria-expanded={openMenu === "profile"}
           >
             {getInitials(user?.email)}
+            {/* Invites to an organization wait in the menu */}
+            {invites.length > 0 && <span className="shell-avatar-badge" aria-hidden="true">{invites.length}</span>}
           </button>
 
           {openMenu === "profile" && (
@@ -345,6 +348,19 @@ export default function ShellHeader({ selectedProject = null }) {
                     Signed in with {authProvider === "github" ? "GitHub" : "email"}
                   </span>
                 </span>
+              </div>
+
+              {/* Where you work: personal or an organization (switching loads the page again for it) */}
+              <div className="profile-menu-group">
+                <button role="menuitem" className="profile-menu-item" aria-expanded={spacesOpen} onClick={() => setSpacesOpen((o) => !o)}>
+                  <span className="profile-menu-icon" aria-hidden="true">{isOrg ? "🏢" : "👤"}</span>
+                  <span className="profile-menu-label">
+                    Working in: <strong>{space?.name ?? "Personal"}</strong>
+                  </span>
+                  {invites.length > 0 && <span className="switcher-badge" aria-label={`${invites.length} invite${invites.length === 1 ? "" : "s"}`}>{invites.length}</span>}
+                  <span className="profile-menu-trail" aria-hidden="true">{spacesOpen ? "▴" : "▾"}</span>
+                </button>
+                {spacesOpen && <SpaceMenu onClose={() => setOpenMenu(null)} />}
               </div>
 
               <div className="profile-menu-group">

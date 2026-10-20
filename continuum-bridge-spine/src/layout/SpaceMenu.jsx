@@ -4,7 +4,11 @@ import { useAuth } from "../state/authStore";
 import { ORG_ROLE_LABEL } from "../state/space";
 import { DIRECTORY_AVAILABLE, openDirectory } from "../directoryLinks";
 
-/** The space switcher's menu: your spaces, invites to join, a new organization, and the Directory. */
+/**
+ * Where you work, inside the profile menu: your spaces (personal and your
+ * organizations; switching loads the page again for it), invites to join, a
+ * new organization, and the Directory for the one you're in.
+ */
 export default function SpaceMenu({ onClose }) {
   const { spaces, space, invites, switchSpace, reloadSpaces } = useAuth();
   const [naming, setNaming] = useState(false);
@@ -34,9 +38,8 @@ export default function SpaceMenu({ onClose }) {
   const isOrg = space?.kind === "org";
 
   return (
-    <div className="menu-dropdown profile-menu space-menu" role="menu" aria-label="Spaces">
+    <div className="space-menu" role="group" aria-label="Spaces">
       <div className="profile-menu-group" role="group" aria-label="Your spaces">
-        <div className="views-menu-title">Work in</div>
         {spaces.map((s) => (
           <button
             key={s.id}

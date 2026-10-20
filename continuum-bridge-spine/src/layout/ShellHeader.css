@@ -335,34 +335,31 @@
   text-align: center;
 }
 
-/* Where you work: personal or an organization (SpaceSwitcher) */
-.shell-space-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 220px;
+/* Where you work (the profile menu's "Working in", SpaceMenu) */
+.shell-avatar {
+  position: relative;
 }
-.shell-space-btn.is-org {
-  border-color: var(--brand);
-}
-.shell-space-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.shell-avatar-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--danger-text);
+  color: var(--on-accent);
+  font-size: 10px;
+  line-height: 16px;
 }
 .space-menu {
-  min-width: 300px;
+  background: var(--surface-subtle);
 }
 .space-menu .profile-menu-group:first-child {
   border-top: none;
 }
-.space-menu .views-menu-title {
-  padding: 8px 14px 2px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-faint);
+.space-menu .profile-menu-item {
+  padding-left: 26px;
 }
 .space-menu-role {
   margin-left: auto;
@@ -425,9 +422,4 @@
   margin: 4px 14px;
   color: var(--danger-text);
   font-size: 12px;
-}
-@media (max-width: 599px) {
-  .shell-space-name {
-    max-width: 90px;
-  }
 }
