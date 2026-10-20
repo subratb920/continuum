@@ -53,7 +53,7 @@ import {
   getUnsavedBridgeChanges,
 } from "./utils/bridgeAutosave";
 
-// Continuum opens on Workflows; the last page used to be remembered here (cleared on sign-out)
+// Continuum opens on Chat; the last page used to be remembered here (cleared on sign-out)
 const LAST_PATH_KEY = "continuum_last_path";
 
 function forgetLastPath() {
@@ -164,10 +164,10 @@ export default function App() {
     const was = previousStatus.current;
     previousStatus.current = status;
 
-    // checking → authenticated = token already present (reopen/reload): Continuum opens on Workflows
+    // checking → authenticated = token already present (reopen/reload): Continuum opens on Chat
     // (a link straight to another screen still goes there)
     if (was === "checking" && status === "authenticated" && pathname === "/") {
-      navigate("/workflows", { replace: true });
+      navigate("/chat", { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
@@ -184,7 +184,7 @@ export default function App() {
       .catch(() => {});
   }, [status]);
 
-  // Continuum opens on Workflows; a role without Agents (Workflows needs it) lands on the
+  // Continuum opens on Chat; a role without Agents (Chat and Workflows need it) lands on the
   // home page instead (once your access is known), not on "No feature access"
   const landing = useRef(true);
   useEffect(() => {
@@ -388,7 +388,7 @@ export default function App() {
   // Signed out: the public page about Continuum at /, the sign-in card anywhere else (/signin, or a link into the app)
   if (status === "unauthenticated") return pathname === "/" ? <Landing /> : <AuthGate />;
   // Signed in already: /signin goes on to Chat
-  if (pathname === "/signin") return <Navigate to="/workflows" replace />;
+  if (pathname === "/signin") return <Navigate to="/chat" replace />;
 
   // Sign-in to Continuum Deploy (shown after Continuum's own sign-in if needed)
   if (pathname === "/sso/authorize") return <SsoAuthorize />;
