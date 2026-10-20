@@ -150,15 +150,48 @@ const words = (text, cls) =>
     .map((w, i) => `<span class="${cls}" data-i="${i}">${w}</span>`)
     .join(" ");
 
-/** Every topic's keywords (the pages' points), once each, for the sliding rows. */
-const KEYWORDS = [...new Set(PAGES.flatMap((p) => p.sections.flatMap((s) => s.points)))];
+/** The topics by theme, each with its page's first keywords (still on the page; they light up in reading order). */
+const THEMES = [
+  ["Agents and workflows", ["/ai-agent-orchestration", "/ai-workflows", "/ai-skills", "/agent-driven-development", "/ai-ide"]],
+  ["Build and ship", ["/build-with-ai", "/enterprise-ai", "/mainframe-migration", "/ai-cloud-deployment", "/teams"]],
+  ["Data and models", ["/data-science", "/ml-pipelines", "/machine-learning", "/custom-ai-models", "/ai-models", "/generative-ai"]],
+];
 
-function marquee() {
-  const half = Math.ceil(KEYWORDS.length / 2);
-  const row = (list, dir) =>
-    // Twice over, so the row loops without a seam
-    `<div class="marquee-row ${dir}"><ul>${list.map((k) => `<li>${esc(k)}</li>`).join("")}</ul><ul aria-hidden="true">${list.map((k) => `<li>${esc(k)}</li>`).join("")}</ul></div>`;
-  return `<section class="marquee" aria-label="What Continuum covers">${row(KEYWORDS.slice(0, half), "left")}${row(KEYWORDS.slice(half), "right")}</section>`;
+/** "Continuum for …": one phrase at a time, in one place. */
+const ROTATE = [
+  "AI agent orchestration",
+  "AI workflows",
+  "mainframe migration",
+  "AI-driven development",
+  "enterprise systems",
+  "building products with AI",
+  "teams and organizations",
+  "autonomous cloud deployment",
+  "data science",
+  "automated ML pipelines",
+  "machine learning",
+  "deep learning and NLP",
+  "your own AI models",
+  "generative AI",
+  "AI agent skills",
+];
+
+function topics() {
+  const seen = new Set();
+  const groups = THEMES.map(([name, paths]) => {
+    const chips = paths.flatMap((path) =>
+      byPath(path)
+        .sections.flatMap((s) => s.points)
+        .slice(0, 2)
+        .filter((k) => !seen.has(k) && seen.add(k))
+        .map((k) => `<li><a class="chip" href="${path}">${esc(k)}</a></li>`)
+    );
+    return `<div class="topic-group"><h3>${esc(name)}</h3><ul>${chips.join("")}</ul></div>`;
+  });
+  return `<section class="topics" aria-labelledby="topics-h">
+  <h2 id="topics-h" class="rotator">Continuum for <span class="rot">${ROTATE.map((n, i) => `<span class="rot-item${i ? "" : " is-on"}"${i ? ' aria-hidden="true"' : ""}>${esc(n)} </span>`).join("")}</span></h2>
+  <div class="topic-groups">${groups.join("")}</div>
+</section>`;
 }
 
 function rail(pages) {
@@ -211,7 +244,7 @@ function pageHtml(page) {
   <p class="lead">${esc(page.lead)}</p>
   <p class="cta"><a class="btn big" href="${APP_URL}/signin?new=1">Get started</a> <a class="btn ghost big" href="${APP_URL}/signin">Sign in</a></p>
 </section>
-${marquee()}
+${topics()}
 ${statement}
 <div class="grid">
 ${sections}

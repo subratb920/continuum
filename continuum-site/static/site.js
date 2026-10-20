@@ -4,8 +4,9 @@
 //   - the hero's glow drifting slower than the page (parallax)
 //   - cards easing in as they arrive, their columns sliding at different speeds
 //   - a statement whose words light up as you scroll through it
-//   - keyword rows sliding, faster while you scroll
-//   - "Everything Continuum does" sliding sideways as you scroll down
+//   - "Continuum for …" changing one phrase at a time, in one place
+//   - the topics staying still and lighting up in reading order as you scroll
+//   - "Everything Continuum does" gliding sideways as you scroll down
 //   - a light that follows the cursor over cards, and a slight tilt
 (() => {
   const root = document.documentElement;
@@ -34,14 +35,15 @@
   const words = statement ? [...statement.querySelectorAll(".sw")] : [];
   const rail = document.querySelector(".rail");
   const track = rail?.querySelector(".rail-track");
-  const rows = [...document.querySelectorAll(".marquee-row")];
+  const chipBox = document.querySelector(".topic-groups");
+  const chips = chipBox ? [...chipBox.querySelectorAll(".chip")] : [];
   const railCards = rail ? [...rail.querySelectorAll(".rail-card")] : [];
   // Sideways, the rail moves this much faster than the page scrolls down
-  const RAIL_SPEED = 1.6;
+  const RAIL_SPEED = 1.25;
 
-  let lastY = scrollY;
-  let velocity = 0;
   let ticking = false;
+  let railAt = 0; // where the rail is (it eases toward where the scroll says)
+  let railTo = 0;
 
   // Where an element is: -1 (below the screen) … 0 (centred) … 1 (above)
   const offset = (el) => {
@@ -52,8 +54,6 @@
   function frame() {
     ticking = false;
     const y = scrollY;
-    velocity = velocity * 0.8 + Math.abs(y - lastY) * 0.2;
-    lastY = y;
     const max = root.scrollHeight - innerHeight;
 
     if (bar) bar.style.transform = `scaleX(${max > 0 ? y / max : 0})`;
@@ -80,7 +80,27 @@
       const r = rail.getBoundingClientRect();
       const run = rail.offsetHeight - innerHeight;
       const p = Math.min(1, Math.max(0, -r.top / Math.max(run, 1)));
-      track.style.transform = `translate3d(${(-p * (track.scrollWidth - track.clientWidth)).toFixed(1)}px,0,0)`;
+      railTo = -p * (track.scrollWidth - track.clientWidth);
+    }
+
+    // The topics light up in reading order while their box crosses the screen; the newest glows
+    if (chips.length) {
+      const r = chipBox.getBoundingClientRect();
+      const p = Math.min(1, Math.max(0, (innerHeight * 0.8 - r.top) / (r.height + innerHeight * 0.2)));
+      const lit = Math.round(p * chips.length);
+      chips.forEach((c, i) => {
+        c.classList.toggle("lit", i < lit);
+        c.classList.toggle("now", i === lit - 1 && p < 1);
+      });
+    }
+  }
+
+  // The rail glides after the scroll (eased), never jumping with it
+  function glide() {
+    if (track && rail.classList.contains("is-pinned")) {
+      railAt += (railTo - railAt) * 0.09;
+      if (Math.abs(railTo - railAt) < 0.3) railAt = railTo;
+      track.style.transform = `translate3d(${railAt.toFixed(1)}px,0,0)`;
       // The card nearest the middle comes forward; the others step back a little
       const mid = innerWidth / 2;
       for (const c of railCards) {
@@ -89,10 +109,31 @@
         c.style.setProperty("--focus", (1 - d).toFixed(3));
       }
     }
+    requestAnimationFrame(glide);
+  }
+  if (rail) requestAnimationFrame(glide);
 
-    // Keyword rows: a little faster while the page moves
-    const boost = 1 + Math.min(velocity / 6, 4);
-    for (const row of rows) for (const a of row.getAnimations()) a.playbackRate = boost;
+  // "Continuum for …": the next phrase every few seconds (not while pointed at, or the tab is away)
+  const rot = [...document.querySelectorAll(".rot-item")];
+  let rotAt = 0;
+  let held = false;
+  document.querySelector(".rotator")?.addEventListener("pointerenter", () => (held = true));
+  document.querySelector(".rotator")?.addEventListener("pointerleave", () => (held = false));
+  const rotBox = document.querySelector(".rot");
+  // The phrase's box takes the width of the phrase showing, so the line stays together
+  const fit = () => rotBox && rot[rotAt] && (rotBox.style.width = `${rot[rotAt].scrollWidth}px`);
+  addEventListener("resize", fit);
+  fit();
+  if (rot.length > 1) {
+    setInterval(() => {
+      if (held || document.hidden) return;
+      rot[rotAt].classList.replace("is-on", "is-out");
+      const out = rot[rotAt];
+      setTimeout(() => out.classList.remove("is-out"), 700);
+      rotAt = (rotAt + 1) % rot.length;
+      rot[rotAt].classList.add("is-on");
+      fit();
+    }, 2800);
   }
   const onScroll = () => {
     if (!ticking) (ticking = true), requestAnimationFrame(frame);
@@ -111,8 +152,6 @@
   addEventListener("resize", () => (sizeRail(), onScroll()));
   sizeRail();
   frame();
-  // Settle the rows' speed back down when scrolling stops
-  setInterval(() => velocity > 0.5 && onScroll(), 120);
 
   // A light under the cursor, and a slight tilt toward it
   const fine = matchMedia("(hover: hover) and (pointer: fine)").matches;
