@@ -12,6 +12,7 @@ import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PAGES, SITE } from "./src/pages.mjs";
+import { BLURB, LOGO, MENU, MENU_LINKS, icon } from "./src/menu.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const trim = (u) => u.replace(/\/+$/, "");
@@ -76,9 +77,50 @@ function structuredData(page) {
   return ld({ "@context": "https://schema.org", "@graph": graph });
 }
 
-const nav = (current) =>
-  PAGES.filter((p) => p.path !== "/")
-    .map((p) => `<li><a href="${p.path}"${p.path === current ? ' aria-current="page"' : ""}>${esc(p.nav)}</a></li>`)
+const here_ = (path, current) => (path === current ? ' aria-current="page"' : "");
+const CHEVRON = '<svg class="chev" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+/** A topic in the menu: its icon, name and a few words. */
+const menuItem = (path, current) =>
+  `<li><a class="mn-item" href="${path}"${here_(path, current)}><span class="mn-ico">${icon(path)}</span><span class="mn-text"><strong>${esc(byPath(path).nav)}</strong><span>${esc(BLURB[path])}</span></span></a></li>`;
+
+/** The bar: each group on it, opening a panel (its topics, and one featured); then plain links. */
+function menuBar(current) {
+  const groups = MENU.map((g, i) => {
+    const f = byPath(g.feature);
+    return `<li class="mn-group">
+      <button type="button" class="mn-btn" aria-expanded="false" aria-controls="mn-${i}">${esc(g.label)} ${CHEVRON}</button>
+      <div class="mn-panel" id="mn-${i}">
+        <div class="mn-inner">
+          <div class="mn-intro">
+            <p class="mn-kicker">${esc(g.label)}</p>
+            <p class="mn-lead">${esc(g.lead)}</p>
+            <a class="mn-feature" href="${f.path}"><span class="mn-feature-tag">Featured</span><strong>${esc(f.h1)}</strong><span class="mn-feature-go">Learn more →</span></a>
+          </div>
+          <ul class="mn-items">${g.items.map((p) => menuItem(p, current)).join("")}</ul>
+        </div>
+      </div>
+    </li>`;
+  }).join("");
+  const links = MENU_LINKS.map((p) => `<li><a class="mn-btn" href="${p}"${here_(p, current)}>${esc(byPath(p).nav.split(" ")[0])}</a></li>`).join("");
+  return `<nav class="mainnav" aria-label="Main"><ul class="mainnav-list">${groups}${links}</ul></nav>`;
+}
+
+/** Phones: one sheet with every group and topic. */
+function menuSheet(current) {
+  const groups = [...MENU.map((g) => ({ label: g.label, items: g.items })), { label: "Teams", items: MENU_LINKS }];
+  return `<details class="msheet">
+    <summary aria-label="Menu"><span class="burger" aria-hidden="true"><span></span><span></span><span></span></span></summary>
+    <div class="msheet-body">${groups.map((g) => `<section><h3>${esc(g.label)}</h3><ul>${g.items.map((p) => menuItem(p, current)).join("")}</ul></section>`).join("")}
+      <p class="msheet-cta"><a class="btn ghost" href="${APP_URL}/signin">Sign in</a> <a class="btn" href="${APP_URL}/signin?new=1">Get started</a></p>
+    </div>
+  </details>`;
+}
+
+/** The footer: the same groups, as columns. */
+const footerNav = (current) =>
+  [...MENU.map((g) => ({ label: g.label, items: g.items })), { label: "Company", items: ["/", ...MENU_LINKS] }]
+    .map((g) => `<div><h3>${esc(g.label)}</h3><ul>${g.items.map((p) => `<li><a href="${p}"${here_(p, current)}>${esc(p === "/" ? "Home" : byPath(p).nav)}</a></li>`).join("")}</ul></div>`)
     .join("");
 
 function head({ title, description, path, noindex = false }) {
@@ -106,7 +148,7 @@ ${noindex ? '<meta name="robots" content="noindex">' : `<link rel="canonical" hr
 <meta name="theme-color" content="#171717" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <link rel="icon" href="/favicon.ico" sizes="any">
-<link rel="icon" type="image/png" href="/logo-compact.png">
+<link rel="icon" type="image/svg+xml" href="/logo.svg">
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="stylesheet" href="${ASSET.css}">
 <script src="${ASSET.js}" defer></script>`;
@@ -120,21 +162,20 @@ ${page.noindex ? "" : structuredData(page)}
 <div class="progress" aria-hidden="true"></div>
 <a class="skip" href="#main">Skip to content</a>
 <header class="top">
-  <a class="brand" href="/" aria-label="${esc(SITE.fullName)} home"><img src="/logo-compact.png" alt="" width="26" height="26"><span>continuum</span></a>
-  <details class="menu">
-    <summary>Menu</summary>
-    <nav aria-label="Topics"><ul>${nav(page.path)}</ul></nav>
-  </details>
+  <a class="brand" href="/" aria-label="${esc(SITE.fullName)} home">${LOGO(24)}<span>continuum</span></a>
+  ${menuBar(page.path)}
   <span class="top-end">
     <a class="btn ghost" href="${APP_URL}/signin">Sign in</a>
     <a class="btn" href="${APP_URL}/signin?new=1">Get started</a>
   </span>
+  ${menuSheet(page.path)}
 </header>
 <main id="main">
 ${main}
 </main>
 <footer class="foot">
-  <nav aria-label="All topics"><ul><li><a href="/">Home</a></li>${nav(page.path)}</ul></nav>
+  <div class="foot-brand"><a class="brand" href="/">${LOGO(22, "lf")}<span>continuum</span></a><p>${esc(SITE.tagline)}.</p></div>
+  <nav class="foot-nav" aria-label="All topics">${footerNav(page.path)}</nav>
   <p>Questions? Write to <a href="mailto:${SITE.email}">${SITE.email}</a>, or ask for a callback from <a href="${APP_URL}/">Continuum</a>'s Contact us.</p>
   <p class="fine">© ${YEAR} ${esc(SITE.fullName)}.</p>
 </footer>
@@ -194,15 +235,26 @@ function topics() {
 </section>`;
 }
 
-function rail(pages) {
-  return `<section class="rail" aria-labelledby="rail-h">
-  <div class="rail-stage">
-    <h2 id="rail-h" data-reveal>Everything Continuum does</h2>
-    <ul class="rail-track">${pages
-      .map(
-        (p, i) => `<li><a class="rail-card" href="${p.path}"><span class="rail-n">${String(i + 1).padStart(2, "0")}</span><strong>${esc(p.nav)}</strong><span>${esc(p.description)}</span><span class="rail-go" aria-hidden="true">→</span></a></li>`
-      )
-      .join("")}</ul>
+/** The topics in the menu's order (by theme), for the workflow run. */
+const FLOW = [...MENU.flatMap((g) => g.items), ...MENU_LINKS];
+
+/**
+ * "Everything Continuum does" as a workflow run: the topics are steps on one
+ * path, and as you scroll a single dot travels it, lighting each step it
+ * reaches (site.js lays it out and moves the dot). Without it: a plain list.
+ */
+function flow() {
+  return `<section class="flow" aria-labelledby="flow-h">
+  <div class="flow-stage">
+    <div class="flow-head"><h2 id="flow-h">Everything Continuum does</h2><p class="flow-hint">Scroll, and follow the run.</p></div>
+    <div class="flow-canvas">
+      <svg class="flow-svg" aria-hidden="true"><defs><linearGradient id="flow-grad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#38bdf8"/><stop offset=".5" stop-color="#818cf8"/><stop offset="1" stop-color="#f59e0b"/></linearGradient></defs><path class="flow-track"/><path class="flow-done"/><g class="flow-dot"><circle class="flow-halo" r="16"/><circle class="flow-core" r="6"/></g></svg>
+      <ol class="flow-nodes">${FLOW.map((path, i) => {
+        const p = byPath(path);
+        return `<li class="flow-node"><a href="${path}"><span class="flow-pin">${icon(path, 18)}</span><span class="flow-label"><span class="flow-n">${String(i + 1).padStart(2, "0")}</span> ${esc(p.nav)}</span><span class="flow-bubble">${esc(BLURB[path])}<span class="flow-go">Open →</span></span></a></li>`;
+      }).join("")}</ol>
+      <span class="flow-mdot" aria-hidden="true"></span>
+    </div>
   </div>
 </section>`;
 }
@@ -229,7 +281,7 @@ function pageHtml(page) {
   const others = PAGES.filter((p) => p.path !== page.path && p.path !== "/");
   const explore =
     page.path === "/"
-      ? rail(others)
+      ? flow()
       : `<section class="explore" aria-labelledby="explore-h">
   <h2 id="explore-h" data-reveal>Explore Continuum</h2>
   <ul>${others.map((p, i) => `<li data-reveal data-i="${i % 4}"><a href="${p.path}"><strong>${esc(p.nav)}</strong><span>${esc(p.description)}</span></a></li>`).join("")}</ul>

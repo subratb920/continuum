@@ -1,12 +1,14 @@
-// continuum-site: the page's motion. Everything reads without it (search
-// engines, no JavaScript, reduced motion); with it:
+// continuum-site: the page's motion and its menu. Everything reads without it
+// (search engines, no JavaScript, reduced motion); with it:
+//   - the menu's groups open their panels on hover, click or keyboard
 //   - a progress line, and a header that tightens once you scroll
 //   - the hero's glow drifting slower than the page (parallax)
 //   - cards easing in as they arrive, their columns sliding at different speeds
 //   - a statement whose words light up as you scroll through it
 //   - "Continuum for …" changing one phrase at a time, in one place
-//   - the topics staying still and lighting up in reading order as you scroll
-//   - "Everything Continuum does" gliding sideways as you scroll down
+//   - the topics standing still and lighting up in reading order as you scroll
+//   - "Everything Continuum does" as a workflow run: one dot travels a path
+//     through every topic as you scroll, lighting each step it reaches
 //   - a light that follows the cursor over cards, and a slight tilt
 (() => {
   const root = document.documentElement;
@@ -14,7 +16,23 @@
   root.classList.add("js");
   if (still) root.classList.add("still");
 
-  // Arriving: each [data-reveal] eases in once (children by their --i)
+  // ── The menu: a group's panel opens on hover (CSS), click or Enter; Esc or a click elsewhere closes it
+  const groups = [...document.querySelectorAll(".mn-group")];
+  const setOpen = (g, open) => {
+    g.classList.toggle("is-open", open);
+    g.querySelector(".mn-btn").setAttribute("aria-expanded", String(open));
+  };
+  for (const g of groups) {
+    g.querySelector(".mn-btn").addEventListener("click", () => {
+      const open = !g.classList.contains("is-open");
+      groups.forEach((o) => setOpen(o, o === g && open));
+    });
+    g.addEventListener("mouseleave", () => setOpen(g, false));
+  }
+  addEventListener("keydown", (e) => e.key === "Escape" && groups.forEach((g) => setOpen(g, false)));
+  addEventListener("click", (e) => !e.target.closest(".mn-group") && groups.forEach((g) => setOpen(g, false)));
+
+  // ── Arriving: each [data-reveal] eases in once (children by their data-i)
   const seen = new IntersectionObserver(
     (entries) => {
       for (const e of entries) {
@@ -26,45 +44,108 @@
     { rootMargin: "0px 0px -8% 0px", threshold: 0.12 }
   );
   document.querySelectorAll("[data-reveal]").forEach((el) => seen.observe(el));
-  if (still) return;
 
   const bar = document.querySelector(".progress");
   const glow = document.querySelector(".hero");
   const drifting = [...document.querySelectorAll("[data-speed]")];
   const statement = document.querySelector(".statement");
   const words = statement ? [...statement.querySelectorAll(".sw")] : [];
-  const rail = document.querySelector(".rail");
-  const track = rail?.querySelector(".rail-track");
   const chipBox = document.querySelector(".topic-groups");
   const chips = chipBox ? [...chipBox.querySelectorAll(".chip")] : [];
-  const railCards = rail ? [...rail.querySelectorAll(".rail-card")] : [];
-  // Sideways, the rail moves this much faster than the page scrolls down
-  const RAIL_SPEED = 1.25;
+
+  // ── The workflow run
+  const flow = document.querySelector(".flow");
+  const canvas = flow?.querySelector(".flow-canvas");
+  const svg = flow?.querySelector(".flow-svg");
+  const track = flow?.querySelector(".flow-track");
+  const done = flow?.querySelector(".flow-done");
+  const dot = flow?.querySelector(".flow-dot");
+  const nodes = flow ? [...flow.querySelectorAll(".flow-node")] : [];
+  // Scrolling per step (in screens): the run takes its time, a step at a time
+  const STEP_SCROLL = 0.32;
+  let map = null; // { total, at: [length of each step along the path] } when laid out on the path
+  let runAt = 0; // where the dot is (it eases toward where the scroll says)
+  let runTo = 0;
+
+  /** Wide screens: the steps on a winding path (4 to a row, each row turning back); else a list. */
+  function layoutFlow() {
+    map = null;
+    if (!flow) return;
+    const wide = innerWidth > 900 && !still;
+    canvas.classList.toggle("is-mapped", wide);
+    flow.classList.toggle("is-pinned", wide);
+    if (!wide) {
+      flow.style.height = "";
+      nodes.forEach((n) => (n.style.left = n.style.top = ""));
+      return;
+    }
+    flow.style.height = `${innerHeight * (1 + nodes.length * STEP_SCROLL)}px`;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
+    const cols = 4;
+    const rows = Math.ceil(nodes.length / cols);
+    const top = 40;
+    const bottom = 96; // room for the last row's words
+    const dy = rows > 1 ? (H - top - bottom) / (rows - 1) : 0;
+    const r = dy / 2;
+    const side = Math.max(110, r + 40);
+    const dx = (W - side * 2) / (cols - 1);
+    const rowLen = dx * (cols - 1) + Math.PI * r;
+    let d = "";
+    const at = [];
+    nodes.forEach((n, i) => {
+      const row = Math.floor(i / cols);
+      const j = i % cols;
+      const col = row % 2 ? cols - 1 - j : j;
+      const x = side + col * dx;
+      const y = top + row * dy;
+      n.style.left = `${x}px`;
+      n.style.top = `${y}px`;
+      n.dataset.edge = col === 0 ? "start" : col === cols - 1 ? "end" : "";
+      at.push(row * rowLen + j * dx);
+      if (i === 0) d = `M${x} ${y}`;
+      else if (j === 0) d += ` A${r} ${r} 0 0 ${row % 2 ? 1 : 0} ${x} ${y}`; // turning down into this row
+      else d += ` L${x} ${y}`;
+    });
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    track.setAttribute("d", d);
+    done.setAttribute("d", d);
+    const total = done.getTotalLength();
+    done.style.strokeDasharray = `${total}`;
+    map = { total, at };
+    drawRun(runAt);
+  }
+
+  /** The dot at a length along the path; steps behind it lit, the one it's at open. */
+  function drawRun(len) {
+    const p = done.getPointAtLength(len);
+    dot.setAttribute("transform", `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)})`);
+    done.style.strokeDashoffset = `${map.total - len}`;
+    let now = -1;
+    map.at.forEach((a, i) => {
+      const lit = a <= len + 2;
+      nodes[i].classList.toggle("lit", lit);
+      if (lit) now = i;
+    });
+    nodes.forEach((n, i) => n.classList.toggle("now", i === now));
+  }
 
   let ticking = false;
-  let railAt = 0; // where the rail is (it eases toward where the scroll says)
-  let railTo = 0;
-
-  // Where an element is: -1 (below the screen) … 0 (centred) … 1 (above)
-  const offset = (el) => {
-    const r = el.getBoundingClientRect();
-    return (innerHeight / 2 - (r.top + r.height / 2)) / (innerHeight / 2 + r.height / 2);
-  };
-
   function frame() {
     ticking = false;
     const y = scrollY;
     const max = root.scrollHeight - innerHeight;
-
     if (bar) bar.style.transform = `scaleX(${max > 0 ? y / max : 0})`;
     root.classList.toggle("scrolled", y > 24);
+    if (still) return;
     if (glow) glow.style.setProperty("--drift", `${Math.min(y, innerHeight) * 0.35}px`);
 
     // Columns at their own speed (Capgemini's staggered rows)
     for (const el of drifting) {
       const r = el.getBoundingClientRect();
       if (r.bottom < -200 || r.top > innerHeight + 200) continue;
-      el.style.setProperty("--shift", `${(-offset(el) * Number(el.dataset.speed) * 60).toFixed(1)}px`);
+      const off = (innerHeight / 2 - (r.top + r.height / 2)) / (innerHeight / 2 + r.height / 2);
+      el.style.setProperty("--shift", `${(-off * Number(el.dataset.speed) * 60).toFixed(1)}px`);
     }
 
     // The statement lights up word by word while it crosses the screen
@@ -73,14 +154,6 @@
       const p = Math.min(1, Math.max(0, (innerHeight * 0.85 - r.top) / (r.height + innerHeight * 0.35)));
       const lit = Math.round(p * words.length);
       words.forEach((w, i) => w.classList.toggle("lit", i < lit));
-    }
-
-    // Down the page, sideways along the rail (wide screens; phones swipe it)
-    if (rail && track && rail.classList.contains("is-pinned")) {
-      const r = rail.getBoundingClientRect();
-      const run = rail.offsetHeight - innerHeight;
-      const p = Math.min(1, Math.max(0, -r.top / Math.max(run, 1)));
-      railTo = -p * (track.scrollWidth - track.clientWidth);
     }
 
     // The topics light up in reading order while their box crosses the screen; the newest glows
@@ -93,33 +166,58 @@
         c.classList.toggle("now", i === lit - 1 && p < 1);
       });
     }
-  }
 
-  // The rail glides after the scroll (eased), never jumping with it
+    // The run: how far down the pinned section you are is how far along the path the dot goes
+    if (map) {
+      const r = flow.getBoundingClientRect();
+      const run = flow.offsetHeight - innerHeight;
+      const p = Math.min(1, Math.max(0, -r.top / Math.max(run, 1)));
+      runTo = p * map.at[map.at.length - 1];
+    } else if (flow && innerWidth <= 900) {
+      // Phones: the line down the list fills as you go, the dot at its end
+      const r = canvas.getBoundingClientRect();
+      const fill = Math.min(r.height, Math.max(0, innerHeight * 0.6 - r.top));
+      canvas.style.setProperty("--fill", `${fill}px`);
+      let now = -1;
+      nodes.forEach((n, i) => {
+        const lit = n.offsetTop + 14 <= fill;
+        n.classList.toggle("lit", lit);
+        if (lit) now = i;
+      });
+      nodes.forEach((n, i) => n.classList.toggle("now", i === now));
+    }
+  }
+  const onScroll = () => {
+    if (!ticking) (ticking = true), requestAnimationFrame(frame);
+  };
+
+  // The dot glides after the scroll (eased), never jumping with it
   function glide() {
-    if (track && rail.classList.contains("is-pinned")) {
-      railAt += (railTo - railAt) * 0.09;
-      if (Math.abs(railTo - railAt) < 0.3) railAt = railTo;
-      track.style.transform = `translate3d(${railAt.toFixed(1)}px,0,0)`;
-      // The card nearest the middle comes forward; the others step back a little
-      const mid = innerWidth / 2;
-      for (const c of railCards) {
-        const b = c.getBoundingClientRect();
-        const d = Math.min(1, Math.abs(b.left + b.width / 2 - mid) / (innerWidth * 0.6));
-        c.style.setProperty("--focus", (1 - d).toFixed(3));
-      }
+    if (map) {
+      runAt += (runTo - runAt) * 0.08;
+      if (Math.abs(runTo - runAt) < 0.3) runAt = runTo;
+      drawRun(runAt);
     }
     requestAnimationFrame(glide);
   }
-  if (rail) requestAnimationFrame(glide);
+
+  addEventListener("scroll", onScroll, { passive: true });
+  addEventListener("resize", () => (layoutFlow(), onScroll()));
+  layoutFlow();
+  frame();
+  if (still) {
+    nodes.forEach((n) => n.classList.add("lit"));
+    return;
+  }
+  requestAnimationFrame(glide);
 
   // "Continuum for …": the next phrase every few seconds (not while pointed at, or the tab is away)
   const rot = [...document.querySelectorAll(".rot-item")];
+  const rotBox = document.querySelector(".rot");
   let rotAt = 0;
   let held = false;
   document.querySelector(".rotator")?.addEventListener("pointerenter", () => (held = true));
   document.querySelector(".rotator")?.addEventListener("pointerleave", () => (held = false));
-  const rotBox = document.querySelector(".rot");
   // The phrase's box takes the width of the phrase showing, so the line stays together
   const fit = () => rotBox && rot[rotAt] && (rotBox.style.width = `${rot[rotAt].scrollWidth}px`);
   addEventListener("resize", fit);
@@ -127,36 +225,18 @@
   if (rot.length > 1) {
     setInterval(() => {
       if (held || document.hidden) return;
-      rot[rotAt].classList.replace("is-on", "is-out");
       const out = rot[rotAt];
+      out.classList.replace("is-on", "is-out");
       setTimeout(() => out.classList.remove("is-out"), 700);
       rotAt = (rotAt + 1) % rot.length;
       rot[rotAt].classList.add("is-on");
       fit();
     }, 2800);
   }
-  const onScroll = () => {
-    if (!ticking) (ticking = true), requestAnimationFrame(frame);
-  };
-
-  // The rail is pinned when there's room: its height becomes the sideways distance
-  function sizeRail() {
-    if (!rail || !track) return;
-    const wide = innerWidth > 900;
-    rail.classList.toggle("is-pinned", wide);
-    rail.style.height = wide ? `${innerHeight + Math.max(0, track.scrollWidth - track.clientWidth) / RAIL_SPEED}px` : "";
-    if (!wide) track.style.transform = "";
-  }
-
-  addEventListener("scroll", onScroll, { passive: true });
-  addEventListener("resize", () => (sizeRail(), onScroll()));
-  sizeRail();
-  frame();
 
   // A light under the cursor, and a slight tilt toward it
-  const fine = matchMedia("(hover: hover) and (pointer: fine)").matches;
-  if (fine) {
-    document.querySelectorAll(".card, .rail-card, .explore a").forEach((el) => {
+  if (matchMedia("(hover: hover) and (pointer: fine)").matches) {
+    document.querySelectorAll(".card, .explore a, .mn-feature").forEach((el) => {
       el.addEventListener("pointermove", (e) => {
         const r = el.getBoundingClientRect();
         const x = (e.clientX - r.left) / r.width;

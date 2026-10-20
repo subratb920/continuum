@@ -39,7 +39,7 @@ test("links between pages lead somewhere", () => {
   const paths = new Set(PAGES.map((p) => p.path));
   for (const p of PAGES) {
     for (const [, href] of html(p.path).matchAll(/href="(\/[^"#?]*)/g)) {
-      if (/\.(css|js|png|ico)$/.test(href)) continue;
+      if (/\.(css|js|png|ico|svg)$/.test(href)) continue;
       assert.ok(paths.has(href), `${p.path} links to ${href}`);
     }
   }
