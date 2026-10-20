@@ -1,59 +1,75 @@
-.auth-root {
-  height: calc(100vh - var(--legal-footer-h));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--auth-bg);
-  color: var(--auth-text);
-  font-family: system-ui, sans-serif;
-}
-
+/* The sign-in box, on the public page: frosted over its aurora, in the page's colours */
 .auth-card {
-  width: 360px;
-  padding: 32px;
-  border-radius: 10px;
-  background: var(--auth-card);
-  box-shadow: 0 20px 40px var(--auth-shadow);
+  width: 100%;
+  max-width: 400px;
+  padding: 30px 30px 26px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 70%, transparent);
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 30px 60px -30px rgb(0 0 0 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.06);
+  color: var(--text);
+  text-align: left;
 }
 
 .auth-title {
   margin: 0;
-  font-size: 28px;
+  font-family: "Outfit", system-ui, sans-serif;
+  font-size: 24px;
+  font-weight: 500;
   text-align: center;
 }
 
 .auth-subtitle {
-  margin: 6px 0 24px;
+  margin: 6px 0 22px;
   font-size: 13px;
-  color: var(--auth-muted);
+  color: var(--text-muted);
   text-align: center;
 }
 
 .auth-form input {
+  box-sizing: border-box;
   width: 100%;
-  padding: 10px 12px;
+  height: 44px;
+  padding: 0 14px;
   margin-bottom: 12px;
-  background: var(--auth-bg);
-  border: 1px solid var(--auth-border);
-  border-radius: 6px;
-  color: var(--auth-text);
+  background: color-mix(in srgb, var(--page) 70%, transparent);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .auth-form input:focus {
   outline: none;
-  border-color: var(--auth-brand);
+  border-color: color-mix(in srgb, #f59e0b 55%, var(--text-muted));
+  box-shadow: 0 0 0 3px color-mix(in srgb, #f59e0b 18%, transparent);
 }
 
+/* The page's amber button (Landing.css .landing-btn), full width */
 .auth-form button[type="submit"] {
+  --amber: color-mix(in srgb, #f59e0b 55%, var(--text-muted));
+  --amber-soft: color-mix(in srgb, var(--amber) 72%, var(--page));
   width: 100%;
-  padding: 10px;
-  margin-top: 8px;
-  background: var(--auth-brand);
-  border: none;
-  border-radius: 6px;
-  color: var(--auth-on-brand);
-  font-weight: 500;
+  height: 44px;
+  margin-top: 6px;
+  border: 1px solid color-mix(in srgb, var(--amber-soft) 80%, #fff 20%);
+  border-radius: 10px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--amber-soft) 92%, #fff) 0%, var(--amber-soft) 45%, color-mix(in srgb, var(--amber-soft) 80%, #000) 100%);
+  color: #1c1405;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.auth-form button[type="submit"]:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px -14px color-mix(in srgb, var(--amber) 75%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.2);
 }
 
 .auth-form button:disabled {
@@ -64,23 +80,26 @@
 .auth-error {
   margin-bottom: 10px;
   font-size: 13px;
-  color: var(--auth-error);
+  color: var(--danger-text);
 }
 
 .auth-switch {
   margin-top: 18px;
   font-size: 13px;
   text-align: center;
-  color: var(--auth-muted);
+  color: var(--text-muted);
 }
 
 .auth-switch button {
   background: none;
   border: none;
-  color: var(--auth-brand);
+  color: color-mix(in srgb, #f59e0b 60%, var(--text));
+  font: inherit;
+  font-weight: 600;
   cursor: pointer;
   padding: 0;
 }
+.auth-switch button:hover { text-decoration: underline; }
 /* ========================= */
 /* Divider */
 /* ========================= */
@@ -90,7 +109,7 @@
   align-items: center;
   margin: 18px 0;
   font-size: 12px;
-  color: var(--auth-subtle);
+  color: var(--text-muted);
 }
 
 .auth-divider::before,
@@ -98,7 +117,7 @@
   content: "";
   flex: 1;
   height: 1px;
-  background: var(--auth-border);
+  background: var(--border);
 }
 
 .auth-divider span {
@@ -120,8 +139,8 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  height: 40px;
-  border-radius: 6px;
+  height: 44px;
+  border-radius: 22px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -130,13 +149,16 @@
 
 /* GitHub */
 .social-btn.github {
-  background: var(--auth-field-hover);
-  color: var(--auth-on-brand);
-  border: none;
+  background: var(--surface-subtle);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .social-btn.github:hover {
-  background: var(--auth-field);
+  background: var(--hover, var(--surface));
 }
 
 
@@ -145,21 +167,9 @@
 }
 
 .social-btn.github .icon {
-  color: var(--auth-on-brand);
+  color: var(--text);
 }
 
-
-/* Back to the public page */
-.auth-about {
-  display: inline-block;
-  margin-bottom: 14px;
-  font-size: 13px;
-  color: inherit;
-  opacity: 0.7;
-  text-decoration: none;
-}
-.auth-about:hover,
-.auth-about:focus-visible { opacity: 1; text-decoration: underline; }
 
 /* ========================= */
 /* Sign in with Google: Google's own button (white pill, thin grey line, the four-colour G) */

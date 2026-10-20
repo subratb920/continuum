@@ -6,7 +6,6 @@ import { useAuth } from "./state/authStore";
 import { deferred } from "./utils/deferred";
 import NoAccess from "./components/NoAccess";
 import { useAppOpened } from "./state/useAppOpened";
-const AuthGate = deferred(() => import("./auth/AuthGate"));
 const SsoAuthorize = deferred(() => import("./pages/SsoAuthorize"));
 
 import ThreePanelLayout from "./layout/ThreePanelLayout";
@@ -385,8 +384,8 @@ export default function App() {
   if (pathname === "/auth/callback") {
     return <AuthCallback />;
   }
-  // Signed out: the public page about Continuum at /, the sign-in card anywhere else (/signin, or a link into the app)
-  if (status === "unauthenticated") return pathname === "/" ? <Landing /> : <AuthGate />;
+  // Signed out: the public page about Continuum, with its sign-in box, wherever you are (/, /signin, or a link into the app)
+  if (status === "unauthenticated") return <Landing />;
   // Signed in already: /signin goes on to Chat
   if (pathname === "/signin") return <Navigate to="/chat" replace />;
 

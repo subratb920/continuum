@@ -68,6 +68,12 @@
   66% { transform: translate(-5%, -3%) scale(0.95); }
 }
 .landing-hero-inner { position: relative; max-width: 940px; margin: 0 auto; }
+/* Signed out: the words on the left, the sign-in box on the right */
+.landing-hero-inner.has-signin { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, 400px); align-items: center; gap: 56px; max-width: 1120px; text-align: left; }
+.has-signin .landing-divider { margin-left: 0; width: min(520px, 100%); background: linear-gradient(90deg, #1d4ed8 0%, #38bdf8 22%, #a78bfa 45%, #fbbf24 68%, #ea580c 88%, transparent 100%); }
+.has-signin .landing-sub { margin-left: 0; }
+.landing-signin { display: flex; justify-content: flex-end; animation: signin-in 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both 0.15s; }
+@keyframes signin-in { from { opacity: 0; transform: translateY(14px); } }
 .landing-title { margin: 0; font-family: "Outfit", system-ui, sans-serif; font-weight: 500; font-size: clamp(28px, 4.3vw, 48px); line-height: 1.12; letter-spacing: -0.015em; text-wrap: balance; }
 /* Under the headline: a long line in the logo's colours (blue into amber and orange), fading at both ends */
 .landing-divider {
@@ -130,6 +136,10 @@
   .landing-feature.is-flipped .landing-feature-text { order: 0; }
   .landing-feature { padding: 44px 16px; }
   .landing-hero { padding: 48px 16px 36px; }
+  .landing-hero-inner.has-signin { grid-template-columns: 1fr; gap: 28px; text-align: center; }
+  .has-signin .landing-divider { margin-left: auto; }
+  .has-signin .landing-sub { margin-left: auto; }
+  .landing-signin { justify-content: center; }
   .landing-bar .shell-wordmark-app { display: none; }
   .landing-link { display: none; }
 }
@@ -138,5 +148,6 @@
 @media (prefers-reduced-motion: reduce) {
   .landing { scroll-behavior: auto; }
   .landing-aurora span { animation: none; }
+  .landing-signin { animation: none; }
   .reveal { opacity: 1; transform: none; transition: none; }
 }
