@@ -9,6 +9,7 @@ Plain JavaScript (ES modules), Node 22. Each folder is its own app.
 - `continuum-data/` data engine (sources, datasets, pipelines), mounted into continuum-api at `/data`.
 - `continuum-directory/` Continuum Directory: `server/` (users of every kind, roles and features, organizations, departments, sign-ins; its own Postgres) mounted into continuum-api at `/directory`, and `app/` (continuum-directory-app, port 45194) its own page, signed in through Continuum. Ports stay in 45170–45199.
 - `continuum-workspaces/` development servers per project (OpenVSCode Server).
+- `continuum-site/` the public website (continuum-site-app, port 45195): plain HTML from `src/pages.mjs`, for search engines; no dependencies. Check: `npm test` there.
 - `continuum-create/` the project generator (Backstage, yarn): leave it alone unless the task is about it.
 - `docker/` the local stack (docker-compose).
 

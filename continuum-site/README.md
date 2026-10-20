@@ -5,6 +5,7 @@ Continuum's public website at **https://continuum-console.one**: what Continuum 
 - `src/pages.mjs`: every page's content: one search topic per page (title ≤ 60 characters, description ≤ 160, one h1, sections, questions).
 - `build.mjs`: makes `dist/`: each page with its canonical address, Open Graph and Twitter cards, structured data (Organization, WebSite, SoftwareApplication, BreadcrumbList, FAQPage), plus `sitemap.xml`, `robots.txt` and a real 404.
 - `server.mjs`: serves `dist/` on port 45195: clean addresses (`/ai-ide`), `www.` → the plain domain (301), gzip, security headers.
+- `static/site.js`: the motion: headline words rising, cards arriving with columns at different speeds, a statement lighting up word by word, sliding keyword rows (faster while scrolling), the topics rail sliding sideways as you scroll, a light and tilt under the cursor. Pages read the same without it, and reduced motion keeps everything still.
 - `static/`: styles, icons and `og.png` (the link-preview picture; `npm run og` redraws it from `scripts/og.html`).
 
 No dependencies. Settings: `SITE_URL` (default `https://continuum-console.one`), `APP_URL` (default `https://app.continuum-console.one`), `PORT` (45195).

@@ -32,9 +32,10 @@
 }
 
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; overflow-x: clip; }
 body {
   margin: 0;
+  overflow-x: clip; /* full-width sections never scroll the page sideways (clip keeps sticky working) */
   background: var(--page);
   color: var(--text);
   font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -61,6 +62,7 @@ img { max-width: 100%; }
 .brand { display: inline-flex; align-items: center; gap: 8px; color: var(--text); font-weight: 700; font-size: 18px; text-decoration: none; letter-spacing: -0.01em; }
 .brand:hover { color: var(--text); }
 .menu { position: relative; }
+.menu:not([open]) nav { display: none; } /* a closed menu takes no room (Chrome keeps closed content laid out) */
 .menu summary { list-style: none; cursor: pointer; padding: 6px 10px; border-radius: 8px; color: var(--text-muted); font-size: 14px; }
 .menu summary::-webkit-details-marker { display: none; }
 .menu summary::after { content: " ▾"; }
@@ -102,7 +104,9 @@ main { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
     radial-gradient(45% 60% at 50% 80%, var(--glow-3), transparent 70%);
   animation: drift 18s ease-in-out infinite alternate;
 }
-@keyframes drift { to { transform: translate3d(0, 12px, 0) scale(1.04); } }
+/* The glow breathes, and drifts down slower than the page scrolls (site.js sets --drift) */
+.hero::before { translate: 0 var(--drift, 0px); }
+@keyframes drift { to { scale: 1.06; } }
 @media (prefers-reduced-motion: reduce) { .hero::before { animation: none; } }
 .crumbs { margin-bottom: 18px; color: var(--text-muted); font-size: 13px; }
 .crumbs a { color: var(--text-muted); }
@@ -113,7 +117,7 @@ h1 { max-width: 860px; margin: 0 auto 18px; font-size: clamp(30px, 5vw, 52px); l
 
 /* Topics */
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin: 24px 0 56px; }
-.card { padding: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+.card { position: relative; isolation: isolate; overflow: hidden; padding: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
 .card h2 { margin: 0 0 8px; font-size: 20px; line-height: 1.3; }
 .card h2 a { color: var(--text); text-decoration: none; }
 .card h2 a:hover { color: var(--accent); }
@@ -151,6 +155,158 @@ h1 { max-width: 860px; margin: 0 auto 18px; font-size: clamp(30px, 5vw, 52px); l
   .top-end .ghost { display: none; }
   main { padding: 0 16px; }
   .hero { padding: 44px 0 32px; }
+  .hero::before { inset: -40px -16px 0; }
   .grid { grid-template-columns: 1fr; }
   .menu ul { position: fixed; left: 16px; right: 16px; top: 56px; }
+}
+
+/* ───────────── Motion (site.js; nothing hides without it) ───────────── */
+@property --rise { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@property --rx { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@property --ry { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+:root { interpolate-size: allow-keywords; }
+[data-i="0"] { --d: 0; }
+[data-i="1"] { --d: 1; }
+[data-i="2"] { --d: 2; }
+[data-i="3"] { --d: 3; }
+[data-i="4"] { --d: 4; }
+[data-i="5"] { --d: 5; }
+[data-i="6"] { --d: 6; }
+[data-i="7"] { --d: 7; }
+[data-i="8"] { --d: 8; }
+[data-i="9"] { --d: 9; }
+[data-i="10"] { --d: 10; }
+[data-i="11"] { --d: 11; }
+[data-i="12"] { --d: 12; }
+[data-i="13"] { --d: 13; }
+[data-i="14"] { --d: 14; }
+[data-i="15"] { --d: 15; }
+[data-i="16"] { --d: 16; }
+[data-i="17"] { --d: 17; }
+[data-i="18"] { --d: 18; }
+[data-i="19"] { --d: 19; }
+
+/* Reading progress, along the top */
+.progress { position: fixed; inset: 0 0 auto; z-index: 20; height: 2px; background: linear-gradient(90deg, var(--accent), #a78bfa, #38bdf8); transform: scaleX(0); transform-origin: left; pointer-events: none; }
+html:not(.js) .progress { display: none; }
+
+/* The header tightens once you scroll */
+.top { transition: padding 0.35s ease, box-shadow 0.35s ease, background-color 0.35s ease; }
+.scrolled .top { padding-top: 6px; padding-bottom: 6px; box-shadow: 0 8px 30px rgb(0 0 0 / 0.18); }
+
+/* The headline rises word by word */
+h1 .w { display: inline-block; animation: word-in 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(var(--d, 0) * 55ms + 80ms); }
+@keyframes word-in { from { opacity: 0; translate: 0 0.45em; filter: blur(8px); } }
+.hero .lead, .hero .cta, .hero .kicker, .hero .crumbs { animation: fade-up 1s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.hero .kicker { animation-delay: 0.05s; }
+.hero .lead { animation-delay: 0.45s; }
+.hero .cta { animation-delay: 0.6s; }
+@keyframes fade-up { from { opacity: 0; translate: 0 14px; } }
+
+/* Arriving as you scroll: up and in, one after another */
+.js [data-reveal] { opacity: 0; --rise: 38px; translate: 0 var(--rise); transition: opacity 0.8s ease, --rise 0.95s cubic-bezier(0.2, 0.7, 0.2, 1); transition-delay: calc(var(--d, 0) * 90ms); }
+.js [data-reveal].is-in { opacity: 1; --rise: 0px; }
+
+/* Cards: columns sliding at their own speeds (--shift), a light under the cursor, a slight tilt */
+.card,
+.js .card[data-reveal] {
+  translate: 0 calc(var(--shift, 0px) + var(--rise, 0px));
+  transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry));
+  transition: opacity 0.8s ease, --rise 0.95s cubic-bezier(0.2, 0.7, 0.2, 1), --rx 0.4s ease, --ry 0.4s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  transition-delay: calc(var(--d, 0) * 90ms), calc(var(--d, 0) * 90ms), 0s, 0s, 0s, 0s;
+}
+.card::before, .rail-card::before, .explore a::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 0%), color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+.card:hover, .rail-card:hover, .explore a:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); box-shadow: 0 18px 50px rgb(0 0 0 / 0.16); }
+.card:hover::before, .rail-card:hover::before, .explore a:hover::before { opacity: 1; }
+/* Its keywords pop in after the card */
+.js .card .points li { opacity: 0; scale: 0.9; transition: opacity 0.5s ease, scale 0.5s cubic-bezier(0.3, 1.6, 0.5, 1); }
+.js .card.is-in .points li { opacity: 1; scale: 1; }
+.js .card.is-in .points li:nth-child(1) { transition-delay: calc(var(--d, 0) * 90ms + 430ms); }
+.js .card.is-in .points li:nth-child(2) { transition-delay: calc(var(--d, 0) * 90ms + 510ms); }
+.js .card.is-in .points li:nth-child(3) { transition-delay: calc(var(--d, 0) * 90ms + 590ms); }
+.js .card.is-in .points li:nth-child(4) { transition-delay: calc(var(--d, 0) * 90ms + 670ms); }
+.js .card.is-in .points li:nth-child(5) { transition-delay: calc(var(--d, 0) * 90ms + 750ms); }
+.points li { transition: background-color 0.2s ease, border-color 0.2s ease; }
+.points li:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface-subtle)); }
+.more { display: inline-block; transition: translate 0.25s ease; }
+.more:hover { translate: 4px 0; }
+
+/* Buttons: they lean toward the cursor and press in */
+.btn { transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, translate 0.25s cubic-bezier(0.2, 0.7, 0.2, 1), scale 0.15s ease, box-shadow 0.25s ease; }
+.btn.big { translate: var(--tx, 0px) var(--ty, 0px); }
+.btn:not(.ghost):hover { box-shadow: 0 8px 28px color-mix(in srgb, var(--accent) 40%, transparent); }
+.btn:active { scale: 0.96; }
+
+/* Keyword rows sliding opposite ways, at different speeds (faster while you scroll) */
+.marquee { display: grid; gap: 10px; margin: 8px -24px 40px; padding: 6px 0; overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); }
+.marquee-row { display: flex; width: max-content; }
+.marquee-row ul { display: flex; gap: 10px; margin: 0; padding: 0 10px 0 0; list-style: none; animation: slide 90s linear infinite; }
+.marquee-row.right ul { animation-duration: 120s; animation-direction: reverse; }
+.marquee:hover ul { animation-play-state: paused; }
+.marquee li { padding: 7px 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text-muted); font-size: 14px; white-space: nowrap; transition: color 0.2s ease, border-color 0.2s ease; }
+.marquee li:hover { color: var(--text); border-color: var(--accent); }
+@keyframes slide { to { translate: -100% 0; } }
+
+/* The statement lights up word by word as it crosses the screen */
+.statement { max-width: 980px; margin: 24px auto 72px; }
+.statement p { margin: 0; font-size: clamp(24px, 3.6vw, 42px); font-weight: 600; line-height: 1.25; letter-spacing: -0.015em; }
+.js .statement .sw { opacity: 0.2; transition: opacity 0.35s ease, color 0.35s ease; }
+.js .statement .sw.lit { opacity: 1; }
+
+/* Everything Continuum does: down the page, the row slides sideways */
+/* Full width of the screen, its start lined up with the page's content */
+.rail { margin: 0 calc(50% - 50vw) 56px; }
+.rail-stage { padding: 0 max(24px, calc((100vw - 1120px) / 2 + 24px)); }
+.rail h2 { font-size: 26px; letter-spacing: -0.01em; }
+.rail-track { display: flex; gap: 16px; margin: 0; padding: 8px 2px 18px; list-style: none; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: thin; }
+.rail-track li { flex: 0 0 min(340px, 82vw); scroll-snap-align: start; }
+.rail-card { position: relative; isolation: isolate; overflow: hidden; display: grid; gap: 8px; align-content: start; height: 100%; min-height: 230px; padding: 22px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); color: var(--text); text-decoration: none; transition: border-color 0.3s ease, box-shadow 0.3s ease, translate 0.3s ease; }
+.rail-card:hover { color: var(--text); translate: 0 -4px; }
+.rail-card strong { font-size: 20px; }
+.rail-card > span:not(.rail-n):not(.rail-go) { color: var(--text-muted); font-size: 14px; }
+.rail-n { font: 600 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent); letter-spacing: 0.08em; }
+.rail-go { margin-top: auto; font-size: 22px; color: var(--accent); transition: translate 0.3s ease; }
+.rail-card:hover .rail-go { translate: 6px 0; }
+.rail.is-pinned { position: relative; }
+.rail.is-pinned .rail-stage { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+.rail.is-pinned .rail-track { overflow: visible; scroll-snap-type: none; will-change: transform; }
+.rail.is-pinned .rail-track { gap: 22px; }
+.rail.is-pinned .rail-track li { flex-basis: 400px; }
+.rail.is-pinned .rail-card { min-height: 300px; padding: 28px; scale: calc(0.9 + var(--focus, 1) * 0.1); opacity: calc(0.45 + var(--focus, 1) * 0.55); transition: border-color 0.3s ease, box-shadow 0.3s ease, scale 0.2s linear, opacity 0.2s linear; }
+.rail.is-pinned .rail-card strong { font-size: 24px; }
+.rail.is-pinned h2 { font-size: clamp(28px, 3.4vw, 40px); margin-bottom: 28px; }
+
+.explore a { position: relative; isolation: isolate; overflow: hidden; transition: border-color 0.3s ease, box-shadow 0.3s ease, translate 0.3s ease; }
+.explore a:hover { translate: 0 -3px; }
+
+/* Questions open smoothly; the marker turns */
+.faq summary { list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; color: var(--accent); font-size: 22px; line-height: 1; transition: rotate 0.3s ease; }
+.faq details[open] summary::after { rotate: 45deg; }
+.faq details::details-content { block-size: 0; overflow: hidden; transition: block-size 0.35s ease, content-visibility 0.35s allow-discrete; }
+.faq details[open]::details-content { block-size: auto; }
+
+/* Phones: one column, no sliding columns or pinned rail */
+@media (max-width: 900px) {
+  .card, .js .card[data-reveal] { translate: 0 var(--rise, 0px); }
+  .marquee { margin-left: -16px; margin-right: -16px; }
+  .rail-stage { padding: 0 16px; }
+}
+
+/* Reduced motion: everything in place, nothing moving */
+.still *, .still *::before, .still *::after { animation: none !important; transition: none !important; }
+.still [data-reveal], .still .card .points li { opacity: 1; --rise: 0px; scale: 1; }
+.still .statement .sw { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .marquee ul, h1 .w, .hero .lead, .hero .cta, .hero .kicker, .hero .crumbs { animation: none; }
 }

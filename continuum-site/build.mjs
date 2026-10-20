@@ -7,7 +7,8 @@
 //   SITE_URL  where the site lives (default https://continuum-console.one)
 //   APP_URL   Continuum itself, for Sign in (default https://app.continuum-console.one)
 
-import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PAGES, SITE } from "./src/pages.mjs";
@@ -19,6 +20,10 @@ export const APP_URL = trim(process.env.APP_URL || "https://app.continuum-consol
 const OUT = join(here, "dist");
 const TODAY = new Date().toISOString().slice(0, 10);
 const YEAR = new Date().getFullYear();
+
+// The stylesheet's and script's addresses carry their content's fingerprint, so a deploy is seen at once (they're kept a day)
+const stamp = (file) => createHash("sha256").update(readFileSync(join(here, "static", file))).digest("hex").slice(0, 10);
+const ASSET = { css: `/site.css?v=${stamp("site.css")}`, js: `/site.js?v=${stamp("site.js")}` };
 
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const url = (path) => (path === "/" ? `${SITE_URL}/` : `${SITE_URL}${path}`);
@@ -103,7 +108,8 @@ ${noindex ? '<meta name="robots" content="noindex">' : `<link rel="canonical" hr
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="/logo-compact.png">
 <link rel="apple-touch-icon" href="/icon-192.png">
-<link rel="stylesheet" href="/site.css">`;
+<link rel="stylesheet" href="${ASSET.css}">
+<script src="${ASSET.js}" defer></script>`;
 }
 
 function shell(page, main) {
@@ -111,6 +117,7 @@ function shell(page, main) {
 ${page.noindex ? "" : structuredData(page)}
 </head>
 <body>
+<div class="progress" aria-hidden="true"></div>
 <a class="skip" href="#main">Skip to content</a>
 <header class="top">
   <a class="brand" href="/" aria-label="${esc(SITE.fullName)} home"><img src="/logo-compact.png" alt="" width="26" height="26"><span>continuum</span></a>
@@ -136,11 +143,43 @@ ${main}
 `;
 }
 
+/** Text as words in spans (each with its order), for word-by-word motion; reads the same without it. */
+const words = (text, cls) =>
+  esc(text)
+    .split(" ")
+    .map((w, i) => `<span class="${cls}" data-i="${i}">${w}</span>`)
+    .join(" ");
+
+/** Every topic's keywords (the pages' points), once each, for the sliding rows. */
+const KEYWORDS = [...new Set(PAGES.flatMap((p) => p.sections.flatMap((s) => s.points)))];
+
+function marquee() {
+  const half = Math.ceil(KEYWORDS.length / 2);
+  const row = (list, dir) =>
+    // Twice over, so the row loops without a seam
+    `<div class="marquee-row ${dir}"><ul>${list.map((k) => `<li>${esc(k)}</li>`).join("")}</ul><ul aria-hidden="true">${list.map((k) => `<li>${esc(k)}</li>`).join("")}</ul></div>`;
+  return `<section class="marquee" aria-label="What Continuum covers">${row(KEYWORDS.slice(0, half), "left")}${row(KEYWORDS.slice(half), "right")}</section>`;
+}
+
+function rail(pages) {
+  return `<section class="rail" aria-labelledby="rail-h">
+  <div class="rail-stage">
+    <h2 id="rail-h" data-reveal>Everything Continuum does</h2>
+    <ul class="rail-track">${pages
+      .map(
+        (p, i) => `<li><a class="rail-card" href="${p.path}"><span class="rail-n">${String(i + 1).padStart(2, "0")}</span><strong>${esc(p.nav)}</strong><span>${esc(p.description)}</span><span class="rail-go" aria-hidden="true">→</span></a></li>`
+      )
+      .join("")}</ul>
+  </div>
+</section>`;
+}
+
 function pageHtml(page) {
   const sections = page.sections
-    .map((s) => {
+    .map((s, i) => {
       const target = s.link && byPath(s.link);
-      return `<section class="card">
+      // Three columns sliding at their own speeds; each card arrives a little after the one before
+      return `<section class="card" data-reveal data-speed="${[0, 0.6, 1.2][i % 3]}" data-i="${i % 3}">
   <h2>${target ? `<a href="${s.link}">${esc(s.h2)}</a>` : esc(s.h2)}</h2>
   <p>${esc(s.text)}</p>
   <ul class="points">${s.points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
@@ -151,29 +190,35 @@ function pageHtml(page) {
   const faq = page.faq?.length
     ? `<section class="faq" aria-labelledby="faq-h">
   <h2 id="faq-h">Questions</h2>
-  ${page.faq.map((f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join("\n  ")}
+  ${page.faq.map((f, i) => `<details data-reveal data-i="${i}"><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join("\n  ")}
 </section>`
     : "";
   const others = PAGES.filter((p) => p.path !== page.path && p.path !== "/");
-  const explore = `<section class="explore" aria-labelledby="explore-h">
-  <h2 id="explore-h">${page.path === "/" ? "Everything Continuum does" : "Explore Continuum"}</h2>
-  <ul>${others.map((p) => `<li><a href="${p.path}"><strong>${esc(p.nav)}</strong><span>${esc(p.description)}</span></a></li>`).join("")}</ul>
+  const explore =
+    page.path === "/"
+      ? rail(others)
+      : `<section class="explore" aria-labelledby="explore-h">
+  <h2 id="explore-h" data-reveal>Explore Continuum</h2>
+  <ul>${others.map((p, i) => `<li data-reveal data-i="${i % 4}"><a href="${p.path}"><strong>${esc(p.nav)}</strong><span>${esc(p.description)}</span></a></li>`).join("")}</ul>
 </section>`;
+  const statement = page.statement ? `<section class="statement" aria-label="In short"><p>${words(page.statement, "sw")}</p></section>` : "";
   return shell(
     page,
     `<section class="hero">
   ${page.path === "/" ? "" : `<nav class="crumbs" aria-label="Breadcrumb"><a href="/">${SITE.name}</a> <span aria-hidden="true">/</span> ${esc(page.nav)}</nav>`}
   <p class="kicker">${esc(page.kicker)}</p>
-  <h1>${esc(page.h1)}</h1>
+  <h1>${words(page.h1, "w")}</h1>
   <p class="lead">${esc(page.lead)}</p>
   <p class="cta"><a class="btn big" href="${APP_URL}/signin?new=1">Get started</a> <a class="btn ghost big" href="${APP_URL}/signin">Sign in</a></p>
 </section>
+${marquee()}
+${statement}
 <div class="grid">
 ${sections}
 </div>
 ${faq}
 ${explore}
-<section class="end">
+<section class="end" data-reveal>
   <h2>Ready when you are</h2>
   <p>Plan it, hand it to your AI agents, and pick up exactly where you left off.</p>
   <p class="cta"><a class="btn big" href="${APP_URL}/signin?new=1">Create an account</a></p>

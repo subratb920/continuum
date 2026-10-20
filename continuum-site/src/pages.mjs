@@ -21,6 +21,8 @@ export const PAGES = [
     description:
       "AI-driven platform: orchestrate AI agents and AI workflows, build enterprise systems and products, modernize mainframes, automate ML pipelines and deploy.",
     kicker: "AI-driven development",
+    statement:
+      "One AI-driven place for the whole journey: plan large systems from a concept, let AI agents build them through AI workflows, modernize legacy code, turn your data into your own models, and deploy to your cloud. Together, with your team.",
     h1: "The AI agent orchestration platform: from concept to code, models and cloud",
     lead: "Plan large systems from a concept, hand the work to a team of AI agents through AI workflows, modernize mainframes, automate data science and machine learning pipelines, create your own AI models, and deploy to your cloud autonomously. One AI-driven place, and it remembers where you left off.",
     sections: [

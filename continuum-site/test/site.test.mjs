@@ -13,6 +13,8 @@ test("every page: a title and description search engines show in full, one h1, a
     assert.ok(p.description.length >= 70 && p.description.length <= 160, `${p.path} description is ${p.description.length} characters`);
     const h = html(p.path);
     assert.equal((h.match(/<h1>/g) ?? []).length, 1, p.path);
+    // The h1 reads as its words, whatever spans carry them
+    assert.equal(h.match(/<h1>(.*?)<\/h1>/s)[1].replace(/<[^>]+>/g, ""), p.h1.replace(/&/g, "&amp;"), p.path);
     assert.match(h, new RegExp(`<link rel="canonical" href="https://continuum-console.one${p.path === "/" ? "/" : p.path}">`));
     assert.match(h, /<meta property="og:image" content="https:\/\/continuum-console.one\/og.png">/);
   }
@@ -36,8 +38,8 @@ test("structured data parses, with the FAQ for each page that has questions", ()
 test("links between pages lead somewhere", () => {
   const paths = new Set(PAGES.map((p) => p.path));
   for (const p of PAGES) {
-    for (const [, href] of html(p.path).matchAll(/href="(\/[^"#]*)"/g)) {
-      if (/\.(css|png|ico)$/.test(href)) continue;
+    for (const [, href] of html(p.path).matchAll(/href="(\/[^"#?]*)/g)) {
+      if (/\.(css|js|png|ico)$/.test(href)) continue;
       assert.ok(paths.has(href), `${p.path} links to ${href}`);
     }
   }

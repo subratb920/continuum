@@ -17,6 +17,7 @@ const SITE_HOST = new URL(SITE_URL).host;
 const TYPES = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
   ".xml": "application/xml; charset=utf-8",
   ".txt": "text/plain; charset=utf-8",
   ".png": "image/png",
@@ -24,7 +25,7 @@ const TYPES = {
   ".svg": "image/svg+xml",
   ".webmanifest": "application/manifest+json",
 };
-const TEXT = new Set([".html", ".css", ".xml", ".txt", ".svg", ".webmanifest"]);
+const TEXT = new Set([".html", ".css", ".js", ".xml", ".txt", ".svg", ".webmanifest"]);
 
 /** Every file: "/path" → { body, gz?, type, html } */
 function load(dir, files = new Map()) {
@@ -44,7 +45,7 @@ const FILES = load(DIST);
 const HEADERS = {
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
-  "Content-Security-Policy": "default-src 'none'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
 };
 
 function send(req, res, status, file) {
