@@ -247,6 +247,11 @@
   color: var(--text);
 }
 
+.provider-google {
+  background: var(--hover);
+  color: var(--text);
+}
+
 .profile-menu-group {
   padding: 4px;
   border-bottom: 1px solid var(--border-subtle);

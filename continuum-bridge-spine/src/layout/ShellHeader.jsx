@@ -345,8 +345,8 @@ export default function ShellHeader({ selectedProject = null }) {
                 <span className="profile-menu-avatar" aria-hidden="true">{getInitials(user?.email)}</span>
                 <span className="profile-menu-who">
                   <span className="profile-menu-email" title={user?.email}>{user?.email}</span>
-                  <span className={`profile-menu-provider provider-${authProvider === "github" ? "github" : "email"}`}>
-                    Signed in with {authProvider === "github" ? "GitHub" : "email"}
+                  <span className={`profile-menu-provider provider-${authProvider === "github" ? "github" : authProvider === "google" ? "google" : "email"}`}>
+                    Signed in with {authProvider === "github" ? "GitHub" : authProvider === "google" ? "Google" : "email"}
                   </span>
                 </span>
               </div>

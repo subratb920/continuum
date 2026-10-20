@@ -108,7 +108,7 @@ export function ProfileCard({ user, authProvider, onClose, onSignOut }) {
         <span className="pcard-avatar" aria-hidden="true">{initialsOf(user?.email)}</span>
         <div className="pcard-profile-who">
           <strong title={user?.email}>{user?.email ?? "—"}</strong>
-          <span className={`pcard-badge ${authProvider === "github" ? "is-github" : ""}`}>Signed in with {authProvider === "github" ? "GitHub" : "email"}</span>
+          <span className={`pcard-badge ${authProvider === "github" ? "is-github" : ""}`}>Signed in with {authProvider === "github" ? "GitHub" : authProvider === "google" ? "Google" : "email"}</span>
         </div>
       </div>
       <dl className="pcard-facts">
@@ -532,7 +532,7 @@ export function ContactCard({ user, authProvider, onClose }) {
   return (
     <Card title="Contact us" subtitle="Write, call, or let us call you" onClose={onClose}>
       <div className="pcard-options">
-        <a className="pcard-option" href={mailto("Hello from Continuum", `\n\n— User ID: ${user?.id ?? "—"} (${authProvider === "github" ? "GitHub" : "email"} sign-in)`)}>
+        <a className="pcard-option" href={mailto("Hello from Continuum", `\n\n— User ID: ${user?.id ?? "—"} (${authProvider === "github" ? "GitHub" : authProvider === "google" ? "Google" : "email"} sign-in)`)}>
           <span className="pcard-option-icon" aria-hidden="true">✉</span>
           <span>
             <strong>Write to us</strong>

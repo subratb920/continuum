@@ -109,7 +109,7 @@ export default function Welcome({ projectCount = 0, activeProject, onCreated, on
           <h2>Your account</h2>
           <p className="welcome-email">{user?.email}</p>
           <p className="welcome-muted">
-            Signed in with {authProvider === "github" ? "GitHub" : "email"}
+            Signed in with {authProvider === "github" ? "GitHub" : authProvider === "google" ? "Google" : "email"}
           </p>
 
           <p className="welcome-stat">

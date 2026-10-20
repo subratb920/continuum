@@ -6,6 +6,7 @@ import { getDB } from "../config/db.js";
 import { dir } from "../directory/directory.js";
 import { clientAuthCallbackUrl, clientPageUrl, githubAuthorizeUrl, githubCallbackUrl } from "../config/urls.js";
 import { GITHUB_SCOPE, takeConnectState } from "./githubConnect.js";
+import googleRoutes, { googleConfigured } from "./google.routes.js";
 
 const router = Router();
 
@@ -14,6 +15,14 @@ const router = Router();
  */
 router.post("/signup", signup);
 router.post("/login", login);
+
+/** Which ways to sign in this Continuum offers (the sign-in card shows only these). */
+router.get("/providers", (_req, res) => {
+    res.set("Cache-Control", "no-store").json({ email: true, github: Boolean(process.env.GITHUB_CLIENT_ID), google: googleConfigured() });
+});
+
+/** Sign in with Google (google.routes.js) */
+router.use("/google", googleRoutes);
 
 /**
  * Step 1: Redirect user to GitHub OAuth

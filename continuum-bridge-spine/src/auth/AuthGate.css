@@ -139,16 +139,6 @@
   background: var(--auth-field);
 }
 
-/* Google */
-.social-btn.google {
-  background: var(--auth-field-hover);   /* same as GitHub */
-  color: var(--auth-on-brand);
-  border: none;
-}
-
-.social-btn.google:hover {
-  background: var(--auth-field);
-}
 
 .icon {
   font-size: 16px;
@@ -158,9 +148,7 @@
   color: var(--auth-on-brand);
 }
 
-.social-btn.google .icon {
-  color: var(--auth-google);  /* Google red accent */
-}
+
 /* Back to the public page */
 .auth-about {
   display: inline-block;
@@ -172,3 +160,64 @@
 }
 .auth-about:hover,
 .auth-about:focus-visible { opacity: 1; text-decoration: underline; }
+
+/* ========================= */
+/* Sign in with Google: Google's own button (white pill, thin grey line, the four-colour G) */
+/* ========================= */
+
+.google-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--google-btn-border);
+  border-radius: 22px;
+  background: var(--google-btn-bg);
+  color: var(--google-btn-text);
+  font-family: Roboto, "Google Sans", system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.25px;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+.google-btn:hover:not(:disabled) {
+  background: var(--google-btn-hover);
+  box-shadow: 0 1px 3px var(--auth-shadow);
+  transform: translateY(-1px);
+}
+.google-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+.google-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--google-btn-focus);
+}
+.google-btn:disabled {
+  opacity: 0.75;
+  cursor: progress;
+}
+.google-btn-mark {
+  position: absolute;
+  left: 14px;
+  display: flex;
+}
+.google-g .g-blue {
+  fill: var(--google-blue);
+}
+.google-g .g-green {
+  fill: var(--google-green);
+}
+.google-g .g-yellow {
+  fill: var(--google-yellow);
+}
+.google-g .g-red {
+  fill: var(--google-red);
+}
+.social-btn:disabled {
+  opacity: 0.75;
+  cursor: progress;
+}
