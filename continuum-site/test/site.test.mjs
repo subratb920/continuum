@@ -15,8 +15,8 @@ test("every page: a title and description search engines show in full, one h1, a
     assert.equal((h.match(/<h1>/g) ?? []).length, 1, p.path);
     // The h1 reads as its words, whatever spans carry them
     assert.equal(h.match(/<h1>(.*?)<\/h1>/s)[1].replace(/<[^>]+>/g, ""), p.h1.replace(/&/g, "&amp;"), p.path);
-    assert.match(h, new RegExp(`<link rel="canonical" href="https://www.continuum-console.one${p.path === "/" ? "/" : p.path}">`));
-    assert.match(h, /<meta property="og:image" content="https:\/\/www.continuum-console.one\/og.png">/);
+    assert.match(h, new RegExp(`<link rel="canonical" href="https://continuum-console.one${p.path === "/" ? "/" : p.path}">`));
+    assert.match(h, /<meta property="og:image" content="https:\/\/continuum-console.one\/og.png">/);
   }
 });
 
@@ -47,6 +47,6 @@ test("links between pages lead somewhere", () => {
 
 test("sitemap lists every page; robots.txt points to it", () => {
   const sitemap = readFileSync(`${out}/sitemap.xml`, "utf8");
-  for (const p of PAGES) assert.match(sitemap, new RegExp(`<loc>https://www.continuum-console.one${p.path === "/" ? "/" : p.path}</loc>`));
-  assert.match(readFileSync(`${out}/robots.txt`, "utf8"), /Sitemap: https:\/\/www.continuum-console.one\/sitemap.xml/);
+  for (const p of PAGES) assert.match(sitemap, new RegExp(`<loc>https://continuum-console.one${p.path === "/" ? "/" : p.path}</loc>`));
+  assert.match(readFileSync(`${out}/robots.txt`, "utf8"), /Sitemap: https:\/\/continuum-console.one\/sitemap.xml/);
 });

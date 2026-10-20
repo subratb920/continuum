@@ -29,10 +29,10 @@ test("pages at clean addresses; a trailing slash and index.html go to the clean 
   assert.equal((await get("/ai-ide/index.html")).headers.location, "/ai-ide");
 });
 
-test("the plain domain goes to the one address (www), same page", async () => {
-  const r = await get("/teams?x=1", { host: "continuum-console.one" });
+test("www goes to the one address (the domain itself), same page", async () => {
+  const r = await get("/teams?x=1", { host: "www.continuum-console.one" });
   assert.equal(r.status, 301);
-  assert.equal(r.headers.location, "https://www.continuum-console.one/teams?x=1");
+  assert.equal(r.headers.location, "https://continuum-console.one/teams?x=1");
 });
 
 test("unknown pages are a real 404 (not a soft one); text is gzipped", async () => {
