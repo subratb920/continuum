@@ -160,11 +160,13 @@ export function createBrainRouter(opts = {}) {
     const task = typeof req.body?.task === "string" ? req.body.task.trim() : "";
     if (!task && !req.body?.goal) throw new AppError("Say what the worker should do.", 400, "VALIDATION_ERROR");
     const { projectId, repo, goal } = req.body ?? {};
+    // A retried or double-clicked spawn with the same key makes one worker, not two
+    const idempotencyKey = typeof req.body?.idempotencyKey === "string" && req.body.idempotencyKey ? req.body.idempotencyKey.slice(0, 200) : undefined;
     // Started directly: on a project, an interval goal (its project, from Continuum) or a repository (a retry)
     if (projectId || goal || repo) {
       const where = goal ? { goal: { bridgeId: goal.bridgeId, goalId: goal.goalId } } : projectId ? { projectId } : { repo };
       // No model: your brain and every worker run on one model (Models, /brain/settings)
-      return res.status(201).json(toAgent(await brain(req, "POST", "/agents", { ...where, task })));
+      return res.status(201).json(toAgent(await brain(req, "POST", "/agents", { ...where, task, ...(idempotencyKey ? { idempotencyKey } : {}) })));
     }
     // Nothing given: your brain picks the project (and asks you when it isn't clear)
     const text = `Start a worker agent for this task. Pick the right project with your tools; if it isn't clear which one, ask me first.\n\nTask: ${task}`;
@@ -320,6 +322,13 @@ export function createBrainRouter(opts = {}) {
     for (const k of ["from", "to"]) if (typeof req.query[k] === "string") qs.set(k, req.query[k]);
     const q = qs.toString();
     res.set("Cache-Control", "no-store").json(await brain(req, "GET", `/stats${q ? `?${q}` : ""}`));
+  });
+  // The user's audit trail (consequential actions)
+  router.get("/audit", async (req, res) => {
+    const qs = new URLSearchParams();
+    for (const k of ["from", "to", "action", "limit"]) if (typeof req.query[k] === "string") qs.set(k, req.query[k]);
+    const q = qs.toString();
+    res.set("Cache-Control", "no-store").json(await brain(req, "GET", `/audit${q ? `?${q}` : ""}`));
   });
   router.get("/settings", async (req, res) => res.json(await brain(req, "GET", "/settings")));
   router.put("/settings", async (req, res) => res.json(await brain(req, "PUT", "/settings", req.body ?? {})));
