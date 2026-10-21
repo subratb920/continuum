@@ -78,6 +78,7 @@ export const adminApi = {
   markCallback: (id, status) => request("PATCH", `/directory/admin/callbacks/${id}`, { status }),
   // Public-site visitor analytics (anonymous) and the leads it captured
   visits: ({ from = "", to = "" } = {}) => request("GET", `/directory/admin/visits?${q({ from, to })}`),
+  journeys: ({ from = "", to = "" } = {}) => request("GET", `/directory/admin/visits/journeys?${q({ from, to })}`),
   leads: (status = "") => request("GET", `/directory/admin/leads?${q({ status })}`),
   markLead: (id, status) => request("PATCH", `/directory/admin/leads/${id}`, { status }),
 };

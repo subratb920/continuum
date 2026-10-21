@@ -49,11 +49,30 @@ export function createPublicRouter() {
         city: req.get("x-client-city") || null,
         network: dir.networkOf(req),
         client: b.client,
+        viewId: b.viewId, // the browser-made id for this page view
+        pid: b.pid, // a persistent id the visitor consented to (cookie); absent otherwise
       });
     } catch (err) {
       req.log?.warn?.({ err: err.message }, "Visit beacon not recorded");
     }
     res.status(204).end(); // a beacon never needs an answer
+  });
+
+  // sendBeacon uses text/plain on unload (a CORS-safelisted type, so no preflight
+  // while the page is closing); a fetch fallback sends application/json (parsed by
+  // the app's global json). Accept either.
+  const engageLimit = limiter(480);
+  const asText = express.text({ type: "text/plain", limit: "4kb" });
+  router.post("/engagement", asText, async (req, res) => {
+    if (engageLimit(req.ip)) return res.status(429).end();
+    let b = req.body ?? {};
+    if (typeof b === "string") try { b = JSON.parse(b); } catch { b = {}; }
+    try {
+      await dir.recordEngagement({ viewId: b.viewId, dwellMs: b.dwellMs, scrollPct: b.scrollPct });
+    } catch (err) {
+      req.log?.warn?.({ err: err.message }, "Engagement not recorded");
+    }
+    res.status(204).end();
   });
 
   const leadLimit = limiter(10);

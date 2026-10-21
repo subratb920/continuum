@@ -63,6 +63,7 @@ export function createDirectory(cfg, { log, hooks = {} } = {}) {
       prepareAdminSetup: users.prepareAdminSetup,
       recordLogin: activity.recordLogin,
       recordVisit: activity.recordVisit,
+      recordEngagement: activity.recordEngagement,
       networkOf, // build a network summary from a request (for the public visit beacon)
       attachClient: activity.attachClient,
       exportUsage: activity.exportUsage,

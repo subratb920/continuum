@@ -20,6 +20,17 @@ function dailyHash(secret, day, ...parts) {
   return createHash("sha256").update(`${secret}:${day}:${parts.join("|")}`).digest("hex").slice(0, 32);
 }
 
+/** A short, stable hash (no day): for a persistent id the visitor agreed to, so they can be followed across days. */
+function stableHash(secret, ...parts) {
+  return createHash("sha256").update(`${secret}:pid:${parts.join("|")}`).digest("hex").slice(0, 32);
+}
+
+/** A whole number clamped to a range (for untrusted engagement numbers). */
+const clampInt = (v, lo, hi) => {
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : null;
+};
+
 const SEARCH_HOSTS = /(^|\.)(google|bing|yahoo|duckduckgo|yandex|baidu|ecosia|brave|startpage|qwant)\./i;
 const SOCIAL_HOSTS = /(^|\.)(t\.co|twitter|x\.com|facebook|fb\.com|fb\.me|linkedin|lnkd\.in|reddit|youtube|instagram|pinterest|t\.me|whatsapp|news\.ycombinator|github)\b/i;
 
@@ -302,14 +313,37 @@ export function createActivity({ pool, cfg }) {
     const ip = v.ip ? String(v.ip) : null;
     const via = v.via === "client" ? "client" : "server";
     const network = v.network && typeof v.network === "object" && Object.keys(v.network).length ? v.network : null;
+    const viewId = typeof v.viewId === "string" && /^[\w-]{8,64}$/.test(v.viewId) ? v.viewId : null;
+    const pid = typeof v.pid === "string" && /^[\w-]{8,64}$/.test(v.pid) ? v.pid : null;
     await q(
-      `INSERT INTO page_views (at, day, path, referer_host, source, via, browser, os, device, bot, region, city, ip_hash, visitor_hash, network, client, expire_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+      `INSERT INTO page_views (at, day, path, referer_host, source, via, browser, os, device, bot, region, city, ip_hash, visitor_hash, visitor_pid, view_id, network, client, expire_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
       [now, day, path, refHost, source, via, browser, os, device, bot, short(v.region, 12), short(v.city, 80),
-       ip ? dailyHash(secret, day, ip) : null, ip ? dailyHash(secret, day, ip, ua) : null, network,
+       ip ? dailyHash(secret, day, ip) : null, ip ? dailyHash(secret, day, ip, ua) : null,
+       pid ? stableHash(secret, pid) : null, viewId, network,
        v.client ? cleanClient(v.client) : null, new Date(now.getTime() + keepMs())]
     );
     return { path, source, bot, via };
+  }
+
+  /**
+   * How a page view went: time on the page and how far down it was read,
+   * reported by the browser when it leaves. Found by the browser-made view_id;
+   * only a real-browser (client) view has one. Kept to the larger of what's
+   * already there (a page can report more than once).
+   */
+  async function recordEngagement({ viewId, dwellMs, scrollPct } = {}) {
+    if (typeof viewId !== "string" || !/^[\w-]{8,64}$/.test(viewId)) return false;
+    const dwell = clampInt(dwellMs, 0, 24 * 3600_000); // at most a day
+    const scroll = clampInt(scrollPct, 0, 100);
+    if (dwell === null && scroll === null) return false;
+    const r = await q(
+      `UPDATE page_views SET dwell_ms = GREATEST(COALESCE(dwell_ms, 0), COALESCE($2, 0)),
+                             scroll_pct = GREATEST(COALESCE(scroll_pct, 0), COALESCE($3, 0))
+       WHERE view_id = $1 AND via = 'client'`,
+      [viewId, dwell, scroll]
+    );
+    return r.rowCount > 0;
   }
 
   /**
@@ -322,12 +356,16 @@ export function createActivity({ pool, cfg }) {
     const fromD = from ? new Date(from) : new Date(toD.getTime() - 30 * DAY_MS);
     const params = [fromD, toD];
     const win = `at >= $1 AND at <= $2`;
-    const human = `${win} AND NOT bot`;
+    // Human page views are the real-browser (client) ones, so server-side rows for
+    // the same view don't double-count. Each visitor is their persistent id when
+    // they've consented, else their day-scoped hash.
+    const human = `${win} AND NOT bot AND via = 'client'`;
+    const vkey = `COALESCE(visitor_pid, visitor_hash)`;
     const [totals, series, pages, sources, countries, devices, browsers, recent] = await Promise.all([
-      q(`SELECT count(*) FILTER (WHERE NOT bot)::int AS views,
-                count(DISTINCT visitor_hash) FILTER (WHERE NOT bot)::int AS visitors,
+      q(`SELECT count(*) FILTER (WHERE NOT bot AND via = 'client')::int AS views,
+                count(DISTINCT ${vkey}) FILTER (WHERE NOT bot AND via = 'client')::int AS visitors,
                 count(*) FILTER (WHERE bot)::int AS bots,
-                count(*) FILTER (WHERE via = 'client')::int AS enriched
+                count(*) FILTER (WHERE via = 'server' AND NOT bot)::int AS requests
          FROM page_views WHERE ${win}`, params),
       q(`SELECT day, count(*)::int AS views, count(DISTINCT visitor_hash)::int AS visitors
          FROM page_views WHERE ${human} GROUP BY day ORDER BY day`, params),
@@ -339,14 +377,14 @@ export function createActivity({ pool, cfg }) {
       q(`SELECT id, at, path, source, via, bot, browser, os, device, region, city, network, client
          FROM page_views WHERE ${win} ORDER BY at DESC LIMIT 100`, params),
     ]);
-    const t = totals.rows[0] ?? { views: 0, visitors: 0, bots: 0, enriched: 0 };
+    const t = totals.rows[0] ?? { views: 0, visitors: 0, bots: 0, requests: 0 };
     return {
       from: fromD,
       to: toD,
       views: t.views,
       visitors: t.visitors,
       bots: t.bots,
-      enriched: t.enriched,
+      requests: t.requests,
       perDay: series.rows.map((r) => ({ day: r.day, views: r.views, visitors: r.visitors })),
       topPages: pages.rows.map((r) => ({ path: r.path, views: r.views })),
       sources: sources.rows.map((r) => ({ source: r.source, views: r.views })),
@@ -369,6 +407,42 @@ export function createActivity({ pool, cfg }) {
         ...(r.client ? { client: r.client } : {}),
       })),
     };
+  }
+
+  /**
+   * Visitor journeys: each anonymous visitor's topics over the window, the most
+   * engaged first. A visitor is their consented persistent id (followed across
+   * days) or, without consent, their day-scoped hash (so "a visitor" there means
+   * within one day). Per topic: views, time spent and how far they read.
+   */
+  async function visitorJourneys({ from, to, limit = 50 } = {}) {
+    const toD = to ? new Date(to) : new Date();
+    const fromD = from ? new Date(from) : new Date(toD.getTime() - 30 * DAY_MS);
+    const n = Math.min(200, Math.max(1, Number(limit) || 50));
+    const { rows } = await q(
+      `SELECT COALESCE(visitor_pid, visitor_hash) AS vkey, (visitor_pid IS NOT NULL) AS persistent,
+              path, count(*)::int AS views, COALESCE(sum(dwell_ms), 0)::bigint AS dwell_ms,
+              COALESCE(max(scroll_pct), 0)::int AS scroll_pct, min(at) AS first_at, max(at) AS last_at,
+              count(DISTINCT day)::int AS days
+       FROM page_views
+       WHERE at >= $1 AND at <= $2 AND NOT bot AND via = 'client' AND COALESCE(visitor_pid, visitor_hash) IS NOT NULL
+       GROUP BY vkey, persistent, path`,
+      [fromD, toD]
+    );
+    const byVisitor = new Map();
+    for (const r of rows) {
+      let v = byVisitor.get(r.vkey);
+      if (!v) byVisitor.set(r.vkey, (v = { key: r.vkey.slice(0, 12), persistent: r.persistent, views: 0, dwellMs: 0, days: 0, firstAt: r.first_at, lastAt: r.last_at, topics: [] }));
+      v.views += r.views;
+      v.dwellMs += Number(r.dwell_ms);
+      v.days = Math.max(v.days, r.days);
+      if (r.first_at < v.firstAt) v.firstAt = r.first_at;
+      if (r.last_at > v.lastAt) v.lastAt = r.last_at;
+      v.topics.push({ path: r.path, views: r.views, dwellMs: Number(r.dwell_ms), scrollPct: r.scroll_pct });
+    }
+    const visitors = [...byVisitor.values()].map((v) => ({ ...v, topics: v.topics.sort((a, b) => b.views - a.views || b.dwellMs - a.dwellMs) }));
+    visitors.sort((a, b) => b.views - a.views || b.dwellMs - a.dwellMs);
+    return { from: fromD, to: toD, visitors: visitors.slice(0, n) };
   }
 
   /** Sign-ins, app use and page views past their days go (Postgres keeps them otherwise). */
@@ -398,5 +472,5 @@ export function createActivity({ pool, cfg }) {
     return { added, kept: rows.length - added };
   }
 
-  return { recordLogin, attachClient, createUsageTracker, sweep, exportUsage, importUsage, recordVisit, visitStats };
+  return { recordLogin, attachClient, createUsageTracker, sweep, exportUsage, importUsage, recordVisit, recordEngagement, visitStats, visitorJourneys };
 }

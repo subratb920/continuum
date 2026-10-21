@@ -11,6 +11,13 @@ const SOURCE = { direct: "Direct", search: "Search", social: "Social", referral:
 const DEVICE = { desktop: "Desktop", phone: "Phone", tablet: "Tablet", program: "Program", bot: "Bot" };
 const nf = new Intl.NumberFormat();
 
+/** "4m12s", "35s", "—" from milliseconds. */
+function dwell(ms) {
+  const s = Math.round((Number(ms) || 0) / 1000);
+  if (!s) return "—";
+  return s >= 60 ? `${Math.floor(s / 60)}m${String(s % 60).padStart(2, "0")}s` : `${s}s`;
+}
+
 /** A list of counts, each with a bar (the biggest is full width). */
 function Bars({ rows, label, empty }) {
   const top = Math.max(...rows.map((r) => r.views), 1);
@@ -41,7 +48,7 @@ function Bars({ rows, label, empty }) {
  * captured (people who left an email), newest first.
  */
 export default function Visitors() {
-  const { visits, leads, visitDays, setVisitDays, markLead } = useAdmin();
+  const { visits, journeys, leads, visitDays, setVisitDays, markLead } = useAdmin();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
 
@@ -81,7 +88,37 @@ export default function Visitors() {
             <div className="vz-stat"><span className="vz-stat-n">{nf.format(visits.views)}</span><span className="admin-muted">Page views</span></div>
             <div className="vz-stat"><span className="vz-stat-n">{nf.format(visits.visitors)}</span><span className="admin-muted">Unique visitors (est.)</span></div>
             <div className="vz-stat"><span className="vz-stat-n">{nf.format(visits.bots)}</span><span className="admin-muted">Bot views (not counted)</span></div>
-            <div className="vz-stat"><span className="vz-stat-n">{nf.format(visits.enriched)}</span><span className="admin-muted">Confirmed real browsers</span></div>
+            <div className="vz-stat"><span className="vz-stat-n">{nf.format(visits.requests ?? 0)}</span><span className="admin-muted">Server-side requests (all, incl. no-JS)</span></div>
+          </div>
+
+          <div className="vz-breakdown">
+            <h3>Visitor journeys <span className="admin-muted">· which topics each visitor was most invested in (anonymous)</span></h3>
+            {!journeys ? (
+              <p className="admin-muted">Loading…</p>
+            ) : journeys.visitors.length ? (
+              <ul className="vz-journeys">
+                {journeys.visitors.map((v) => (
+                  <li key={v.key}>
+                    <div className="vz-j-head">
+                      <span className="admin-mono">{v.key}</span>
+                      {v.persistent ? <span className="admin-pill" title="Agreed to a cookie, so recognised across visits">returning</span> : <span className="admin-pill is-off" title="Anonymous; within one day only">one day</span>}
+                      <span className="admin-muted">{nf.format(v.views)} views · {dwell(v.dwellMs)} · {v.days} {v.days === 1 ? "day" : "days"} · last {since(v.lastAt)}</span>
+                    </div>
+                    <ol className="vz-j-topics">
+                      {v.topics.slice(0, 6).map((t) => (
+                        <li key={t.path}>
+                          <span className="admin-mono vz-j-path">{t.path}</span>
+                          <span className="admin-muted">{t.views}×{t.dwellMs ? ` · ${dwell(t.dwellMs)}` : ""}{t.scrollPct ? ` · ${t.scrollPct}% read` : ""}</span>
+                        </li>
+                      ))}
+                      {v.topics.length > 6 && <li className="admin-muted">+{v.topics.length - 6} more</li>}
+                    </ol>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="admin-muted">No visitor journeys yet. They appear once pages are viewed (engagement and cross-visit continuity grow as visitors return and, for continuity, accept the cookie).</p>
+            )}
           </div>
 
           <div className="vz-breakdown">

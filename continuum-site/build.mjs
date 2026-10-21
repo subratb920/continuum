@@ -157,6 +157,18 @@ ${noindex ? '<meta name="robots" content="noindex">' : `<link rel="canonical" hr
 ${API_URL ? `<meta name="api-base" content="${esc(API_URL)}">\n` : ""}<script src="${ASSET.js}" defer></script>`;
 }
 
+/** An opt-in cookie banner (only when an API is configured). Hidden until site.js shows it, and only when no choice has been made. */
+function consentBanner() {
+  if (!API_URL) return "";
+  return `<div class="consent" data-consent hidden role="dialog" aria-label="Cookie choice">
+  <p>We count visits to improve Continuum. Allow a cookie so we can recognise you on repeat visits? Either way the site works the same.</p>
+  <div class="consent-actions">
+    <button type="button" class="btn ghost" data-consent-no>No thanks</button>
+    <button type="button" class="btn" data-consent-yes>Allow</button>
+  </div>
+</div>`;
+}
+
 /** A small "stay in touch" lead form (only when an API is configured). Submitted by site.js via fetch; no page reload. */
 function leadForm() {
   if (!API_URL) return "";
@@ -201,6 +213,7 @@ ${page.noindex ? "" : leadForm()}
     <p>Questions? Write to <a href="mailto:${SITE.email}">${SITE.email}</a> or ask for a callback in <a href="${APP_URL}/">Continuum</a>'s Contact us.</p>
   </div>
 </footer>
+${page.noindex ? "" : consentBanner()}
 </body>
 </html>
 `;

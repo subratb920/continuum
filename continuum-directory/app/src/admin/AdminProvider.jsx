@@ -20,6 +20,7 @@ export function AdminProvider({ children, section = "users", onSection }) {
   const [signins, setSignins] = useState(null);
   const [changes, setChanges] = useState(null);
   const [visits, setVisits] = useState(null);
+  const [journeys, setJourneys] = useState(null);
   const [leads, setLeads] = useState(null);
   const [visitDays, setVisitDays] = useState(30);
   const [selected, setSelected] = useState(null); // { kind: "user" | "role", id }
@@ -61,7 +62,9 @@ export function AdminProvider({ children, section = "users", onSection }) {
     if (section === "visitors") {
       const from = new Date(Date.now() - visitDays * 86_400_000).toISOString();
       setVisits(null);
+      setJourneys(null);
       adminApi.visits({ from }).then(setVisits).catch(fail);
+      adminApi.journeys({ from }).then(setJourneys).catch(fail);
       adminApi.leads().then(setLeads).catch(fail);
     }
   }, [open, section, visitDays]);
@@ -80,6 +83,7 @@ export function AdminProvider({ children, section = "users", onSection }) {
       signins,
       changes,
       visits,
+      journeys,
       leads,
       visitDays,
       setVisitDays,
@@ -137,7 +141,7 @@ export function AdminProvider({ children, section = "users", onSection }) {
         await loadRoles();
       },
     }),
-    [open, section, onSection, query, users, roles, features, settings, signins, changes, visits, leads, visitDays, selected, error, loading, loadUsers, loadRoles]
+    [open, section, onSection, query, users, roles, features, settings, signins, changes, visits, journeys, leads, visitDays, selected, error, loading, loadUsers, loadRoles]
   );
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;

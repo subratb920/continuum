@@ -174,6 +174,7 @@ export function createDirectoryRouter({ directory, auth = [] }) {
   adminOnly.get("/activity", async (req, res) => res.json(await admin.activity({ limit: req.query.limit, failedOnly: req.query.failed === "1" })));
   // Public-site visitor analytics (anonymous; no person identified)
   adminOnly.get("/visits", async (req, res) => res.json(await activity.visitStats({ from: req.query.from, to: req.query.to })));
+  adminOnly.get("/visits/journeys", async (req, res) => res.json(await activity.visitorJourneys({ from: req.query.from, to: req.query.to })));
   adminOnly.get("/changes", async (req, res) => res.json(await admin.changes({ limit: req.query.limit })));
   router.use("/admin", adminOnly);
 

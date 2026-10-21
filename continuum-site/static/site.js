@@ -264,18 +264,40 @@
   }
 })();
 
-// Visitor beacon + lead form. First-party, no cookies; honors Do-Not-Track for
-// the beacon. Reads the API's address from <meta name="api-base"> (left out
-// when no API is configured, so this does nothing then). Self-contained so it
-// runs whether or not the motion above did.
+// Analytics: a page-view beacon, engagement (time on page + how far it was
+// read), the lead form, and an opt-in consent banner. First-party only. Without
+// consent nothing persists across visits; Do-Not-Track turns the beacon off
+// entirely. Reads the API's address from <meta name="api-base"> (absent when no
+// API is set, so this does nothing then). Self-contained.
 (() => {
   const api = document.querySelector('meta[name="api-base"]')?.content?.replace(/\/+$/, "");
   if (!api) return;
-
-  // A real browser confirming this page view, with a little harmless enrichment.
-  // Fires on load (not unload), so a normal fetch is reliable and uses the
-  // server's CORS + JSON path cleanly. Suppressed under Do-Not-Track.
   const dnt = navigator.doNotTrack === "1" || window.doNotTrack === "1" || navigator.msDoNotTrack === "1";
+
+  // ---- tiny cookie + consent helpers ----
+  const getCookie = (k) => document.cookie.split("; ").find((c) => c.startsWith(`${k}=`))?.split("=")[1] || null;
+  const setCookie = (k, v, days) => {
+    const secure = location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${k}=${v}; Max-Age=${days * 86400}; Path=/; SameSite=Lax${secure}`;
+  };
+  const consent = () => { try { return localStorage.getItem("cv-consent"); } catch { return null; } };
+  const setConsent = (v) => { try { localStorage.setItem("cv-consent", v); } catch { /* private mode */ } };
+
+  // A persistent id only exists once the visitor has agreed (so they can be
+  // recognised across visits). Never created otherwise.
+  function pid() {
+    if (consent() !== "yes") return null;
+    let id = getCookie("cv_pid");
+    if (!id) {
+      id = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`).replace(/[^\w-]/g, "");
+      setCookie("cv_pid", id, 365);
+    }
+    return id;
+  }
+
+  const viewId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  // ---- page-view beacon ----
   if (!dnt) {
     try {
       fetch(`${api}/public/visits`, {
@@ -285,6 +307,8 @@
         body: JSON.stringify({
           path: location.pathname,
           referer: document.referrer || null,
+          viewId,
+          pid: pid(),
           client: {
             screen: `${screen.width}×${screen.height}`,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || null,
@@ -292,12 +316,35 @@
           },
         }),
       }).catch(() => {});
-    } catch {
-      /* a beacon never matters enough to surface */
-    }
+    } catch { /* never matters enough to surface */ }
   }
 
-  // The "stay in touch" lead form: send by fetch, no page reload.
+  // ---- engagement: time on the page and how far down it was read ----
+  if (!dnt) {
+    const start = performance.now();
+    let maxScroll = 0;
+    const onScroll = () => {
+      const h = document.documentElement.scrollHeight - innerHeight;
+      const pct = h > 0 ? Math.round(((scrollY) / h) * 100) : 100;
+      if (pct > maxScroll) maxScroll = Math.min(100, pct);
+    };
+    addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    let sent = false;
+    const flush = () => {
+      if (sent) return;
+      sent = true;
+      const body = JSON.stringify({ viewId, dwellMs: Math.round(performance.now() - start), scrollPct: maxScroll });
+      try {
+        if (navigator.sendBeacon) navigator.sendBeacon(`${api}/public/engagement`, new Blob([body], { type: "text/plain" }));
+        else fetch(`${api}/public/engagement`, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+      } catch { /* best effort */ }
+    };
+    addEventListener("visibilitychange", () => document.visibilityState === "hidden" && flush());
+    addEventListener("pagehide", flush);
+  }
+
+  // ---- lead form ----
   const form = document.querySelector("form[data-lead]");
   if (form) {
     const msg = form.querySelector(".signup-msg");
@@ -326,5 +373,14 @@
         if (btn) btn.disabled = false;
       }
     });
+  }
+
+  // ---- consent banner (opt-in; only asks when a choice hasn't been made) ----
+  const banner = document.querySelector("[data-consent]");
+  if (banner && !dnt && consent() === null) {
+    banner.hidden = false;
+    const decide = (v) => { setConsent(v); if (v === "yes") pid(); banner.hidden = true; };
+    banner.querySelector("[data-consent-yes]")?.addEventListener("click", () => decide("yes"));
+    banner.querySelector("[data-consent-no]")?.addEventListener("click", () => decide("no"));
   }
 })();
