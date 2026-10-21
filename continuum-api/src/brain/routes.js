@@ -223,13 +223,18 @@ export function createBrainRouter(opts = {}) {
     res.status(202).json(toAgent(await brain(req, "POST", "/brain/messages", { text: req.body?.text })));
   });
 
-  router.post("/projects/:id/snapshot", express.raw({ type: "application/gzip", limit: "60mb" }), async (req, res) => {
+  const SNAPSHOT_MAX = 60 * 1024 * 1024;
+  router.post("/projects/:id/snapshot", async (req, res) => {
     const projectId = String(req.params.id);
     if (!ID.test(projectId)) throw new AppError("No such project.", 404, "NOT_FOUND");
-    if (!Buffer.isBuffer(req.body) || !req.body.length) throw new AppError("Send the folder as a .tar.gz.", 400, "VALIDATION_ERROR");
+    // Stream the upload straight through to the brain (never buffer the whole .tar.gz); guard the size by its declared length
+    const len = Number(req.headers["content-length"]);
+    if (Number.isFinite(len) && len > SNAPSHOT_MAX) throw new AppError("That folder is too big (over 60 MB).", 413, "TOO_LARGE");
+    if (len === 0) throw new AppError("Send the folder as a .tar.gz.", 400, "VALIDATION_ERROR");
+    const contentType = typeof req.headers["content-type"] === "string" ? req.headers["content-type"] : "application/gzip";
     let r;
     try {
-      r = await client.send(uid(req), `/projects/${projectId}/snapshots`, req.body);
+      r = await client.send(uid(req), `/projects/${projectId}/snapshots`, req, contentType);
     } catch (e) {
       if (e instanceof BrainUnavailableError) throw new AppError(e.message, 503, "BRAIN_UNAVAILABLE");
       throw e;

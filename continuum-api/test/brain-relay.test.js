@@ -28,9 +28,13 @@ function fakeBrain() {
       return { status: 200, data: agent };
     },
     send: async (userId, path, bytes) => {
-      calls.push(`${userId} SEND ${path} ${bytes.length} bytes`);
+      // The route now streams the upload straight through, so `bytes` is a readable stream (drain it to size it)
+      let len = 0;
+      if (bytes && typeof bytes[Symbol.asyncIterator] === "function") for await (const c of bytes) len += c.length;
+      else if (bytes && typeof bytes.length === "number") len = bytes.length;
+      calls.push(`${userId} SEND ${path} ${len} bytes`);
       if (path.startsWith(`/projects/${"e".repeat(24)}`)) return { status: 404, data: { error: { code: "NOT_FOUND", message: "No such project." } } };
-      return { status: 201, data: { id: "s".repeat(24), files: 3, bytes: bytes.length } };
+      return { status: 201, data: { id: "s".repeat(24), files: 3, bytes: len } };
     },
     stream: async (_u, query) => {
       calls.push(`stream ${new URLSearchParams(query)}`);
