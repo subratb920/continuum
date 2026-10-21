@@ -47,6 +47,32 @@
 .mp-save { flex: none; }
 .mp-locked { margin: 0; }
 
+/* Budget: spend this period, a bar, and the user's own cap */
+.mp-budget { border: none; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.mp-budget legend { padding: 0; font-size: 11px; font-weight: 600; color: var(--text-muted); }
+.mp-budget-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.mp-budget-spent { font-weight: 600; color: var(--text); }
+.mp-budget-state { font-size: 11px; color: var(--text-muted); }
+.mp-budget-state.is-ok { color: var(--success); }
+.mp-budget-state.is-warn { color: var(--warning); }
+.mp-budget-state.is-exceeded { color: var(--danger); }
+.mp-budget-bar { display: block; height: 5px; border-radius: 3px; background: var(--border-strong); overflow: hidden; }
+.mp-budget-bar > span { display: block; height: 100%; background: var(--agent-core); transition: width 0.3s ease; }
+.mp-budget-bar > span.is-warn { background: var(--warning); }
+.mp-budget-bar > span.is-exceeded { background: var(--danger); }
+.mp-budget-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.mp-budget-input:focus-visible { outline: none; border-color: var(--agent-core); }
+
 @media (prefers-reduced-motion: reduce) {
-  .mp-more, .mp-chevron { transition: none; }
+  .mp-more, .mp-chevron, .mp-budget-bar > span { transition: none; }
 }

@@ -5,6 +5,7 @@ import "./ModelSettingsBar.css";
 
 /** The short name of a "provider/model" id (e.g. "anthropic/claude-x" → "claude-x"). */
 const shortName = (id) => (id ? String(id).split("/").slice(1).join("/") || String(id) : null);
+const money = (n) => `$${(Number(n) || 0).toFixed(2)}`;
 
 function Chevron({ open }) {
   return (
@@ -75,6 +76,14 @@ export default function ModelSettingsBar() {
                 <div><dt>Brain</dt><dd className="brain-mono" title={eff.brain ?? ""}>{brain}</dd></div>
                 <div><dt>Workers</dt><dd className="brain-mono" title={eff.worker ?? ""}>{worker}</dd></div>
                 {models.canSplit && <div><dt>Routing</dt><dd>{models.autoRoute ? "Auto (per task)" : "Fixed"}</dd></div>}
+                {models.budget && (
+                  <div>
+                    <dt>Budget</dt>
+                    <dd className={`msbar-budget is-${models.budget.state}`}>
+                      {money(models.budget.periodCostUsd)}{models.budget.capUsd > 0 ? ` / ${money(models.budget.capUsd)}` : " · no cap"}
+                    </dd>
+                  </div>
+                )}
               </dl>
               <button type="button" className="msbar-flip-btn" onClick={() => setFlipped(true)} aria-label="Change the models" title="Change">
                 <FlipIcon /> Change

@@ -6,6 +6,8 @@ import "./ModelPicker.css";
 const MODE_LABEL = { fast: "Fast", thorough: "Thorough" };
 const TOOLS_LABEL = { lean: "Lean", full: "Full" };
 const TIER_HINT = { small: "Routine, mechanical work", standard: "Ordinary coding", strong: "Hard reasoning" };
+const BUDGET_LABEL = { off: "No cap", ok: "On track", warn: "Near cap", exceeded: "Over cap" };
+const money = (n) => `$${(Number(n) || 0).toFixed(2)}`;
 
 /** v, or "" for the default option, from a model value that may be null. */
 const sel = (v) => v ?? "";
@@ -18,7 +20,7 @@ const sel = (v) => v ?? "";
  * Older brains that don't split models fall back to a single model select.
  */
 export default function ModelPicker({ models }) {
-  const { available, canSplit, list, settings, error, chosen, brainModel, workerModel, defaultModel, defaultBrainModel, defaultWorkerModel, tiers, tierNames, autoRoute, mode, modes, tools, toolsets, locked, changeable, refresh, save } = models;
+  const { available, canSplit, list, settings, error, chosen, brainModel, workerModel, defaultModel, defaultBrainModel, defaultWorkerModel, tiers, tierNames, autoRoute, budget, mode, modes, tools, toolsets, locked, changeable, refresh, save } = models;
 
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState(null); // built from settings on open
@@ -34,8 +36,9 @@ export default function ModelPicker({ models }) {
       tiers: { small: sel(tiers.small), standard: sel(tiers.standard), strong: sel(tiers.strong) },
       mode: mode ?? null,
       tools: tools ?? null,
+      budgetCap: budget?.userCapUsd != null ? String(budget.userCapUsd) : "",
     });
-  }, [settings, canSplit, brainModel, workerModel, chosen, tiers.small, tiers.standard, tiers.strong, mode, tools]);
+  }, [settings, canSplit, brainModel, workerModel, chosen, tiers.small, tiers.standard, tiers.strong, mode, tools, budget?.userCapUsd]);
 
   if (!available) return <p className="brain-hint mp-empty">The model settings aren't available here.</p>;
   if (!draft) return <p className="brain-hint mp-empty">Loading the models…</p>;
@@ -56,6 +59,15 @@ export default function ModelPicker({ models }) {
     }
     if (draft.mode && draft.mode !== mode) c.mode = draft.mode;
     if (draft.tools && draft.tools !== tools) c.tools = draft.tools;
+    // The spend cap: blank clears it back to the default; a number sets it (0 = no limit)
+    const capStr = (draft.budgetCap ?? "").trim();
+    const curCap = budget?.userCapUsd ?? null;
+    if (capStr === "") {
+      if (curCap !== null) c.budgetCapUsd = null;
+    } else {
+      const n = Number(capStr);
+      if (Number.isFinite(n) && n >= 0 && n !== curCap) c.budgetCapUsd = n;
+    }
     return c;
   }
   const dirty = Object.keys(changes()).length > 0;
@@ -157,6 +169,25 @@ export default function ModelPicker({ models }) {
                   </label>
                 ))}
               </div>
+            </fieldset>
+          )}
+          {budget && (
+            <fieldset className="mp-budget" disabled={disabled}>
+              <legend>Budget <span className="brain-hint">· cloud models, this {budget.period === "daily" ? "day" : "month"}</span></legend>
+              <div className="mp-budget-row">
+                <span className="mp-budget-spent">{money(budget.periodCostUsd)}{budget.capUsd > 0 ? ` of ${money(budget.capUsd)}` : ""}</span>
+                <span className={`mp-budget-state is-${budget.state}`}>{BUDGET_LABEL[budget.state] ?? budget.state}</span>
+              </div>
+              {budget.capUsd > 0 && (
+                <span className="mp-budget-bar" aria-hidden="true">
+                  <span className={`is-${budget.state}`} style={{ width: `${Math.min(100, (budget.periodCostUsd / budget.capUsd) * 100)}%` }} />
+                </span>
+              )}
+              <label className="mp-field">
+                <span className="mp-label">Your cap, USD <span className="brain-hint">· blank = default, 0 = no limit</span></span>
+                <input className="mp-budget-input" type="number" min="0" step="1" inputMode="decimal" placeholder="e.g. 20" value={draft.budgetCap ?? ""} onChange={(e) => set({ budgetCap: e.target.value })} disabled={disabled} />
+              </label>
+              <p className="brain-hint">Over the cap, new cloud‑model agents pause; local models stay free and running agents finish.</p>
             </fieldset>
           )}
         </div>

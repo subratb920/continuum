@@ -46,6 +46,9 @@
 .msbar-glance > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 8px; border-radius: 6px; background: var(--surface); }
 .msbar-glance dt { font-size: 12px; color: var(--text-muted); }
 .msbar-glance dd { margin: 0; max-width: 62%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: var(--text); }
+.msbar-budget.is-ok { color: var(--success); }
+.msbar-budget.is-warn { color: var(--warning); }
+.msbar-budget.is-exceeded { color: var(--danger); }
 
 .msbar-flip-btn {
   align-self: flex-start;
