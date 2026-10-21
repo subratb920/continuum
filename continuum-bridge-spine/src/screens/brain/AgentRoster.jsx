@@ -3,8 +3,6 @@ import { useBrain } from "../../brain/brainContext";
 import { ACTIVE_STATES, STATE_LABEL } from "../../brain/brainTypes";
 import { BRAIN_IS_MOCK } from "../../brain/brainClient";
 import { agentName, elapsed, runningModel, useNow } from "./agentDisplay";
-import ModelSettings from "./ModelSettings";
-import { useModelSettings } from "../../brain/useModelSettings";
 import "./brain.css";
 
 /**
@@ -20,7 +18,6 @@ export default function AgentRoster() {
   const [spawning, setSpawning] = useState(false);
   const [task, setTask] = useState("");
   const [goalId, setGoalId] = useState("");
-  const models = useModelSettings();
 
   if (!brain) return null;
   const { core, workers, pending, selectedId, select, stop, retry, replay, interval } = brain;
@@ -101,8 +98,6 @@ export default function AgentRoster() {
         </h2>
         {BRAIN_IS_MOCK && <span className="brain-sim" title="Simulated agents until brain-api is connected (VITE_BRAIN_MODE=live)">Simulated</span>}
       </div>
-
-      <ModelSettings models={models} />
 
       {spawning ? (
         <form className="agent-spawn" onSubmit={submit}>
