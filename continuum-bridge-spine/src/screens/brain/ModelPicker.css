@@ -1,0 +1,52 @@
+/* The compact model picker (brain + workers models, with an expand for tiers,
+   speed and tools). Used in the global Model settings header on every pane. */
+.mp { display: flex; flex-direction: column; gap: 8px; }
+.mp-empty { margin: 4px 0; }
+.mp-field { display: flex; flex-direction: column; gap: 3px; }
+.mp-label { font-size: 11px; color: var(--text-muted); }
+
+/* Automatic routing: a toggle that Continuum picks the model per task */
+.mp-auto { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; background: var(--surface); cursor: pointer; }
+.mp-auto input { flex: none; }
+.mp-auto-text { font-weight: 600; color: var(--text); }
+.mp-auto-text .brain-hint { font-weight: 400; }
+
+/* The extra options open below, smoothly, pushing the cards under it down */
+.mp-more { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease; }
+.mp-more.is-open { grid-template-rows: 1fr; }
+.mp-more-inner { overflow: hidden; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.mp-more.is-open .mp-more-inner { padding-top: 2px; }
+
+.mp-tiers, .mp-choices { border: none; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.mp-tiers legend, .mp-choices legend { padding: 0; font-size: 11px; font-weight: 600; color: var(--text-muted); }
+.mp-tier .mp-label { color: var(--text-2); }
+.mp-segs { display: flex; gap: 6px; }
+.mp-seg {
+  position: relative;
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+.mp-seg input { position: absolute; opacity: 0; width: 0; height: 0; }
+.mp-seg.is-on { border-color: var(--agent-core); color: var(--text); background: color-mix(in srgb, var(--agent-core) 12%, transparent); }
+
+.mp-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
+.mp-expand { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px; border: none; background: none; color: var(--text-muted); font: inherit; font-size: 12px; cursor: pointer; }
+.mp-expand:hover,
+.mp-expand:focus-visible { color: var(--text); }
+.mp-chevron { transition: transform 0.2s ease; }
+.mp-chevron.is-up { transform: rotate(180deg); }
+.mp-save { flex: none; }
+.mp-locked { margin: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mp-more, .mp-chevron { transition: none; }
+}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import ProjectList from "../components/ProjectList";
 import BridgeSpine from "../components/BridgeSpine";
+import ModelSettingsBar from "../components/ModelSettingsBar";
 import { usePanels } from "./PanelsContext";
 import { CreatePane, DeployPane } from "./ViewPanes";
 
@@ -118,22 +119,25 @@ export default function ThreePanelLayout({
   return (
     <div className={classes} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
       <aside className="left" aria-label={leftLabel} id="console-projects" inert={away(0)}>
-        {leftPane ?? (
-        <ProjectList
-          projects={projects}
-          activeProject={activeProject}
-          selectedProject={selectedProject}
-          onSelectProject={(p) => {
-            onSelectProject(p);
-            close();
-          }}
-          // Each opens a window: the drawer gets out of its way
-          onCreateProject={() => (close(), onCreateProject())}
-          onActivateProject={(project) => (close(), onActivateProject(project))}
-          onEditProject={(project) => (close(), onEditProject(project))}
-          onDeleteProject={(project) => (close(), onDeleteProject(project))}
-        />
-        )}
+        <ModelSettingsBar />
+        <div className="left-content">
+          {leftPane ?? (
+          <ProjectList
+            projects={projects}
+            activeProject={activeProject}
+            selectedProject={selectedProject}
+            onSelectProject={(p) => {
+              onSelectProject(p);
+              close();
+            }}
+            // Each opens a window: the drawer gets out of its way
+            onCreateProject={() => (close(), onCreateProject())}
+            onActivateProject={(project) => (close(), onActivateProject(project))}
+            onEditProject={(project) => (close(), onEditProject(project))}
+            onDeleteProject={(project) => (close(), onDeleteProject(project))}
+          />
+          )}
+        </div>
       </aside>
 
       <main className="center" inert={away(1)}>

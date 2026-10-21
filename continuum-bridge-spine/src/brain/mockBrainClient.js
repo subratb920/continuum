@@ -65,12 +65,20 @@ export function createMockBrainClient({ speed = 1 } = {}) {
     ],
   };
   const DEFAULT_MODEL = "ollama/qwen3:4b";
-  const choice = { model: null, mode: "fast" }; // one model for the brain and every worker, and how fast they run
+  const TIER_NAMES = ["small", "standard", "strong"];
+  // The brain's and workers' own models, optional per-tier worker models, automatic routing, speed and tools
+  const choice = { brainModel: null, workerModel: null, tiers: {}, autoRoute: true, mode: "fast", tools: "lean" };
   const MODES = [
     { id: "fast", words: "Quicker replies, lighter on your computer: a smaller context, and no thinking before each answer where the model allows it." },
     { id: "thorough", words: "More room and reasoning, slower: the biggest context and the model's own thinking." },
   ];
-  const oneModel = () => choice.model ?? DEFAULT_MODEL;
+  const TOOLSETS = [
+    { id: "lean", words: "About 3,200 tokens before each answer: no sub-agents, to-do list or web fetch. Faster on a local model." },
+    { id: "full", words: "About 4,800 tokens before each answer: every tool, including sub-agents, a to-do list and web fetch." },
+  ];
+  const brainModelOf = () => choice.brainModel ?? DEFAULT_MODEL;
+  const workerModelOf = () => choice.workerModel ?? choice.brainModel ?? DEFAULT_MODEL;
+  const oneModel = () => brainModelOf();
 
   function addAgent(kind, task, { repo = null, goal = null, retryOf = null, model = null } = {}) {
     const id = `a${String(++agentSeq).padStart(4, "0")}`;
@@ -232,26 +240,62 @@ export function createMockBrainClient({ speed = 1 } = {}) {
 
     async settings() {
       const awake = [...agents.values()].some((a) => ["queued", "starting", "working", "stopping"].includes(a.state)) || waiting.size > 0;
-      return { model: oneModel(), chosen: choice.model, defaults: { model: DEFAULT_MODEL, mode: "fast" }, mode: choice.mode, modes: MODES, changeable: !awake, locked: awake ? "Agents are awake." : null };
+      return {
+        model: brainModelOf(),
+        chosen: choice.brainModel ?? choice.workerModel ?? null,
+        brainModel: choice.brainModel ?? null,
+        workerModel: choice.workerModel ?? null,
+        effective: { brain: brainModelOf(), worker: workerModelOf() },
+        tiers: { ...choice.tiers },
+        tierNames: TIER_NAMES,
+        autoRoute: choice.autoRoute !== false,
+        defaults: { model: DEFAULT_MODEL, brain: DEFAULT_MODEL, worker: DEFAULT_MODEL, mode: "fast" },
+        mode: choice.mode,
+        modes: MODES,
+        tools: choice.tools,
+        toolsets: TOOLSETS,
+        localHelpers: choice.localHelpers === true,
+        // Budget is off in the mock (the readout shows "off"); the real brain reports spend here
+        budget: { capUsd: 0, period: "monthly", periodCostUsd: 0, remaining: null, state: "off" },
+        changeable: !awake,
+        locked: awake ? "Agents are awake." : null,
+      };
     },
 
     /**
-     * The one model (as brain-api): only while nothing is awake and nothing
-     * waits on you; a model it lists, that can use tools; idle agents stop.
+     * The models (as brain-api): `model` sets the brain and workers together;
+     * brainModel/workerModel/tiers set each; autoRoute and localHelpers are
+     * toggles (no lock). Model changes need nothing awake; idle agents stop.
      */
-    async saveSettings({ model, mode }) {
+    async saveSettings({ model, brainModel, workerModel, tiers, autoRoute, localHelpers, mode, tools } = {}) {
+      // Toggles change nothing running: no lock
+      if (typeof autoRoute === "boolean") choice.autoRoute = autoRoute;
+      if (typeof localHelpers === "boolean") choice.localHelpers = localHelpers;
+      const modelChange = model !== undefined || brainModel !== undefined || workerModel !== undefined || tiers !== undefined || mode !== undefined || tools !== undefined;
+      if (!modelChange) return { ...(await this.settings()), stopped: 0 };
+
       const awake = [...agents.values()].filter((a) => ["queued", "starting", "working", "stopping"].includes(a.state)).length;
       if (awake) throw new Error(`${awake} ${awake === 1 ? "agent is" : "agents are"} awake. Change the model once everything is idle.`);
       if (waiting.size) throw new Error(`${waiting.size} ${waiting.size === 1 ? "request waits" : "requests wait"} for your answer. Answer them first, then change the model.`);
-      const m = model && MODELS.models.find((x) => x.id === model);
-      if (model && !m) throw new Error(`${model} isn't available.`);
-      if (m && m.tools === false) throw new Error(`${m.name} can't use tools, and agents need them.`);
+      const ok = (v, what) => {
+        if (v === undefined || v === null || v === "") return;
+        const m = MODELS.models.find((x) => x.id === v);
+        if (!m) throw new Error(`${v} isn't available.`);
+        if (m.tools === false) throw new Error(`${m.name} can't use tools, and agents need them (${what}).`);
+      };
+      [model, brainModel, workerModel, ...(tiers ? Object.values(tiers) : [])].forEach((v) => ok(v, "model"));
       if (mode !== undefined && !MODES.some((x) => x.id === mode)) throw new Error("mode must be fast or thorough.");
-      const before = `${oneModel()} ${choice.mode}`;
-      if (model !== undefined) choice.model = model || null;
+      if (tools !== undefined && !TOOLSETS.some((x) => x.id === tools)) throw new Error("tools must be lean or full.");
+      const before = JSON.stringify([brainModelOf(), workerModelOf(), choice.tiers, choice.mode, choice.tools]);
+      const put = (v) => (v === null || v === "" ? null : v);
+      if (model !== undefined) choice.brainModel = choice.workerModel = put(model);
+      if (brainModel !== undefined) choice.brainModel = put(brainModel);
+      if (workerModel !== undefined) choice.workerModel = put(workerModel);
+      if (tiers) for (const [k, v] of Object.entries(tiers)) { if (put(v)) choice.tiers[k] = v; else delete choice.tiers[k]; }
       if (mode !== undefined) choice.mode = mode;
+      if (tools !== undefined) choice.tools = tools;
       let stopped = 0;
-      if (`${oneModel()} ${choice.mode}` !== before) {
+      if (JSON.stringify([brainModelOf(), workerModelOf(), choice.tiers, choice.mode, choice.tools]) !== before) {
         for (const a of agents.values()) {
           if (a.state !== "idle") continue;
           this.stop(a._id);

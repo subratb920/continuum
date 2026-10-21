@@ -1,35 +1,36 @@
 import { useCallback, useEffect, useState } from "react";
-import { useBrain } from "./brainContext";
+import { getBrainClient } from "./brainClient";
 
 /**
- * The one model your brain and every worker run on (brain-api's /settings:
- * your choice, else the server's default), the models available (/models),
- * and whether it can change now: only while nothing is awake and nothing
- * waits on you (the server says so; the screen also sees it at once).
- * refresh() asks again (a provider just set up, a model just pulled).
+ * The models the brain and workers run on (brain-api's /settings: your choice,
+ * else the server's default), the models available (/models), optional per-tier
+ * worker models and automatic routing, and whether it can change now: only
+ * while nothing is awake and nothing waits on you (the server says so).
+ * refresh() asks again. It talks to the brain client directly (not the brain
+ * provider), so it works in every pane, on every tab.
  */
 export function useModelSettings() {
-  const brain = useBrain();
+  const client = getBrainClient();
   const [state, setState] = useState({ list: null, settings: null, error: "" });
-  const can = !!(brain?.models && brain?.settings);
+  const can = !!(client?.settings && client?.models);
 
   // Each on its own: the model in use shows at once; the list (a cloud provider's catalogue) can take longer
   const refresh = useCallback(() => {
     if (!can) return;
     const failed = (err) => setState((s) => ({ ...s, error: err.message || "The models couldn't be loaded." }));
-    brain.settings().then((settings) => setState((s) => ({ ...s, settings, error: "" })), failed);
-    brain.models().then((list) => setState((s) => ({ ...s, list })), failed);
-  }, [brain, can]);
+    client.settings().then((settings) => setState((s) => ({ ...s, settings, error: "" })), failed);
+    client.models().then((list) => setState((s) => ({ ...s, list })), failed);
+  }, [client, can]);
   useEffect(refresh, [refresh]);
 
-  /** Changes the one model (null: back to the server's default) and/or the speed (fast | thorough). Throws when refused. */
+  /** Changes the models and/or speed/tools/routing. Throws when refused. */
   const save = useCallback(
     async (changes) => {
-      const settings = await brain.saveSettings(changes);
+      const settings = await client.saveSettings(changes);
       setState((s) => ({ ...s, settings }));
       return settings;
     },
-    [brain]
+    [client]
   );
 
   const { settings } = state;
@@ -53,19 +54,21 @@ export function useModelSettings() {
     /** Optional per-tier worker models the brain picks from, and the tier names. */
     tiers: settings?.tiers ?? {},
     tierNames: settings?.tierNames ?? [],
+    /** Whether Continuum picks a worker's tier per task (on unless the server says false). */
+    autoRoute: settings ? settings.autoRoute !== false : true,
     /** The models actually used once defaults are filled in ({ brain, worker }), when the server reports them. */
     effective: settings?.effective ?? null,
     /** Model spend this period and where it stands (state: off | ok | warn | exceeded), when the server reports it. */
     budget: settings?.budget ?? null,
-    /** Why the model can't change right now (an agent awake, a request waiting), or null. */
-    locked: settings?.locked ?? null,
-    changeable: settings ? settings.changeable !== false : false,
     /** fast or thorough (a brain from before speeds: null), and what each means. */
     mode: settings?.mode ?? null,
     modes: settings?.modes ?? [],
     /** lean or full (a brain from before: null), and what each costs. */
     tools: settings?.tools ?? null,
     toolsets: settings?.toolsets ?? [],
+    /** Why the model can't change right now (an agent awake, a request waiting), or null. */
+    locked: settings?.locked ?? null,
+    changeable: settings ? settings.changeable !== false : false,
     refresh,
     save,
   };

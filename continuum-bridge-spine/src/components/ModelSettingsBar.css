@@ -1,0 +1,72 @@
+/* The global "Model settings" header at the top of every left pane: a clickable
+   header that opens a small card (the models in use), which flips to the picker. */
+.msbar {
+  flex: none;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface-subtle);
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.msbar-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.msbar-head:hover { background: var(--surface); }
+.msbar-title { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.msbar-hint { margin-left: auto; min-width: 0; font-size: 12px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msbar-chevron { flex: none; color: var(--text-muted); transition: transform 0.2s ease; }
+.msbar-chevron.is-open { transform: rotate(180deg); }
+
+/* Opens smoothly, pushing the pane's content below it down */
+.msbar-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease; }
+.msbar.is-open .msbar-body { grid-template-rows: 1fr; }
+.msbar-body-inner { overflow: hidden; min-height: 0; perspective: 1400px; }
+
+/* The flip card: front = the models in use, back = the picker */
+.msbar-flip { position: relative; margin: 0 12px 12px; transform-style: preserve-3d; transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1), height 0.35s ease; }
+.msbar-flip.is-flipped { transform: rotateY(180deg); }
+.msbar-face { position: absolute; top: 0; left: 0; right: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.msbar-back { transform: rotateY(180deg); }
+
+.msbar-front { display: flex; flex-direction: column; gap: 8px; }
+.msbar-glance { margin: 0; display: grid; gap: 4px; }
+.msbar-glance > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 8px; border-radius: 6px; background: var(--surface); }
+.msbar-glance dt { font-size: 12px; color: var(--text-muted); }
+.msbar-glance dd { margin: 0; max-width: 62%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: var(--text); }
+
+.msbar-flip-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.msbar-flip-btn:hover,
+.msbar-flip-btn:focus-visible { color: var(--text); border-color: var(--border-strong); }
+
+.msbar-back-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.msbar-back-title { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .msbar-body, .msbar-flip, .msbar-chevron { transition: none; }
+}

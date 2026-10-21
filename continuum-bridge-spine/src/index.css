@@ -25,6 +25,10 @@ body {
   color: var(--text-muted);
 }
 
+/* The left pane stacks the global Model settings header above its scrolling content */
+.left { display: flex; flex-direction: column; }
+.left-content { flex: 1 1 auto; min-height: 0; overflow: auto; }
+
 .center {
   padding: 40px;
 }

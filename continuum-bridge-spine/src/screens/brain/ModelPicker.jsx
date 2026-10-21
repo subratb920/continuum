@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ModelSelect } from "./ModelSettings";
 import "./brain.css";
+import "./ModelPicker.css";
 
 const MODE_LABEL = { fast: "Fast", thorough: "Thorough" };
 const TOOLS_LABEL = { lean: "Lean", full: "Full" };
@@ -17,7 +18,7 @@ const sel = (v) => v ?? "";
  * Older brains that don't split models fall back to a single model select.
  */
 export default function ModelPicker({ models }) {
-  const { available, canSplit, list, settings, error, chosen, brainModel, workerModel, defaultModel, defaultBrainModel, defaultWorkerModel, tiers, tierNames, mode, modes, tools, toolsets, locked, changeable, refresh, save } = models;
+  const { available, canSplit, list, settings, error, chosen, brainModel, workerModel, defaultModel, defaultBrainModel, defaultWorkerModel, tiers, tierNames, autoRoute, mode, modes, tools, toolsets, locked, changeable, refresh, save } = models;
 
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState(null); // built from settings on open
@@ -78,8 +79,28 @@ export default function ModelPicker({ models }) {
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
   const setTier = (k, v) => setDraft((d) => ({ ...d, tiers: { ...d.tiers, [k]: v } }));
 
+  // Automatic routing is a toggle: it saves on its own (nothing running changes)
+  async function toggleAuto(on) {
+    setSaving(true);
+    setMessage(null);
+    try {
+      await save({ autoRoute: on });
+      setMessage({ ok: true, text: on ? "Continuum will choose each worker's model from your prompt and goals." : "Workers use your workers model; Continuum won't vary it." });
+    } catch (err) {
+      setMessage({ ok: false, text: err.message || "That couldn't be saved." });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <form className="mp" onSubmit={submit}>
+      {canSplit && (
+        <label className="mp-auto" title="Continuum picks each worker's tier from your prompt and the session goals">
+          <input type="checkbox" checked={autoRoute !== false} disabled={saving || !changeable} onChange={(e) => toggleAuto(e.target.checked)} />
+          <span className="mp-auto-text">Auto‑route<span className="brain-hint"> · Continuum picks the model per task</span></span>
+        </label>
+      )}
       {canSplit ? (
         <>
           <label className="mp-field">
