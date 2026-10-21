@@ -74,6 +74,36 @@ export function bridgeView(b) {
 export function createServiceRouter(opts = {}) {
   const router = express.Router();
   const db = () => opts.db ?? getDB();
+  // Injected by app.js (the directory's recordVisit); absent in unit tests → /visits is a no-op.
+  const recordVisit = opts.recordVisit ?? null;
+
+  // Service token only (no per-user), checked in constant time.
+  function requireServiceToken(req, res, next) {
+    const expected = opts.token ?? process.env.CONTINUUM_SERVICE_TOKEN;
+    if (!expected) return res.status(503).json({ error: "Service access isn't set up here." });
+    const header = req.get("authorization") ?? "";
+    const given = header.startsWith("Bearer ") ? header.slice(7) : "";
+    if (!given || !sameSecret(given, expected)) return res.status(401).json({ error: "Not allowed." });
+    res.set("Cache-Control", "no-store");
+    next();
+  }
+
+  // Public-site page views, forwarded by continuum-site in batches (server to
+  // server; no user). Recorded as anonymous analytics in the Directory. Defined
+  // before the per-user guard below, so it needs no X-Continuum-User.
+  router.post("/visits", requireServiceToken, async (req, res) => {
+    if (!recordVisit) return res.status(503).json({ error: "Visit recording isn't set up here." });
+    const items = Array.isArray(req.body?.visits) ? req.body.visits.slice(0, 500) : [];
+    let saved = 0;
+    for (const v of items) {
+      try {
+        if (await recordVisit({ ...v, via: "server" })) saved++;
+      } catch (err) {
+        req.log?.warn?.({ err: err.message }, "Visit not recorded"); // one bad item never fails the batch
+      }
+    }
+    res.json({ saved });
+  });
 
   router.use((req, res, next) => {
     const expected = opts.token ?? process.env.CONTINUUM_SERVICE_TOKEN;

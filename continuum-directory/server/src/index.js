@@ -62,6 +62,7 @@ export function createDirectory(cfg, { log, hooks = {} } = {}) {
       adminSetupOpen: users.adminSetupOpen,
       prepareAdminSetup: users.prepareAdminSetup,
       recordLogin: activity.recordLogin,
+      recordVisit: activity.recordVisit,
       attachClient: activity.attachClient,
       exportUsage: activity.exportUsage,
       importUsage: activity.importUsage,

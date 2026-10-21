@@ -61,6 +61,7 @@
     {
       "name": "continuum-site-app",
       "path": "continuum-site",
+      "clientInfo": true,
       "port": 45195,
       "scale": {
         "min": 1,

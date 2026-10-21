@@ -18,6 +18,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 const trim = (u) => u.replace(/\/+$/, "");
 export const SITE_URL = trim(process.env.SITE_URL || "https://continuum-console.one");
 export const APP_URL = trim(process.env.APP_URL || "https://app.continuum-console.one");
+// Continuum's API, for the visitor beacon and the lead form (both under /public).
+// Empty: the beacon and form are left out and nothing is sent.
+export const API_URL = process.env.API_URL ? trim(process.env.API_URL) : "";
 const OUT = join(here, "dist");
 const TODAY = new Date().toISOString().slice(0, 10);
 const YEAR = new Date().getFullYear();
@@ -151,7 +154,23 @@ ${noindex ? '<meta name="robots" content="noindex">' : `<link rel="canonical" hr
 <link rel="icon" type="image/svg+xml" href="/logo.svg">
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="stylesheet" href="${ASSET.css}">
-<script src="${ASSET.js}" defer></script>`;
+${API_URL ? `<meta name="api-base" content="${esc(API_URL)}">\n` : ""}<script src="${ASSET.js}" defer></script>`;
+}
+
+/** A small "stay in touch" lead form (only when an API is configured). Submitted by site.js via fetch; no page reload. */
+function leadForm() {
+  if (!API_URL) return "";
+  return `<section class="signup" aria-labelledby="signup-h">
+  <h2 id="signup-h">Stay in touch</h2>
+  <p>Leave your email and we'll reach out — no spam.</p>
+  <form class="signup-form" data-lead novalidate>
+    <label class="visually-hidden" for="lead-email">Email</label>
+    <input id="lead-email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@company.com" required>
+    <input class="hp" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <button type="submit" class="btn">Keep me posted</button>
+    <p class="signup-msg" role="status" aria-live="polite"></p>
+  </form>
+</section>`;
 }
 
 function shell(page, main) {
@@ -173,6 +192,7 @@ ${page.noindex ? "" : structuredData(page)}
 <main id="main">
 ${main}
 </main>
+${page.noindex ? "" : leadForm()}
 <footer class="foot">
   <div class="foot-brand"><a class="brand" href="/">${LOGO(22, "lf")}<span>continuum</span></a><p>${esc(SITE.tagline)}.</p></div>
   <nav class="foot-nav" aria-label="All topics">${footerNav(page.path)}</nav>

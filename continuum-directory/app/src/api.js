@@ -76,4 +76,8 @@ export const adminApi = {
   // Contact us's callback requests (kept by Continuum)
   callbacks: (status = "") => request("GET", `/directory/admin/callbacks?${q({ status })}`),
   markCallback: (id, status) => request("PATCH", `/directory/admin/callbacks/${id}`, { status }),
+  // Public-site visitor analytics (anonymous) and the leads it captured
+  visits: ({ from = "", to = "" } = {}) => request("GET", `/directory/admin/visits?${q({ from, to })}`),
+  leads: (status = "") => request("GET", `/directory/admin/leads?${q({ status })}`),
+  markLead: (id, status) => request("PATCH", `/directory/admin/leads/${id}`, { status }),
 };

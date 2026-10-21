@@ -19,6 +19,9 @@ export function AdminProvider({ children, section = "users", onSection }) {
   const [settings, setSettings] = useState(null);
   const [signins, setSignins] = useState(null);
   const [changes, setChanges] = useState(null);
+  const [visits, setVisits] = useState(null);
+  const [leads, setLeads] = useState(null);
+  const [visitDays, setVisitDays] = useState(30);
   const [selected, setSelected] = useState(null); // { kind: "user" | "role", id }
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true); // until the first list arrives
@@ -55,7 +58,13 @@ export function AdminProvider({ children, section = "users", onSection }) {
     if (!open) return;
     if (section === "signins") adminApi.activity().then(setSignins).catch(fail);
     if (section === "changes") adminApi.changes().then(setChanges).catch(fail);
-  }, [open, section]);
+    if (section === "visitors") {
+      const from = new Date(Date.now() - visitDays * 86_400_000).toISOString();
+      setVisits(null);
+      adminApi.visits({ from }).then(setVisits).catch(fail);
+      adminApi.leads().then(setLeads).catch(fail);
+    }
+  }, [open, section, visitDays]);
 
   const value = useMemo(
     () => ({
@@ -70,6 +79,15 @@ export function AdminProvider({ children, section = "users", onSection }) {
       settings,
       signins,
       changes,
+      visits,
+      leads,
+      visitDays,
+      setVisitDays,
+      async markLead(id, status) {
+        const r = await adminApi.markLead(id, status);
+        setLeads((cur) => (cur ? { ...cur, items: cur.items.map((l) => (l.id === id ? r : l)), open: cur.items.filter((l) => (l.id === id ? r.status : l.status) === "new").length } : cur));
+        return r;
+      },
       selected,
       select: (kind, id) => setSelected(kind ? { kind, id } : null),
       error,
@@ -119,7 +137,7 @@ export function AdminProvider({ children, section = "users", onSection }) {
         await loadRoles();
       },
     }),
-    [open, section, onSection, query, users, roles, features, settings, signins, changes, selected, error, loading, loadUsers, loadRoles]
+    [open, section, onSection, query, users, roles, features, settings, signins, changes, visits, leads, visitDays, selected, error, loading, loadUsers, loadRoles]
   );
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;

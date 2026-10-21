@@ -10,8 +10,10 @@ export function directoryConfigFromEnv(env = process.env) {
     // In the cloud the database is in the same cluster: no TLS unless asked
     ssl: env.DIRECTORY_DATABASE_SSL === "true",
     poolSize: n(env.DIRECTORY_POOL_SIZE, 10),
-    // Sign-ins and app use are kept this many days
+    // Sign-ins, app use and page views are kept this many days
     historyDays: n(env.LOGIN_HISTORY_DAYS, 180),
+    // Salts the day-scoped hash that de-dups visitors (set it so it's stable across API copies)
+    hashSecret: env.DIRECTORY_HASH_SECRET || "",
     // A user's access is cached this long per API copy
     accessCacheMs: n(env.DIRECTORY_ACCESS_CACHE_MS, 60_000),
   };

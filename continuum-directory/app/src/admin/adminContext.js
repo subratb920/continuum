@@ -12,6 +12,7 @@ export const ADMIN_SECTIONS = [
   ["users", "Users", "👥"],
   ["roles", "Roles", "🛡"],
   ["signins", "Sign-ins", "🔑"],
+  ["visitors", "Visitors", "📈"],
   ["changes", "Admin changes", "📝"],
   ["callbacks", "Callback requests", "☎"],
   ["sync", "Production sync", "⇅"],

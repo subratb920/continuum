@@ -9,13 +9,15 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join, relative, sep } from "node:path";
 import { gzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
-import { SITE_URL } from "./build.mjs";
+import { API_URL, SITE_URL } from "./build.mjs";
 
 const DIST = fileURLToPath(new URL("./dist", import.meta.url));
 const PORT = Number(process.env.PORT) || 45195;
 const SITE_HOST = new URL(SITE_URL).host;
 // The same domain's other name (www. added or taken away): sent on to SITE_URL
 const OTHER_HOST = SITE_HOST.startsWith("www.") ? SITE_HOST.slice(4) : `www.${SITE_HOST}`;
+// Continuum's API origin, so the browser may send the beacon and the lead form there (CSP connect-src)
+const API_ORIGIN = API_URL ? new URL(API_URL).origin : "";
 
 const TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -48,7 +50,8 @@ const FILES = load(DIST);
 const HEADERS = {
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
-  "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  // connect-src lets the first-party beacon and lead form reach Continuum's API (when one is configured)
+  "Content-Security-Policy": `default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'${API_ORIGIN ? ` ${API_ORIGIN}` : ""}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
 };
 
 function send(req, res, status, file) {
@@ -66,6 +69,57 @@ function send(req, res, status, file) {
 
 const redirect = (res, to) => (res.writeHead(301, { ...HEADERS, Location: to }), res.end());
 
+// ── Visit recording ─────────────────────────────────────────────
+// Every real page view is buffered and sent to Continuum's API in a batch every
+// FLUSH_MS (never on the request's own path, never blocking the response). The
+// API records it as anonymous analytics. Off unless an API and a service token
+// are set. The buffer is capped so a long API outage can't grow it without end.
+const SERVICE_TOKEN = process.env.CONTINUUM_SERVICE_TOKEN || "";
+const RECORDING = Boolean(API_ORIGIN && SERVICE_TOKEN);
+const FLUSH_MS = 15_000;
+const MAX_BUFFER = 1000;
+let buffer = [];
+
+/** The visitor's own address (the first in X-Forwarded-For; the load balancer appends the rest). */
+function clientIp(req) {
+  const xff = String(req.headers["x-forwarded-for"] ?? "").split(",")[0].trim();
+  return xff || req.socket?.remoteAddress || null;
+}
+
+function recordVisit(req, pathname) {
+  if (!RECORDING || buffer.length >= MAX_BUFFER) return;
+  buffer.push({
+    path: pathname,
+    referer: req.headers["referer"] ?? req.headers["referrer"] ?? null,
+    userAgent: req.headers["user-agent"] ?? null,
+    ip: clientIp(req),
+    host: req.headers.host ?? SITE_HOST,
+    region: req.headers["x-client-region"] ?? null,
+    city: req.headers["x-client-city"] ?? null,
+  });
+}
+
+async function flush() {
+  if (!buffer.length) return;
+  const visits = buffer;
+  buffer = [];
+  try {
+    await fetch(`${API_URL}/service/visits`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_TOKEN}` },
+      body: JSON.stringify({ visits }),
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch {
+    // A flush that fails drops this batch rather than blocking the site; analytics are best-effort.
+  }
+}
+
+if (RECORDING) {
+  const timer = setInterval(() => flush(), FLUSH_MS);
+  timer.unref?.();
+}
+
 export const server = createServer((req, res) => {
   if (req.method !== "GET" && req.method !== "HEAD") return res.writeHead(405, { Allow: "GET, HEAD" }), res.end();
   const host = (req.headers.host ?? "").toLowerCase();
@@ -78,7 +132,10 @@ export const server = createServer((req, res) => {
   if (pathname.length > 1 && pathname.endsWith("/")) return redirect(res, `${pathname.replace(/\/+$/, "")}${search}`);
   if (pathname.endsWith("/index.html")) return redirect(res, `${pathname.slice(0, -"index.html".length).replace(/(.)\/$/, "$1")}${search}`);
   const file = FILES.get(pathname) ?? FILES.get(pathname === "/" ? "/index.html" : `${pathname}/index.html`);
-  if (file) return send(req, res, 200, file);
+  if (file) {
+    if (req.method === "GET" && file.html) recordVisit(req, pathname); // real page views only (not assets, HEAD, redirects)
+    return send(req, res, 200, file);
+  }
   send(req, res, 404, FILES.get("/404.html"));
 });
 

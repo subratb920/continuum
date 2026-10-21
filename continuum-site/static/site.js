@@ -263,3 +263,68 @@
     });
   }
 })();
+
+// Visitor beacon + lead form. First-party, no cookies; honors Do-Not-Track for
+// the beacon. Reads the API's address from <meta name="api-base"> (left out
+// when no API is configured, so this does nothing then). Self-contained so it
+// runs whether or not the motion above did.
+(() => {
+  const api = document.querySelector('meta[name="api-base"]')?.content?.replace(/\/+$/, "");
+  if (!api) return;
+
+  // A real browser confirming this page view, with a little harmless enrichment.
+  // Fires on load (not unload), so a normal fetch is reliable and uses the
+  // server's CORS + JSON path cleanly. Suppressed under Do-Not-Track.
+  const dnt = navigator.doNotTrack === "1" || window.doNotTrack === "1" || navigator.msDoNotTrack === "1";
+  if (!dnt) {
+    try {
+      fetch(`${api}/public/visits`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({
+          path: location.pathname,
+          referer: document.referrer || null,
+          client: {
+            screen: `${screen.width}×${screen.height}`,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || null,
+            language: navigator.language || null,
+          },
+        }),
+      }).catch(() => {});
+    } catch {
+      /* a beacon never matters enough to surface */
+    }
+  }
+
+  // The "stay in touch" lead form: send by fetch, no page reload.
+  const form = document.querySelector("form[data-lead]");
+  if (form) {
+    const msg = form.querySelector(".signup-msg");
+    const btn = form.querySelector("button");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = form.email?.value.trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+        if (msg) msg.textContent = "Enter an email we can reach you at.";
+        return;
+      }
+      if (btn) btn.disabled = true;
+      if (msg) msg.textContent = "Sending…";
+      try {
+        const r = await fetch(`${api}/public/leads`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, company: form.company?.value || "", page: location.pathname }),
+        });
+        if (!r.ok) throw new Error();
+        form.reset();
+        if (msg) msg.textContent = "Thanks — we'll be in touch.";
+      } catch {
+        if (msg) msg.textContent = "That didn't go through. Please try again.";
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+  }
+})();

@@ -4,6 +4,7 @@ import ProductionSync from "./ProductionSync";
 import "./admin.css";
 
 const Callbacks = lazy(() => import("./Callbacks"));
+const Visitors = lazy(() => import("./Visitors"));
 
 /**
  * Admin (centre): the section showing — Users (search, filters, the list),
@@ -23,6 +24,11 @@ export default function AdminMain() {
       {admin.section === "users" && <Users />}
       {admin.section === "roles" && <Roles />}
       {admin.section === "signins" && <SignIns />}
+      {admin.section === "visitors" && (
+        <Suspense fallback={<p className="admin-muted">Loading…</p>}>
+          <Visitors />
+        </Suspense>
+      )}
       {admin.section === "changes" && <Changes />}
       {admin.section === "sync" && <ProductionSync />}
       {admin.section === "callbacks" && (

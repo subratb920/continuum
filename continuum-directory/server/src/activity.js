@@ -8,7 +8,55 @@
 // device. Kept historyDays (180 unless set), then removed by sweep(). Admins
 // only see it.
 
+import { createHash, randomBytes } from "node:crypto";
+
 const DAY_MS = 86_400_000;
+
+// A per-process fallback salt, used only when no DIRECTORY_HASH_SECRET is set.
+const PROC_SALT = randomBytes(16).toString("hex");
+
+/** A short, day-scoped hash (so visitors can be de-duped within a day but not linked across days). */
+function dailyHash(secret, day, ...parts) {
+  return createHash("sha256").update(`${secret}:${day}:${parts.join("|")}`).digest("hex").slice(0, 32);
+}
+
+const SEARCH_HOSTS = /(^|\.)(google|bing|yahoo|duckduckgo|yandex|baidu|ecosia|brave|startpage|qwant)\./i;
+const SOCIAL_HOSTS = /(^|\.)(t\.co|twitter|x\.com|facebook|fb\.com|fb\.me|linkedin|lnkd\.in|reddit|youtube|instagram|pinterest|t\.me|whatsapp|news\.ycombinator|github)\b/i;
+
+/** The host a referrer came from (no www), or null for none/unparseable. */
+export function refererHost(referer) {
+  if (!referer) return null;
+  try {
+    return new URL(String(referer)).hostname.replace(/^www\./, "").slice(0, 120) || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Where a visit came from: direct (none or same site), search, social, or another site. */
+export function visitSource(refHost, selfHost) {
+  if (!refHost) return "direct";
+  const self = String(selfHost ?? "").replace(/^www\./, "").toLowerCase();
+  if (self && refHost.toLowerCase() === self) return "direct";
+  if (SEARCH_HOSTS.test(refHost)) return "search";
+  if (SOCIAL_HOSTS.test(refHost)) return "social";
+  return "referral";
+}
+
+/** A request path on its own: no host, query or fragment; capped. */
+export function cleanPath(p) {
+  let s = String(p ?? "");
+  if (!s.startsWith("/")) {
+    try {
+      s = new URL(s).pathname;
+    } catch {
+      return null;
+    }
+  }
+  s = s.split(/[?#]/)[0];
+  if (!s) return null;
+  return s.slice(0, 200);
+}
 
 /**
  * Browser, operating system and kind of device from a User-Agent (enough to
@@ -233,11 +281,84 @@ export function createActivity({ pool, cfg }) {
     return { used, sawUser, flush, pending: () => uses.size + seen.size };
   }
 
-  /** Sign-ins and app use past their days go (Postgres keeps them otherwise). */
+  /**
+   * A public-site page view — the anonymous sibling of a sign-in. Nobody is
+   * identified: the IP is used only to derive a daily-salted hash (rough daily
+   * uniques, not linkable across days) and is never stored. `via` is 'server'
+   * (every request, forwarded by continuum-site) or 'client' (an enrichment
+   * beacon from a real browser). Coarse geo (region/city) only when the load
+   * balancer passes it. Returns null for a path we won't record.
+   */
+  async function recordVisit(v = {}, now = new Date()) {
+    const path = cleanPath(v.path);
+    if (!path) return null;
+    const ua = String(v.userAgent ?? "");
+    const { browser, os, device } = parseUserAgent(ua);
+    const bot = device === "bot" || device === "program";
+    const refHost = refererHost(v.referer);
+    const source = visitSource(refHost, v.host);
+    const day = dayOf(now);
+    const secret = cfg.hashSecret || PROC_SALT;
+    const ip = v.ip ? String(v.ip) : null;
+    const via = v.via === "client" ? "client" : "server";
+    await q(
+      `INSERT INTO page_views (at, day, path, referer_host, source, via, browser, os, device, bot, region, city, ip_hash, visitor_hash, client, expire_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+      [now, day, path, refHost, source, via, browser, os, device, bot, short(v.region, 12), short(v.city, 80),
+       ip ? dailyHash(secret, day, ip) : null, ip ? dailyHash(secret, day, ip, ua) : null,
+       v.client ? cleanClient(v.client) : null, new Date(now.getTime() + keepMs())]
+    );
+    return { path, source, bot, via };
+  }
+
+  /**
+   * Visitor analytics over a window (default: the last 30 days): totals and
+   * unique estimate, per-day series, top pages, where they came from, countries,
+   * devices and browsers. Humans only for the breakdowns (bots counted apart).
+   */
+  async function visitStats({ from, to } = {}) {
+    const toD = to ? new Date(to) : new Date();
+    const fromD = from ? new Date(from) : new Date(toD.getTime() - 30 * DAY_MS);
+    const params = [fromD, toD];
+    const win = `at >= $1 AND at <= $2`;
+    const human = `${win} AND NOT bot`;
+    const [totals, series, pages, sources, countries, devices, browsers] = await Promise.all([
+      q(`SELECT count(*) FILTER (WHERE NOT bot)::int AS views,
+                count(DISTINCT visitor_hash) FILTER (WHERE NOT bot)::int AS visitors,
+                count(*) FILTER (WHERE bot)::int AS bots,
+                count(*) FILTER (WHERE via = 'client')::int AS enriched
+         FROM page_views WHERE ${win}`, params),
+      q(`SELECT day, count(*)::int AS views, count(DISTINCT visitor_hash)::int AS visitors
+         FROM page_views WHERE ${human} GROUP BY day ORDER BY day`, params),
+      q(`SELECT path, count(*)::int AS views FROM page_views WHERE ${human} GROUP BY path ORDER BY views DESC, path LIMIT 20`, params),
+      q(`SELECT source, count(*)::int AS views FROM page_views WHERE ${human} GROUP BY source ORDER BY views DESC`, params),
+      q(`SELECT COALESCE(NULLIF(region, ''), '—') AS country, count(*)::int AS views FROM page_views WHERE ${human} GROUP BY 1 ORDER BY views DESC LIMIT 20`, params),
+      q(`SELECT COALESCE(device, '—') AS device, count(*)::int AS views FROM page_views WHERE ${human} GROUP BY 1 ORDER BY views DESC`, params),
+      q(`SELECT COALESCE(browser, '—') AS browser, count(*)::int AS views FROM page_views WHERE ${human} GROUP BY 1 ORDER BY views DESC LIMIT 12`, params),
+    ]);
+    const t = totals.rows[0] ?? { views: 0, visitors: 0, bots: 0, enriched: 0 };
+    return {
+      from: fromD,
+      to: toD,
+      views: t.views,
+      visitors: t.visitors,
+      bots: t.bots,
+      enriched: t.enriched,
+      perDay: series.rows.map((r) => ({ day: r.day, views: r.views, visitors: r.visitors })),
+      topPages: pages.rows.map((r) => ({ path: r.path, views: r.views })),
+      sources: sources.rows.map((r) => ({ source: r.source, views: r.views })),
+      countries: countries.rows.map((r) => ({ country: r.country, views: r.views })),
+      devices: devices.rows.map((r) => ({ device: r.device, views: r.views })),
+      browsers: browsers.rows.map((r) => ({ browser: r.browser, views: r.views })),
+    };
+  }
+
+  /** Sign-ins, app use and page views past their days go (Postgres keeps them otherwise). */
   async function sweep(now = new Date()) {
     const a = await q(`DELETE FROM login_events WHERE expire_at <= $1`, [now]);
     const b = await q(`DELETE FROM app_usage WHERE expire_at <= $1`, [now]);
-    return { loginEvents: a.rowCount, appUsage: b.rowCount };
+    const c = await q(`DELETE FROM page_views WHERE expire_at <= $1`, [now]);
+    return { loginEvents: a.rowCount, appUsage: b.rowCount, pageViews: c.rowCount };
   }
 
   /** One user's app use (for moving an account between Continuums). */
@@ -259,5 +380,5 @@ export function createActivity({ pool, cfg }) {
     return { added, kept: rows.length - added };
   }
 
-  return { recordLogin, attachClient, createUsageTracker, sweep, exportUsage, importUsage };
+  return { recordLogin, attachClient, createUsageTracker, sweep, exportUsage, importUsage, recordVisit, visitStats };
 }

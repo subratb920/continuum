@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { callbackEmail, normalizeCallback } from "../src/services/supportRequests.js";
+import { callbackEmail, normalizeCallback, normalizeLead, leadEmail } from "../src/services/supportRequests.js";
 
 test("callback: a phone number with a country code is kept as typed", () => {
   const c = normalizeCallback({ name: " Subrat ", phone: "+91 98765 43210", bestTime: "evening", timezone: "Asia/Kolkata", note: " after 6 " });
@@ -41,4 +41,21 @@ test("callback email: who, the number, when, the note, and a link to the Directo
 test("callback email: without a name it says the account; a name can't break the subject line", () => {
   assert.equal(callbackEmail({ email: "s@example.com", phone: "+44 20 7946 0958", bestTime: "asap" }, "").subject, "Callback request: s@example.com, +44 20 7946 0958");
   assert.doesNotMatch(callbackEmail({ name: "A\r\nBcc: x@y.z", phone: "+44 20 7946 0958" }, "").subject, /[\r\n]/);
+});
+
+test("lead: a valid email is kept lowercased; name/note/page trimmed and capped", () => {
+  const l = normalizeLead({ email: " Me@Company.COM ", name: "  Subrat  ", note: " interested ", page: "/teams?utm=x" });
+  assert.deepEqual(l, { email: "me@company.com", name: "Subrat", note: "interested", page: "/teams" });
+});
+
+test("lead: a missing or malformed email is refused", () => {
+  assert.throws(() => normalizeLead({ email: "not-an-email" }), /email/);
+  assert.throws(() => normalizeLead({}), /email/);
+});
+
+test("lead: the team's email names who and the page, and replies to them", () => {
+  const m = leadEmail({ email: "me@company.com", name: "Subrat", note: "hi", page: "/ai-workflows" }, "https://continuum-console.one");
+  assert.match(m.subject, /New lead: Subrat/);
+  assert.equal(m.replyTo, "me@company.com");
+  assert.match(m.text, /\/ai-workflows/);
 });

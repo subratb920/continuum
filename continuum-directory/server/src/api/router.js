@@ -26,7 +26,7 @@ import express from "express";
 import { DirectoryError } from "../errors.js";
 
 export function createDirectoryRouter({ directory, auth = [] }) {
-  const { orgs, admin, links, users } = directory.parts;
+  const { orgs, admin, links, users, activity } = directory.parts;
   const router = express.Router();
 
   router.use(express.json({ limit: "100kb" }));
@@ -172,6 +172,8 @@ export function createDirectoryRouter({ directory, auth = [] }) {
     res.json(s);
   });
   adminOnly.get("/activity", async (req, res) => res.json(await admin.activity({ limit: req.query.limit, failedOnly: req.query.failed === "1" })));
+  // Public-site visitor analytics (anonymous; no person identified)
+  adminOnly.get("/visits", async (req, res) => res.json(await activity.visitStats({ from: req.query.from, to: req.query.to })));
   adminOnly.get("/changes", async (req, res) => res.json(await admin.changes({ limit: req.query.limit })));
   router.use("/admin", adminOnly);
 

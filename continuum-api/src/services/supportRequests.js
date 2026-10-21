@@ -16,8 +16,39 @@ export const CALLBACK_STATUSES = ["new", "called"];
 const TIME_TEXT = { asap: "as soon as possible", morning: "morning (9–12)", afternoon: "afternoon (12–17)", evening: "evening (17–20)" };
 /** At most this many callback requests per person per day. */
 export const DAILY_LIMIT = 5;
+/** A lead is new until someone on the team has reached out. */
+export const LEAD_STATUSES = ["new", "contacted"];
 
 const invalid = (message, field) => Object.assign(new AppError(message, 400, "VALIDATION_ERROR"), { field });
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/** Checks a public lead (an interested visitor leaving a way to reach them); returns its clean fields. */
+export function normalizeLead(body) {
+  const b = body && typeof body === "object" ? body : {};
+  const email = typeof b.email === "string" ? b.email.trim().slice(0, 200) : "";
+  if (!EMAIL_RE.test(email)) throw invalid("Enter an email address we can reach you at.", "email");
+  const name = typeof b.name === "string" ? b.name.trim().slice(0, 100) : "";
+  const note = typeof b.note === "string" ? b.note.trim().slice(0, 1000) : "";
+  // Which page of the public site it came from (kept short), for context only
+  const page = typeof b.page === "string" ? b.page.replace(/[?#].*$/, "").slice(0, 200) : "";
+  return { email: email.toLowerCase(), name, note, page };
+}
+
+/** The team's email about a new lead from the public site: { subject, text, replyTo }. */
+export function leadEmail(doc, siteUrl = process.env.SITE_URL) {
+  const who = doc.name || doc.email;
+  const lines = [
+    `${who} left their email on the public site${doc.page ? ` (${doc.page})` : ""}.`,
+    "",
+    `Email: ${doc.email}`,
+    `Name: ${doc.name || "—"}`,
+    "",
+    doc.note ? `What they said:\n${doc.note}` : "No message.",
+  ];
+  if (siteUrl) lines.push("", `Public site: ${siteUrl.replace(/\/+$/, "")}`);
+  return { subject: `New lead: ${who.replace(/[\r\n]+/g, " ")}`, text: lines.join("\n"), replyTo: doc.email };
+}
 
 /** Checks a callback request; returns its clean fields. */
 export function normalizeCallback(body) {
@@ -109,5 +140,53 @@ export function createSupportService(db, { notify = mailTeam, log } = {}) {
     return view(d);
   }
 
-  return { requestCallback, listCallbacks, setCallbackStatus };
+  /**
+   * A lead from the public site (unauthenticated). Lightly rate-limited by
+   * email so the same address can't flood; emailed to the team after saving.
+   */
+  async function submitLead(body, { now = new Date() } = {}) {
+    const fields = normalizeLead(body);
+    const since = new Date(now.getTime() - 24 * 3600_000);
+    const recent = await col.countDocuments({ type: "lead", email: fields.email, createdAt: { $gte: since } });
+    if (recent >= DAILY_LIMIT) throw new AppError("We've got your message — the team will be in touch.", 429, "TOO_MANY_REQUESTS");
+    const doc = { type: "lead", ...fields, status: "new", createdAt: now };
+    const { insertedId } = await col.insertOne(doc);
+    Promise.resolve()
+      .then(() => notify(leadEmail(doc)))
+      .then((sent) => sent && log?.info?.({ requestId: String(insertedId) }, "Lead emailed to the team"))
+      .catch((err) => log?.warn?.({ err: err.message, requestId: String(insertedId) }, "Lead not emailed"));
+    return { id: insertedId, email: fields.email, createdAt: now };
+  }
+
+  /** The team's lead list (Directory): newest first; status "new" | "contacted" | "" (all). */
+  async function listLeads({ status = "", limit = 200 } = {}) {
+    const q = { type: "lead", ...(LEAD_STATUSES.includes(status) ? { status } : {}) };
+    const n = Math.min(Math.max(Number(limit) || 200, 1), 500);
+    const [items, open] = await Promise.all([col.find(q).sort({ createdAt: -1 }).limit(n).toArray(), col.countDocuments({ type: "lead", status: "new" })]);
+    return { items: items.map(leadView), open };
+  }
+
+  /** Marked contacted (by whom, when), or back to new. */
+  async function setLeadStatus(id, status, by, now = new Date()) {
+    if (!ObjectId.isValid(String(id))) throw new AppError("No such lead.", 404, "NOT_FOUND");
+    if (!LEAD_STATUSES.includes(status)) throw invalid(`Status is one of: ${LEAD_STATUSES.join(", ")}.`, "status");
+    const set = status === "contacted" ? { status, contactedAt: now, contactedBy: by?.email ?? null } : { status, contactedAt: null, contactedBy: null };
+    const d = await col.findOneAndUpdate({ _id: new ObjectId(String(id)), type: "lead" }, { $set: set }, { returnDocument: "after" });
+    if (!d) throw new AppError("No such lead.", 404, "NOT_FOUND");
+    return leadView(d);
+  }
+
+  return { requestCallback, listCallbacks, setCallbackStatus, submitLead, listLeads, setLeadStatus };
 }
+
+const leadView = (d) => ({
+  id: String(d._id),
+  email: d.email ?? null,
+  name: d.name ?? "",
+  note: d.note ?? "",
+  page: d.page ?? "",
+  status: d.status ?? "new",
+  contactedAt: d.contactedAt ?? null,
+  contactedBy: d.contactedBy ?? null,
+  createdAt: d.createdAt,
+});

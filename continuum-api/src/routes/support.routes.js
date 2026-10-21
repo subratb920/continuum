@@ -32,3 +32,22 @@ export function createCallbacksAdminRouter() {
   });
   return admin;
 }
+
+/**
+ * The team's side for public-site leads (Continuum's admins):
+ *   GET   /directory/admin/leads?status=new|contacted
+ *   PATCH /directory/admin/leads/:id { status: "contacted" | "new" }
+ */
+export function createLeadsAdminRouter() {
+  const admin = express.Router();
+  admin.get("/", async (req, res) => {
+    res.set("Cache-Control", "no-store");
+    res.json(await createSupportService(getDB()).listLeads({ status: req.query.status, limit: req.query.limit }));
+  });
+  admin.patch("/:id", async (req, res) => {
+    const r = await createSupportService(getDB()).setLeadStatus(req.params.id, req.body?.status, { email: req.access?.email ?? null });
+    req.log.info({ requestId: r.id, status: r.status, by: req.user.id }, "Lead marked");
+    res.json(r);
+  });
+  return admin;
+}

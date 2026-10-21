@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cleanClient, networkOf, parseUserAgent } from "../src/activity.js";
+import { cleanClient, networkOf, parseUserAgent, refererHost, visitSource, cleanPath } from "../src/activity.js";
 
 const req = (headers = {}, ip = "203.0.113.7") => ({ ip, get: (h) => headers[h.toLowerCase()] });
 const IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1";
@@ -36,4 +36,30 @@ test("activity: the network a sign-in came over: IPv4/IPv6, the proxies' chain, 
   assert.equal(networkOf(req({}, "::ffff:203.0.113.7")).ipVersion, 4, "an IPv4 address in IPv6 form");
   assert.equal(networkOf(req({ "x-client-lat-long": "<script>" })).cityLatLong, undefined, "only a position");
   assert.deepEqual(cleanClient({ netType: "wifi", netEffective: "4g", netDownlinkMbps: 10, netRttMs: 50, netSaveData: false }), { netType: "wifi", netEffective: "4g", netDownlinkMbps: 10, netRttMs: 50, netSaveData: false });
+});
+
+test("visit: the referrer's host, without www (bad or missing → none)", () => {
+  assert.equal(refererHost("https://www.google.com/search?q=continuum"), "google.com");
+  assert.equal(refererHost("https://news.ycombinator.com/item?id=1"), "news.ycombinator.com");
+  assert.equal(refererHost(null), null);
+  assert.equal(refererHost("not a url"), null);
+});
+
+test("visit: where a visit came from — direct, search, social or referral", () => {
+  assert.equal(visitSource(null, "continuum-console.one"), "direct");
+  assert.equal(visitSource("continuum-console.one", "continuum-console.one"), "direct"); // same site
+  assert.equal(visitSource("google.com", "continuum-console.one"), "search");
+  assert.equal(visitSource("t.co", "continuum-console.one"), "social");
+  assert.equal(visitSource("linkedin.com", "continuum-console.one"), "social");
+  assert.equal(visitSource("some-blog.dev", "continuum-console.one"), "referral");
+});
+
+test("visit: a path on its own — no host, query or fragment; capped", () => {
+  assert.equal(cleanPath("/ai-workflows"), "/ai-workflows");
+  assert.equal(cleanPath("/ai-workflows?utm=x#top"), "/ai-workflows");
+  assert.equal(cleanPath("https://continuum-console.one/teams?a=1"), "/teams");
+  assert.equal(cleanPath("/"), "/");
+  assert.equal(cleanPath(""), null); // nothing to record
+  assert.equal(cleanPath("nonsense"), null);
+  assert.equal(cleanPath("/" + "a".repeat(500)).length, 200);
 });

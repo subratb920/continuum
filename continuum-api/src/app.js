@@ -12,7 +12,8 @@ import { requestLogger } from "./middleware/requestLogger.js";
 import githubRoutes from "./auth/github.routes.js";
 import oauthRoutes from "./oauth/oauth.routes.js";
 import deployRoutes from "./oauth/deploy.routes.js";
-import supportRoutes, { createCallbacksAdminRouter } from "./routes/support.routes.js";
+import supportRoutes, { createCallbacksAdminRouter, createLeadsAdminRouter } from "./routes/support.routes.js";
+import { createPublicRouter } from "./public/routes.js";
 import createRoutes from "./create/routes.js";
 import publishRoutes from "./create/publish.js";
 import cloneRoutes from "./create/clone.js";
@@ -41,6 +42,9 @@ app.use(express.json({ limit: "1mb" }));
 // 👇 must come AFTER body parsing, BEFORE routes
 app.use(requestLogger);
 
+// The public website (continuum-site): visitor beacon and lead capture, no sign-in
+app.use("/public", createPublicRouter());
+
 // Routes. Signed-in routes load the user's access (authed); each feature's
 // routes refuse when the user's role has it switched off (NO_FEATURE_ACCESS).
 // Projects and intervals: reading also serves the Dashboard; changing them is Interval Setup.
@@ -66,12 +70,13 @@ app.post("/me/sync-codes", requireAuthOrDirectoryToken, withAccess(), createSync
 const directoryAuth = [requireAuthOrDirectoryToken, withAccess()];
 app.use("/directory/orgs/:orgId/projects", ...directoryAuth, createOrgProjectsRouter()); // an organization's projects (they're Continuum's)
 app.use("/directory/admin/callbacks", ...directoryAuth, requireFeature("admin"), createCallbacksAdminRouter()); // Contact us's callback requests (they're Continuum's; admins)
+app.use("/directory/admin/leads", ...directoryAuth, requireFeature("admin"), createLeadsAdminRouter()); // Public-site leads (admins)
 app.use("/directory", directory.router({ auth: [...directoryAuth, uses("directory")] }));
 app.use("/me", authed, meRoutes); // you: your access, and your preferences (theme), shared with Continuum Deploy
 app.use("/workspaces", authed, requireFeature("workspaces"), requireFeatureFor(WORKSPACES_RULES), uses("workspaces"), createWorkspacesRouter()); // development servers per project (continuum-workspaces)
 // Production sync: Preview and Merge (admins; from the Directory's page too). Users, roles and sign-ins are the directory's
 app.use("/admin/sync", requireAuthOrDirectoryToken, withAccess(), requireFeature("admin"), createSyncAdminRouter());
-app.use("/service", createServiceRouter()); // read-only data for continuum-brain (its service token only)
+app.use("/service", createServiceRouter({ recordVisit: directory.api.recordVisit })); // data for continuum-brain + the site's visit batches (service token only)
 app.use("/brain", streamToken, authed, requireFeature("agents"), requireFeatureFor(AGENTS_RULES), uses("agents"), createBrainRouter()); // the Agents screen, relayed to continuum-brain
 if (dataEngine) app.use("/data", dataEngine.router({ auth: [...authed, requireFeature("data"), requireFeatureFor(DATA_RULES), uses("data")] })); // datasets: sources, versions, pipelines (continuum-data)
 
