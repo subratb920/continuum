@@ -309,6 +309,13 @@ export function createBrainRouter(opts = {}) {
   router.post("/reviews/:id/applied", async (req, res) => res.json(await brain(req, "POST", `/reviews/${reviewId(req)}/applied`, { kept: req.body?.kept })));
 
   router.get("/models", async (req, res) => res.json(await brain(req, "GET", "/models")));
+  // Observability: the user's agent activity over a period (counts, outcomes, cost, latency)
+  router.get("/stats", async (req, res) => {
+    const qs = new URLSearchParams();
+    for (const k of ["from", "to"]) if (typeof req.query[k] === "string") qs.set(k, req.query[k]);
+    const q = qs.toString();
+    res.set("Cache-Control", "no-store").json(await brain(req, "GET", `/stats${q ? `?${q}` : ""}`));
+  });
   router.get("/settings", async (req, res) => res.json(await brain(req, "GET", "/settings")));
   router.put("/settings", async (req, res) => res.json(await brain(req, "PUT", "/settings", req.body ?? {})));
 
