@@ -301,11 +301,12 @@ export function createActivity({ pool, cfg }) {
     const secret = cfg.hashSecret || PROC_SALT;
     const ip = v.ip ? String(v.ip) : null;
     const via = v.via === "client" ? "client" : "server";
+    const network = v.network && typeof v.network === "object" && Object.keys(v.network).length ? v.network : null;
     await q(
-      `INSERT INTO page_views (at, day, path, referer_host, source, via, browser, os, device, bot, region, city, ip_hash, visitor_hash, client, expire_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+      `INSERT INTO page_views (at, day, path, referer_host, source, via, browser, os, device, bot, region, city, ip_hash, visitor_hash, network, client, expire_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
       [now, day, path, refHost, source, via, browser, os, device, bot, short(v.region, 12), short(v.city, 80),
-       ip ? dailyHash(secret, day, ip) : null, ip ? dailyHash(secret, day, ip, ua) : null,
+       ip ? dailyHash(secret, day, ip) : null, ip ? dailyHash(secret, day, ip, ua) : null, network,
        v.client ? cleanClient(v.client) : null, new Date(now.getTime() + keepMs())]
     );
     return { path, source, bot, via };
@@ -322,7 +323,7 @@ export function createActivity({ pool, cfg }) {
     const params = [fromD, toD];
     const win = `at >= $1 AND at <= $2`;
     const human = `${win} AND NOT bot`;
-    const [totals, series, pages, sources, countries, devices, browsers] = await Promise.all([
+    const [totals, series, pages, sources, countries, devices, browsers, recent] = await Promise.all([
       q(`SELECT count(*) FILTER (WHERE NOT bot)::int AS views,
                 count(DISTINCT visitor_hash) FILTER (WHERE NOT bot)::int AS visitors,
                 count(*) FILTER (WHERE bot)::int AS bots,
@@ -335,6 +336,8 @@ export function createActivity({ pool, cfg }) {
       q(`SELECT COALESCE(NULLIF(region, ''), '—') AS country, count(*)::int AS views FROM page_views WHERE ${human} GROUP BY 1 ORDER BY views DESC LIMIT 20`, params),
       q(`SELECT COALESCE(device, '—') AS device, count(*)::int AS views FROM page_views WHERE ${human} GROUP BY 1 ORDER BY views DESC`, params),
       q(`SELECT COALESCE(browser, '—') AS browser, count(*)::int AS views FROM page_views WHERE ${human} GROUP BY 1 ORDER BY views DESC LIMIT 12`, params),
+      q(`SELECT id, at, path, source, via, bot, browser, os, device, region, city, network, client
+         FROM page_views WHERE ${win} ORDER BY at DESC LIMIT 100`, params),
     ]);
     const t = totals.rows[0] ?? { views: 0, visitors: 0, bots: 0, enriched: 0 };
     return {
@@ -350,6 +353,21 @@ export function createActivity({ pool, cfg }) {
       countries: countries.rows.map((r) => ({ country: r.country, views: r.views })),
       devices: devices.rows.map((r) => ({ device: r.device, views: r.views })),
       browsers: browsers.rows.map((r) => ({ browser: r.browser, views: r.views })),
+      recent: recent.rows.map((r) => ({
+        id: String(r.id),
+        at: r.at,
+        path: r.path,
+        source: r.source,
+        via: r.via,
+        bot: r.bot,
+        browser: r.browser,
+        os: r.os,
+        device: r.device,
+        region: r.region,
+        city: r.city,
+        network: r.network,
+        ...(r.client ? { client: r.client } : {}),
+      })),
     };
   }
 

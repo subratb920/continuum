@@ -86,6 +86,25 @@ function clientIp(req) {
   return xff || req.socket?.remoteAddress || null;
 }
 
+/** A network summary from the load balancer's headers (shape matches login_events). */
+function networkFrom(req) {
+  const ip = clientIp(req);
+  const h = (name) => req.headers[name] || null;
+  const chain = String(req.headers["x-forwarded-for"] ?? "").split(",").map((x) => x.trim()).filter(Boolean).slice(0, 10);
+  const rtt = Number(h("x-client-rtt"));
+  const net = {
+    ipVersion: ip ? (ip.includes(":") && !ip.startsWith("::ffff:") ? 6 : 4) : null,
+    forwardedFor: chain.length ? chain : null,
+    protocol: h("x-forwarded-proto"),
+    subdivision: h("x-client-subdivision"),
+    rttMs: Number.isFinite(rtt) ? rtt : null,
+    tlsVersion: h("x-client-tls"),
+    tlsCipher: h("x-client-cipher"),
+  };
+  const out = Object.fromEntries(Object.entries(net).filter(([, v]) => v !== null));
+  return Object.keys(out).length ? out : null;
+}
+
 function recordVisit(req, pathname) {
   if (!RECORDING || buffer.length >= MAX_BUFFER) return;
   buffer.push({
@@ -96,6 +115,7 @@ function recordVisit(req, pathname) {
     host: req.headers.host ?? SITE_HOST,
     region: req.headers["x-client-region"] ?? null,
     city: req.headers["x-client-city"] ?? null,
+    network: networkFrom(req),
   });
 }
 

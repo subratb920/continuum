@@ -47,6 +47,7 @@ export function createPublicRouter() {
         host: req.get("host"),
         region: req.get("x-client-region") || null,
         city: req.get("x-client-city") || null,
+        network: dir.networkOf(req),
         client: b.client,
       });
     } catch (err) {

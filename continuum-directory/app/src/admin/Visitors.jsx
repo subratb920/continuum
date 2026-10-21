@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { since, useAdmin } from "./adminContext";
+import { deviceText, networkText, placeText, since, useAdmin } from "./adminContext";
 import "./admin.css";
 
 const RANGES = [
@@ -105,6 +105,32 @@ export default function Visitors() {
             <Bars label="Countries" empty="No locations reported." rows={visits.countries.map((c) => ({ key: c.country, name: c.country, views: c.views }))} />
             <Bars label="Devices" empty="Nothing yet." rows={visits.devices.map((d) => ({ key: d.device, name: DEVICE[d.device] ?? d.device, views: d.views }))} />
             <Bars label="Browsers" empty="Nothing yet." rows={visits.browsers.map((b) => ({ key: b.browser, name: b.browser, views: b.views }))} />
+          </div>
+
+          <div className="vz-breakdown">
+            <h3>Recent visits <span className="admin-muted">· each page view: device, location and network (no visitor is identified)</span></h3>
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr><th>When</th><th>Page</th><th>From</th><th>Device</th><th>Location</th><th>Network</th></tr>
+                </thead>
+                <tbody>
+                  {(visits.recent ?? []).map((v) => (
+                    <tr key={v.id} className={v.bot ? "is-refused" : ""}>
+                      <td title={new Date(v.at).toLocaleString()}>{since(v.at)}{v.via !== "client" && <span className="admin-client">server</span>}</td>
+                      <td className="admin-mono">{v.path}</td>
+                      <td>{SOURCE[v.source] ?? v.source}{v.bot && <span className="admin-pill is-off">Bot</span>}</td>
+                      <td className="admin-muted" title={v.client ? [v.client.screen, v.client.timezone, v.client.language].filter(Boolean).join(" · ") : ""}>{deviceText(v) || "—"}</td>
+                      <td className="admin-muted">{placeText(v) || "—"}</td>
+                      <td className="admin-muted admin-mono">{networkText(v) || "—"}</td>
+                    </tr>
+                  ))}
+                  {visits.recent && !visits.recent.length && (
+                    <tr><td colSpan={6} className="admin-empty">No visits in this range yet.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       )}
