@@ -200,10 +200,78 @@
 .guide-limits dd { margin: 0; font-size: 12px; color: var(--text-muted); }
 .guide-foot { margin: 0; font-size: 12px; color: var(--text-muted); }
 
+/* ---------- Right now: flips to the model/tier picker ---------- */
+/* Content-sized (not stretched), so expanding the picker pushes the cards below down */
+.guide-flip-wrap { flex: none; perspective: 1400px; }
+.guide-flip { position: relative; transform-style: preserve-3d; transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1), height 0.35s ease; }
+.guide-flip.is-flipped { transform: rotateY(180deg); }
+/* The faces overlay (absolute) so the card has one of their heights at a time; the wrapper follows it */
+.guide-flip .flip-face { position: absolute; top: 0; left: 0; right: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.guide-flip .flip-back { transform: rotateY(180deg); }
+
+.guide-flip-btn {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.guide-flip-btn:hover,
+.guide-flip-btn:focus-visible { color: var(--text); border-color: var(--border-strong); }
+
+/* ---------- The compact model picker (on the back) ---------- */
+.mp { display: flex; flex-direction: column; gap: 8px; }
+.mp-empty { margin: 4px 0; }
+.mp-field { display: flex; flex-direction: column; gap: 3px; }
+.mp-label { font-size: 11px; color: var(--text-muted); }
+
+/* The extra options open below, smoothly, pushing the cards under the card down */
+.mp-more { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease; }
+.mp-more.is-open { grid-template-rows: 1fr; }
+.mp-more-inner { overflow: hidden; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.mp-more.is-open .mp-more-inner { padding-top: 2px; }
+
+.mp-tiers, .mp-choices { border: none; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.mp-tiers legend, .mp-choices legend { padding: 0; font-size: 11px; font-weight: 600; color: var(--text-muted); }
+.mp-tier .mp-label { color: var(--text-2); }
+.mp-segs { display: flex; gap: 6px; }
+.mp-seg {
+  position: relative;
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+.mp-seg input { position: absolute; opacity: 0; width: 0; height: 0; }
+.mp-seg.is-on { border-color: var(--agent-core); color: var(--text); background: color-mix(in srgb, var(--agent-core) 12%, transparent); }
+
+.mp-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
+.mp-expand { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px; border: none; background: none; color: var(--text-muted); font: inherit; font-size: 12px; cursor: pointer; }
+.mp-expand:hover,
+.mp-expand:focus-visible { color: var(--text); }
+.mp-chevron { transition: transform 0.2s ease; }
+.mp-chevron.is-up { transform: rotate(180deg); }
+.mp-save { flex: none; }
+.mp-locked { margin: 0; }
+
 /* Less motion asked for: the pictures stand still, every step shows plainly */
 @media (prefers-reduced-motion: reduce) {
   .loop-pulse, .mini-dot, .pipe-row { display: none; }
   .pipe-quality .pipe-quality-arc { stroke-dasharray: 86 100; }
   .loop-link.is-flow, .loop-node.is-worker circle, .loop-commit, .mini-worker.is-late, .guide-steps li, .guide-led, .pipe-track.is-next, .pipe-stage circle, .pipe-train rect, .pipe-quality-arc { animation: none; }
   .loop-commit, .mini-worker.is-late { opacity: 1; }
+  .guide-flip, .mp-more, .mp-chevron { transition: none; }
 }

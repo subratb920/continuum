@@ -43,6 +43,23 @@ export function useModelSettings() {
     model: settings ? settings.model ?? settings.chosen ?? settings.brainModel ?? settings.defaults?.model ?? settings.defaults?.brain ?? null : null,
     chosen: settings ? settings.chosen ?? settings.brainModel ?? null : null,
     defaultModel: settings?.defaults?.model ?? settings?.defaults?.brain ?? null,
+    // The brain's and workers' own models (null: unset → the default). A brain from before the split answers neither.
+    brainModel: settings ? settings.brainModel ?? null : null,
+    workerModel: settings ? settings.workerModel ?? null : null,
+    defaultBrainModel: settings?.defaults?.brain ?? settings?.defaults?.model ?? null,
+    defaultWorkerModel: settings?.defaults?.worker ?? settings?.defaults?.brain ?? settings?.defaults?.model ?? null,
+    /** Whether the server splits brain/worker models and per-tier worker models (only the newer brain reports `effective`; older ones mirror one model, so false). */
+    canSplit: !!settings?.effective,
+    /** Optional per-tier worker models the brain picks from, and the tier names. */
+    tiers: settings?.tiers ?? {},
+    tierNames: settings?.tierNames ?? [],
+    /** The models actually used once defaults are filled in ({ brain, worker }), when the server reports them. */
+    effective: settings?.effective ?? null,
+    /** Model spend this period and where it stands (state: off | ok | warn | exceeded), when the server reports it. */
+    budget: settings?.budget ?? null,
+    /** Why the model can't change right now (an agent awake, a request waiting), or null. */
+    locked: settings?.locked ?? null,
+    changeable: settings ? settings.changeable !== false : false,
     /** fast or thorough (a brain from before speeds: null), and what each means. */
     mode: settings?.mode ?? null,
     modes: settings?.modes ?? [],

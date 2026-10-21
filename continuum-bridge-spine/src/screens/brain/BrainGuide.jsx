@@ -1,8 +1,11 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { useBrain } from "../../brain/brainContext";
 import { useNavigate } from "react-router-dom";
 import { ACTIVE_STATES } from "../../brain/brainTypes";
 import { DATA_ENABLED } from "../../data/dataApi";
 import { useAuth } from "../../state/authStore";
+import { useModelSettings } from "../../brain/useModelSettings";
+import ModelPicker from "./ModelPicker";
 import "./brain.css";
 import "./brainGuide.css";
 
@@ -29,35 +32,75 @@ export default function BrainGuide() {
   const coreState = brain?.core?.state;
   const brainWord = !coreState || coreState === "stopped" ? "Stopped" : coreState === "failed" ? "Failed" : coreState === "idle" ? "Ready" : coreState === "working" ? "Working" : "Starting";
 
+  // The "Right now" card flips to a model/tier picker. The card's height follows
+  // the face that's showing (the back grows when the picker expands), so the
+  // cards below are pushed down smoothly.
+  const models = useModelSettings();
+  const [flipped, setFlipped] = useState(false);
+  const frontRef = useRef(null);
+  const backRef = useRef(null);
+  const [faceH, setFaceH] = useState(undefined);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = flipped ? backRef.current : frontRef.current;
+      if (el) setFaceH(el.offsetHeight);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (frontRef.current) ro.observe(frontRef.current);
+    if (backRef.current) ro.observe(backRef.current);
+    return () => ro.disconnect();
+  }, [flipped]);
+
   return (
     <div className="guide">
-      <section className="guide-unit">
-        <h3 className="guide-head">Right now</h3>
-        <dl className="guide-stats">
-          <div className="guide-stat">
-            <dt>Brain</dt>
-            <dd>
-              <span className={`guide-led is-${brainWord.toLowerCase()}`} aria-hidden="true" />
-              {brainWord}
-            </dd>
-          </div>
-          <div className="guide-stat">
-            <dt>Workers</dt>
-            <dd>
-              <span className="guide-meter" aria-hidden="true">
-                {Array.from({ length: WORKER_LIMIT }, (_, i) => (
-                  <span key={i} className={i < awake ? "is-on" : ""} />
-                ))}
-              </span>
-              {awake} of {WORKER_LIMIT}
-            </dd>
-          </div>
-          <div className={`guide-stat${waiting ? " is-attention" : ""}`}>
-            <dt>Waiting on you</dt>
-            <dd>{waiting}</dd>
-          </div>
-        </dl>
-      </section>
+      <div className="guide-flip-wrap">
+        <div className={`guide-flip${flipped ? " is-flipped" : ""}`} style={faceH ? { height: faceH } : undefined}>
+          <section className="guide-unit flip-face flip-front" ref={frontRef} aria-hidden={flipped} {...(flipped ? { inert: "" } : {})}>
+            <div className="guide-head-row">
+              <h3 className="guide-head">Right now</h3>
+              {models.available && (
+                <button type="button" className="guide-flip-btn" onClick={() => setFlipped(true)} aria-label="Choose the models" title="Models">
+                  <FlipIcon />
+                </button>
+              )}
+            </div>
+            <dl className="guide-stats">
+              <div className="guide-stat">
+                <dt>Brain</dt>
+                <dd>
+                  <span className={`guide-led is-${brainWord.toLowerCase()}`} aria-hidden="true" />
+                  {brainWord}
+                </dd>
+              </div>
+              <div className="guide-stat">
+                <dt>Workers</dt>
+                <dd>
+                  <span className="guide-meter" aria-hidden="true">
+                    {Array.from({ length: WORKER_LIMIT }, (_, i) => (
+                      <span key={i} className={i < awake ? "is-on" : ""} />
+                    ))}
+                  </span>
+                  {awake} of {WORKER_LIMIT}
+                </dd>
+              </div>
+              <div className={`guide-stat${waiting ? " is-attention" : ""}`}>
+                <dt>Waiting on you</dt>
+                <dd>{waiting}</dd>
+              </div>
+            </dl>
+          </section>
+          <section className="guide-unit flip-face flip-back" ref={backRef} aria-hidden={!flipped} {...(flipped ? {} : { inert: "" })}>
+            <div className="guide-head-row">
+              <h3 className="guide-head">Models</h3>
+              <button type="button" className="guide-flip-btn" onClick={() => setFlipped(false)} aria-label="Back to status" title="Back">
+                <FlipIcon />
+              </button>
+            </div>
+            <ModelPicker models={models} />
+          </section>
+        </div>
+      </div>
 
       <section className="guide-unit">
         <h3 className="guide-head">The loop</h3>
@@ -85,6 +128,16 @@ export default function BrainGuide() {
         <p className="pipe-kinds">Text · tables · images · audio</p>
       </section>
     </div>
+  );
+}
+
+/** A flip glyph (two rotating arrows): turns the "Right now" card between its status and the model picker. */
+function FlipIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+      <path d="M13 8a5 5 0 0 1-8.6 3.5M3 8a5 5 0 0 1 8.6-3.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M11.5 1.6v3h-3M4.5 14.4v-3h3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 

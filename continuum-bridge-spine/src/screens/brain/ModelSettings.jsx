@@ -14,7 +14,7 @@ const ctx = (n) => (n >= 1000 ? `${Math.round(n / 1000)}k` : String(n));
  * A model to pick, grouped by provider; models that can't use tools are shown
  * but can't be picked (agents need tools). "" means the default, labelled.
  */
-function ModelSelect({ list, value, onChange, defaultLabel, label, disabled }) {
+export function ModelSelect({ list, value, onChange, defaultLabel, label, disabled }) {
   const models = list?.models ?? [];
   const byProvider = new Map();
   for (const m of models) byProvider.set(m.provider, [...(byProvider.get(m.provider) ?? []), m]);
