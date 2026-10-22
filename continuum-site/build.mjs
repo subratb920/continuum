@@ -106,7 +106,8 @@ function menuBar(current) {
     </li>`;
   }).join("");
   const links = MENU_LINKS.map((p) => `<li><a class="mn-btn" href="${p}"${here_(p, current)}>${esc(byPath(p).nav.split(" ")[0])}</a></li>`).join("");
-  return `<nav class="mainnav" aria-label="Main"><ul class="mainnav-list">${groups}${links}</ul></nav>`;
+  const contact = API_URL ? `<li><a class="mn-btn" href="/#contact">Contact</a></li>` : "";
+  return `<nav class="mainnav" aria-label="Main"><ul class="mainnav-list">${groups}${links}${contact}</ul></nav>`;
 }
 
 /** Phones: one sheet with every group and topic. */
@@ -115,6 +116,7 @@ function menuSheet(current) {
   return `<details class="msheet">
     <summary aria-label="Menu"><span class="burger" aria-hidden="true"><span></span><span></span><span></span></span></summary>
     <div class="msheet-body">${groups.map((g) => `<section><h3>${esc(g.label)}</h3><ul>${g.items.map((p) => menuItem(p, current)).join("")}</ul></section>`).join("")}
+      ${API_URL ? `<section><h3>Company</h3><ul><li><a class="mn-item" href="/#contact"><span class="mn-text"><strong>Contact us</strong><span>Email us or ask for a callback</span></span></a></li></ul></section>` : ""}
       <p class="msheet-cta"><a class="btn ghost" href="${APP_URL}/signin">Sign in</a> <a class="btn" href="${APP_URL}/signin?new=1">Get started</a></p>
     </div>
   </details>`;
@@ -172,9 +174,9 @@ function consentBanner() {
 /** A small "stay in touch" lead form (only when an API is configured). Submitted by site.js via fetch; no page reload. */
 function leadForm() {
   if (!API_URL) return "";
-  return `<section class="signup" aria-labelledby="signup-h">
-  <h2 id="signup-h">Stay in touch</h2>
-  <p>Leave your email and we'll reach out — no spam.</p>
+  return `<section class="signup" id="contact" aria-labelledby="signup-h">
+  <h2 id="signup-h">Contact us</h2>
+  <p>Write to <a href="mailto:${SITE.email}">${esc(SITE.email)}</a>, or leave your email and we'll reach out for a callback — no spam.</p>
   <form class="signup-form" data-lead novalidate>
     <label class="visually-hidden" for="lead-email">Email</label>
     <input id="lead-email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@company.com" required>
@@ -210,7 +212,7 @@ ${page.noindex ? "" : leadForm()}
   <nav class="foot-nav" aria-label="All topics">${footerNav(page.path)}</nav>
   <div class="foot-bottom">
     <p>© ${YEAR} ${esc(SITE.fullName)}</p>
-    <p>Questions? Write to <a href="mailto:${SITE.email}">${SITE.email}</a> or ask for a callback in <a href="${APP_URL}/">Continuum</a>'s Contact us.</p>
+    <p>Questions? Write to <a href="mailto:${SITE.email}">${SITE.email}</a>${API_URL ? ` or ask for a callback in <a href="/#contact">Contact us</a>` : ""}.</p>
   </div>
 </footer>
 ${page.noindex ? "" : consentBanner()}
