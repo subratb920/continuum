@@ -114,6 +114,8 @@ export function createSseBrainClient(base = import.meta.env.VITE_BRAIN_API_URL) 
     pending: () => call("GET", "/brain/pending"),
     reply: (agentId, eventId, answer, { message } = {}) => call("POST", `/brain/agents/${agentId}/reply`, { eventId, answer, ...(message ? { message } : {}) }),
     say: (text) => call("POST", "/brain/core/messages", { text }),
+    // Stop what the brain is doing now but keep it warm (it goes Ready, no cold start)
+    interrupt: () => call("POST", "/brain/interrupt"),
     // An agent interval started: the brain is given its goals and works them to the end
     startAgentInterval: (bridgeId) => call("POST", "/brain/core/agent-interval", { bridgeId }),
   };

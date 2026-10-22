@@ -225,6 +225,12 @@ export function createBrainRouter(opts = {}) {
     res.status(202).json(toAgent(await brain(req, "POST", "/brain/messages", { text: req.body?.text })));
   });
 
+  // Stop what the brain is doing now but keep it warm (ready for a new message)
+  router.post("/interrupt", async (req, res) => {
+    const core = await brain(req, "POST", "/brain/interrupt");
+    res.json(core ? toAgent(core) : null);
+  });
+
   const SNAPSHOT_MAX = 60 * 1024 * 1024;
   router.post("/projects/:id/snapshot", async (req, res) => {
     const projectId = String(req.params.id);

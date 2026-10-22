@@ -289,6 +289,8 @@ export function BrainProvider({ children }) {
         }
       },
       say: (text) => client.say(text),
+      // Stop the core's current turn but keep it warm (it goes Ready), for redoing a wrong prompt
+      interrupt: () => client.interrupt?.(),
       // A worker's work: its changes, copying them into your folder, and pushing them to its own branch
       changes: client.changes ? (id) => client.changes(id) : null,
       // Model: the one model your brain and every worker run on (and the models available)

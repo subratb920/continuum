@@ -1001,6 +1001,10 @@ button.goal-agent:hover { background: rgb(var(--c-rgb, var(--agent-off-rgb)) / 0
   padding: 0 20px;
   border-radius: 10px;
 }
+/* Stop: halts the current turn but keeps the brain warm; shown only while it's working */
+.brain-chat-stop { display: inline-flex; align-items: center; gap: 7px; }
+.brain-chat-stop-glyph { width: 9px; height: 9px; border-radius: 2px; background: currentColor; }
+.brain-chat-stoperr { margin: 0 0 4px; padding: 0 var(--chat-pad); text-align: left; }
 
 /* Phones: the full width, the input clear of the bottom edge */
 @media (max-width: 899px) {

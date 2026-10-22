@@ -51,6 +51,7 @@
  * @property {(agentId: string) => Promise<void>} stop
  * @property {(agentId: string, eventId: string, answer: string) => Promise<void>} reply  answers a permission or question
  * @property {(text: string) => Promise<void>} say  a message to the core
+ * @property {() => Promise<unknown>} [interrupt]  stop the core's current turn but keep it warm (ready for a new message)
  */
 
 export const ACTIVE_STATES = ["queued", "starting", "working", "idle", "stopping"];

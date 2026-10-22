@@ -389,6 +389,14 @@ export function createMockBrainClient({ speed = 1 } = {}) {
       coreSays(`Noted: "${text}". I'll fold it into the plan for the next worker.`);
     },
 
+    /** Stop the current turn but keep the brain warm: it drops to idle ("Ready"). */
+    async interrupt() {
+      const id = coreId();
+      if (!id) return;
+      event(id, "state", "Stopped — ready for your next message");
+      setState(id, "idle");
+    },
+
     /** An agent interval started (as brain-api): the brain takes its goals, a worker each (the demo can't write the bridge). */
     async startAgentInterval(bridgeId) {
       const id = coreId();

@@ -72,6 +72,7 @@ export default function BrainChat() {
   const navigate = useNavigate();
   const [text, setText] = useState("");
   const [outbox, setOutbox] = useState([]); // [{ id, text, at, error? }]
+  const [stopErr, setStopErr] = useState(null); // when a Stop couldn't go through
   const log = useRef(null);
   const box = useRef(null);
   // The feed: your conversation with the brain, plus the brain's and its
@@ -110,12 +111,24 @@ export default function BrainChat() {
   }, [text]);
 
   if (!brain) return null;
-  const { core, say, replay, connected, pending } = brain;
+  const { core, say, interrupt, replay, connected, pending } = brain;
   const status = brainStatus(core, connected);
   // Sending needs "Run agents"; an API from before that feature existed (it isn't in its list) leaves it to Agents itself
   const runKnown = access?.allFeatures?.some((f) => f.id === "agents_run") ?? true;
   const mayRun = runKnown ? can("agents_run") : can("agents");
   const off = !mayRun || !replay.live || (BRAIN_IS_MOCK && !core);
+  // A turn is in flight to stop (pulse covers queued/starting/working); idle shows no Stop
+  const canStop = mayRun && replay.live && status.pulse === true && !!interrupt;
+
+  // Stop what the brain is doing now; it stays warm (Ready), so you can send a corrected prompt
+  async function stopBrain() {
+    setStopErr(null);
+    try {
+      await interrupt();
+    } catch (err) {
+      setStopErr(err.message || "That couldn't be stopped — try again.");
+    }
+  }
 
   async function send(words, id = crypto.randomUUID()) {
     setOutbox((o) => [...o.filter((x) => x.id !== id), { id, text: words, at: Date.now() }]);
@@ -204,6 +217,7 @@ export default function BrainChat() {
         {!feed.length && !waiting.length && <li className="brain-empty">Ask the brain for something: it plans the work and hands it to workers.</li>}
       </ol>
 
+      {stopErr && <p className="chat-error brain-chat-stoperr" role="alert">{stopErr}</p>}
       <form className="chat-input brain-chat-input" onSubmit={submit}>
         <textarea
           ref={box}
@@ -221,6 +235,11 @@ export default function BrainChat() {
           disabled={off}
           aria-label="Message the brain"
         />
+        {canStop && (
+          <button type="button" className="brain-btn is-danger brain-chat-stop" onClick={stopBrain} title="Stop what the brain is doing now — it stays ready for a new message">
+            <span className="brain-chat-stop-glyph" aria-hidden="true" /> Stop
+          </button>
+        )}
         <button type="submit" className="brain-btn is-primary" disabled={off || !text.trim()}>
           Send
         </button>
