@@ -639,6 +639,41 @@ html.reduce-motion .model-change svg { transition: none; }
 .chat-msg.sending .chat-bubble { opacity: 0.6; }
 .chat-msg.failed .chat-bubble { border-color: var(--danger-border); }
 .chat-error { max-width: 100%; color: var(--danger-text); font-size: 11px; text-align: right; overflow-wrap: anywhere; }
+
+/* The activity trail: a quiet step the brain (or a worker) took, between
+   replies, so the chat shows the work happening instead of sitting dead. A
+   failure turns red and shows the actual error. */
+.chat-activity {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  max-width: 100%;
+  padding: 1px 2px;
+  color: var(--text-muted);
+  font-size: 12px;
+  animation: agent-row-in 0.3s ease-out;
+}
+.chat-activity-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+.chat-activity.is-ok .chat-activity-dot { background: var(--agent-core); }
+.chat-activity.is-err .chat-activity-dot { background: var(--danger); }
+.chat-activity-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.chat-activity-label { overflow-wrap: anywhere; }
+.chat-activity.is-err .chat-activity-label { color: var(--danger-text); }
+.chat-activity-detail {
+  color: var(--danger-text);
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.chat-activity .event-time { flex: none; }
 .chat-status {
   flex: none;
   margin: 0;
