@@ -264,6 +264,29 @@ async function projectWithGitHub(req, res, projectId) {
 }
 
 /**
+ * Which files changed between two commits on the project's repository, so Deploy
+ * can tell which apps have an update waiting since they were last deployed.
+ * Query: base (the last-deployed commit) and head (the branch's latest commit).
+ * Returns { base, head, paths: string[], truncated } — GitHub's compare caps the
+ * file list at 300, so `truncated` says when there may be more.
+ */
+router.get("/projects/:id/changed", requireDeployToken, async (req, res) => {
+  const found = await projectWithGitHub(req, res, req.params.id);
+  if (!found) return;
+  const { repo, token } = found;
+  const base = typeof req.query.base === "string" ? req.query.base : "";
+  const head = typeof req.query.head === "string" ? req.query.head : "";
+  const SHA = /^[0-9a-fA-F]{7,40}$/;
+  if (!SHA.test(base) || !SHA.test(head)) return void res.status(400).json({ error: "base and head must each be a commit SHA." });
+  if (base === head) return void res.json({ base, head, paths: [], truncated: false });
+  const cmp = await github(token, `/repos/${repo}/compare/${base}...${head}`);
+  if (cmp.status === 404) return void res.status(404).json({ error: `GitHub couldn't compare ${base}...${head} in ${repo}.` });
+  if (cmp.status !== 200) return void res.status(502).json({ error: `GitHub couldn't compare those commits (HTTP ${cmp.status}).` });
+  const files = cmp.body?.files ?? [];
+  res.json({ base, head, paths: files.map((f) => f.filename).filter(Boolean), truncated: files.length >= 300 });
+});
+
+/**
  * Deploy's "Setup" edits: continuum.deploy.json written on the deployed
  * branch as one commit. Body: { branch, content (the whole file, JSON text),
  * message, baseCommit (the commit Deploy read the file at: refused with 409 when
