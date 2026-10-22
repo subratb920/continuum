@@ -8,6 +8,14 @@ const TOOLS_LABEL = { lean: "Lean", full: "Full" };
 const TIER_HINT = { small: "Routine, mechanical work", standard: "Ordinary coding", strong: "Hard reasoning" };
 const BUDGET_LABEL = { off: "No cap", ok: "On track", warn: "Near cap", exceeded: "Over cap" };
 const money = (n) => `$${(Number(n) || 0).toFixed(2)}`;
+const nf = new Intl.NumberFormat();
+/** "1.2M", "340k", "920" from a token count. */
+const toks = (n) => {
+  n = Number(n) || 0;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`;
+  if (n >= 1000) return `${Math.round(n / 1000)}k`;
+  return nf.format(n);
+};
 
 /** v, or "" for the default option, from a model value that may be null. */
 const sel = (v) => v ?? "";
@@ -37,6 +45,7 @@ export default function ModelPicker({ models }) {
       mode: mode ?? null,
       tools: tools ?? null,
       budgetCap: budget?.userCapUsd != null ? String(budget.userCapUsd) : "",
+      capUnit: "usd",
     });
   }, [settings, canSplit, brainModel, workerModel, chosen, tiers.small, tiers.standard, tiers.strong, mode, tools, budget?.userCapUsd]);
 
@@ -59,14 +68,17 @@ export default function ModelPicker({ models }) {
     }
     if (draft.mode && draft.mode !== mode) c.mode = draft.mode;
     if (draft.tools && draft.tools !== tools) c.tools = draft.tools;
-    // The spend cap: blank clears it back to the default; a number sets it (0 = no limit)
+    // The cap: blank clears it to the default; a number sets it in the chosen unit (0 = no limit)
     const capStr = (draft.budgetCap ?? "").trim();
     const curCap = budget?.userCapUsd ?? null;
     if (capStr === "") {
       if (curCap !== null) c.budgetCapUsd = null;
     } else {
       const n = Number(capStr);
-      if (Number.isFinite(n) && n >= 0 && n !== curCap) c.budgetCapUsd = n;
+      if (Number.isFinite(n) && n >= 0) {
+        if (draft.capUnit === "tokens") c.budgetCapTokens = n; // the server converts tokens → $ at the worker-model rate
+        else if (n !== curCap) c.budgetCapUsd = n;
+      }
     }
     return c;
   }
@@ -173,9 +185,9 @@ export default function ModelPicker({ models }) {
           )}
           {budget && (
             <fieldset className="mp-budget" disabled={disabled}>
-              <legend>Budget <span className="brain-hint">· cloud models, this {budget.period === "daily" ? "day" : "month"}</span></legend>
+              <legend>Budget <span className="brain-hint">· this {budget.period === "daily" ? "day" : "month"}</span></legend>
               <div className="mp-budget-row">
-                <span className="mp-budget-spent">{money(budget.periodCostUsd)}{budget.capUsd > 0 ? ` of ${money(budget.capUsd)}` : ""}</span>
+                <span className="mp-budget-spent">{money(budget.periodCostUsd)} · {toks(budget.periodTokens)} tok{budget.capUsd > 0 ? ` of ${money(budget.capUsd)}` : ""}</span>
                 <span className={`mp-budget-state is-${budget.state}`}>{BUDGET_LABEL[budget.state] ?? budget.state}</span>
               </div>
               {budget.capUsd > 0 && (
@@ -183,11 +195,21 @@ export default function ModelPicker({ models }) {
                   <span className={`is-${budget.state}`} style={{ width: `${Math.min(100, (budget.periodCostUsd / budget.capUsd) * 100)}%` }} />
                 </span>
               )}
-              <label className="mp-field">
-                <span className="mp-label">Your cap, USD <span className="brain-hint">· blank = default, 0 = no limit</span></span>
-                <input className="mp-budget-input" type="number" min="0" step="1" inputMode="decimal" placeholder="e.g. 20" value={draft.budgetCap ?? ""} onChange={(e) => set({ budgetCap: e.target.value })} disabled={disabled} />
-              </label>
-              <p className="brain-hint">Over the cap, new cloud‑model agents pause; local models stay free and running agents finish.</p>
+              <div className="mp-field">
+                <span className="mp-label mp-cap-head">
+                  Your cap
+                  <span className="mp-cap-units">
+                    {["usd", "tokens"].map((un) => (
+                      <button key={un} type="button" className={`mp-cap-unit${draft.capUnit === un ? " is-on" : ""}`} onClick={() => set({ capUnit: un, budgetCap: "" })} disabled={disabled}>
+                        {un === "usd" ? "$" : "tokens"}
+                      </button>
+                    ))}
+                  </span>
+                </span>
+                <input className="mp-budget-input" type="number" min="0" step={draft.capUnit === "tokens" ? "100000" : "1"} inputMode="decimal" placeholder={draft.capUnit === "tokens" ? "e.g. 2000000" : "e.g. 20"} value={draft.budgetCap ?? ""} onChange={(e) => set({ budgetCap: e.target.value })} disabled={disabled} />
+                <span className="brain-hint">blank = default, 0 = no limit{budget.capUsd > 0 ? ` · now ${money(budget.capUsd)} ≈ ${toks(budget.capTokens)} tok` : ""}</span>
+              </div>
+              <p className="brain-hint">Over the cap, new agents are refused and running ones stop. Billed at your rate card.</p>
             </fieldset>
           )}
         </div>

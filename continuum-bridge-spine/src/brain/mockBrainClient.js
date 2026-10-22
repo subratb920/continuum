@@ -68,12 +68,24 @@ export function createMockBrainClient({ speed = 1 } = {}) {
   const TIER_NAMES = ["small", "standard", "strong"];
   // The brain's and workers' own models, optional per-tier worker models, automatic routing, speed, tools, spend cap
   const choice = { brainModel: null, workerModel: null, tiers: {}, autoRoute: true, mode: "fast", tools: "lean", budgetCapUsd: null };
-  const DEMO_SPEND = 2.37; // pretend cloud spend this period, so the budget readout shows something
+  const DEMO_SPEND = 2.37; // pretend spend this period (billed at the rate card), so the budget readout shows something
+  const USD_PER_TOKEN = 0.0000042; // ~Claude Sonnet blended ($4.2 / 1M), for the demo
   const budgetView = () => {
     const cap = typeof choice.budgetCapUsd === "number" ? choice.budgetCapUsd : 0; // 0 = unlimited (no server default in the mock)
     const periodCostUsd = DEMO_SPEND;
     const state = cap <= 0 ? "off" : periodCostUsd >= cap ? "exceeded" : periodCostUsd >= cap * 0.8 ? "warn" : "ok";
-    return { capUsd: cap, userCapUsd: typeof choice.budgetCapUsd === "number" ? choice.budgetCapUsd : null, period: "monthly", periodCostUsd, remaining: cap > 0 ? Math.max(0, cap - periodCostUsd) : null, state };
+    return {
+      capUsd: cap,
+      userCapUsd: typeof choice.budgetCapUsd === "number" ? choice.budgetCapUsd : null,
+      period: "monthly",
+      periodCostUsd,
+      periodTokens: Math.round(periodCostUsd / USD_PER_TOKEN),
+      usdPerToken: USD_PER_TOKEN,
+      remaining: cap > 0 ? Math.max(0, cap - periodCostUsd) : null,
+      capTokens: cap > 0 ? Math.round(cap / USD_PER_TOKEN) : null,
+      remainingTokens: cap > 0 ? Math.max(0, Math.round((cap - periodCostUsd) / USD_PER_TOKEN)) : null,
+      state,
+    };
   };
   const MODES = [
     { id: "fast", words: "Quicker replies, lighter on your computer: a smaller context, and no thinking before each answer where the model allows it." },
@@ -274,7 +286,7 @@ export function createMockBrainClient({ speed = 1 } = {}) {
      * brainModel/workerModel/tiers set each; autoRoute and localHelpers are
      * toggles (no lock). Model changes need nothing awake; idle agents stop.
      */
-    async saveSettings({ model, brainModel, workerModel, tiers, autoRoute, localHelpers, budgetCapUsd, mode, tools } = {}) {
+    async saveSettings({ model, brainModel, workerModel, tiers, autoRoute, localHelpers, budgetCapUsd, budgetCapTokens, mode, tools } = {}) {
       // Toggles change nothing running: no lock
       if (typeof autoRoute === "boolean") choice.autoRoute = autoRoute;
       if (typeof localHelpers === "boolean") choice.localHelpers = localHelpers;
@@ -284,6 +296,13 @@ export function createMockBrainClient({ speed = 1 } = {}) {
           const n = Number(budgetCapUsd);
           if (!Number.isFinite(n) || n < 0) throw new Error("The cap must be 0 or more.");
           choice.budgetCapUsd = Math.round(n * 100) / 100;
+        }
+      } else if (budgetCapTokens !== undefined) {
+        if (budgetCapTokens === null) choice.budgetCapUsd = null;
+        else {
+          const n = Number(budgetCapTokens);
+          if (!Number.isFinite(n) || n < 0) throw new Error("The token cap must be 0 or more.");
+          choice.budgetCapUsd = Math.round(n * USD_PER_TOKEN * 100) / 100;
         }
       }
       const modelChange = model !== undefined || brainModel !== undefined || workerModel !== undefined || tiers !== undefined || mode !== undefined || tools !== undefined;

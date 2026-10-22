@@ -117,6 +117,9 @@ services:
       VITE_DATA_ENABLED: ${DATA_ENABLED:-false}
       # Continuum Directory's page (Admin in the profile menu opens it in a new tab)
       VITE_DIRECTORY_URL: http://localhost:45194
+      # Live brain (real brain-api via continuum-api's /brain relay) — for the end-to-end test pass
+      VITE_BRAIN_MODE: live
+      VITE_BRAIN_API_URL: http://localhost:45170
 
     depends_on:
       - continuum-api
