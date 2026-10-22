@@ -645,7 +645,7 @@ html.reduce-motion .model-change svg { transition: none; }
    failure turns red and shows the actual error. */
 .chat-activity {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   gap: 8px;
   max-width: 100%;
   padding: 1px 2px;
@@ -657,7 +657,7 @@ html.reduce-motion .model-change svg { transition: none; }
   flex: none;
   width: 6px;
   height: 6px;
-  margin-top: 1px;
+  margin-top: 4px;
   border-radius: 50%;
   background: var(--border-strong);
 }
@@ -673,7 +673,8 @@ html.reduce-motion .model-change svg { transition: none; }
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
-.chat-activity .event-time { flex: none; }
+/* The time sits under the step, quiet, not off to the right */
+.chat-activity-time { font-size: 10px; color: var(--text-muted); opacity: 0.7; }
 .chat-status {
   flex: none;
   margin: 0;
@@ -938,13 +939,27 @@ button.goal-agent:hover { background: rgb(var(--c-rgb, var(--agent-off-rgb)) / 0
 .brain-chat-pill.is-amber { --tone: var(--warning); }
 .brain-chat-pill.is-red { --tone: var(--danger); }
 .brain-chat-pill.is-violet { --tone: var(--agent-core); }
-.brain-chat-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--tone); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 25%, transparent); }
-.brain-chat-pill.is-pulsing .brain-chat-dot { animation: agent-blink 1.4s ease-in-out infinite; }
+.brain-chat-dot { position: relative; width: 10px; height: 10px; border-radius: 50%; background: var(--tone); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 25%, transparent); }
+/* Active (working, starting, waiting on you): the dot blinks and throws an expanding ring, so it clearly reads as "alive" */
+.brain-chat-pill.is-pulsing .brain-chat-dot { animation: chat-dot-blink 1.2s ease-in-out infinite; }
+.brain-chat-pill.is-pulsing .brain-chat-dot::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 2px solid var(--tone);
+  animation: chat-dot-ring 1.4s ease-out infinite;
+}
+@keyframes chat-dot-blink { 50% { opacity: 0.45; } }
+@keyframes chat-dot-ring { 0% { transform: scale(0.7); opacity: 0.8; } 100% { transform: scale(1.9); opacity: 0; } }
 /* Stopped: the stop symbol (a square), in the text's own colour */
 .brain-chat-pill.is-stopped { --tone: var(--text-2); }
 .brain-chat-pill.is-stopped .brain-chat-dot { border-radius: 2px; box-shadow: none; }
 .brain-chat-what { font-weight: 400; color: var(--text-muted); }
 .brain-chat-hint { font-size: 14px; color: var(--text-2); }
+/* Live "Working…" meter and the "done …" summary (tabular numerals so the timer doesn't jiggle) */
+.brain-chat-meter { font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.brain-chat-meter.is-done { color: var(--text-muted); }
 .brain-chat-waiting { margin-left: auto; font-size: 14px; }
 .brain-chat .chat-status { padding: 6px var(--chat-pad); }
 .brain-chat-log {

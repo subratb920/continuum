@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useBrain } from "../../brain/brainContext";
 import { BRAIN_IS_MOCK } from "../../brain/brainClient";
 import { useAuth } from "../../state/authStore";
-import { agentName, clock } from "./agentDisplay";
+import { agentName, clock, elapsed, useNow } from "./agentDisplay";
 import { CHAT_DRAFT_EVENT } from "./BrainFlows";
 import { brainStatus } from "./brainStatus";
 import "./brain.css";
@@ -29,6 +29,16 @@ const TOOL_SAID = {
 };
 
 const cut = (s, n = 300) => (s && s.length > n ? `${s.slice(0, n)}…` : s || "");
+
+// "6.2k", "1.1M", "920" from a token count
+const fmtTok = (n) => {
+  n = Number(n) || 0;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return String(n);
+};
+/** The brain's total tokens so far (input + output), or 0. */
+const coreTokens = (c) => (c?.usage ? (c.usage.inputTokens || 0) + (c.usage.outputTokens || 0) : 0);
 
 /** A tool call in plain words (its own name if we have no nicer one). */
 function toolSaid(ev) {
@@ -73,6 +83,10 @@ export default function BrainChat() {
   const [text, setText] = useState("");
   const [outbox, setOutbox] = useState([]); // [{ id, text, at, error? }]
   const [stopErr, setStopErr] = useState(null); // when a Stop couldn't go through
+  const now = useNow(1000); // ticks the live "Working…" timer
+  const [lastDone, setLastDone] = useState(null); // { at, ms, tokens } of the turn just finished
+  const [turn, setTurn] = useState(null); // { start, tokensBase } of the working turn in flight, or null
+  const prevState = useRef(null);
   const log = useRef(null);
   const box = useRef(null);
   // The feed: your conversation with the brain, plus the brain's and its
@@ -91,6 +105,22 @@ export default function BrainChat() {
   useEffect(() => {
     if (log.current) log.current.scrollTop = log.current.scrollHeight;
   }, [feed.length, waiting.length]);
+
+  // Track each working turn: when it starts, and (on finish) how long it ran and the tokens it used
+  useEffect(() => {
+    const c = brain?.core;
+    const s = c?.state ?? null;
+    const prev = prevState.current;
+    if (s === "working" && prev !== "working") {
+      setTurn({ start: Date.now(), tokensBase: coreTokens(c) });
+      setLastDone(null);
+    } else if (prev === "working" && s !== "working") {
+      if (turn) setLastDone({ at: Date.now(), ms: Date.now() - turn.start, tokens: Math.max(0, coreTokens(c) - turn.tokensBase) });
+      setTurn(null);
+    }
+    prevState.current = s;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the core's state/usage; `turn` is read, not tracked
+  }, [brain?.core?.state, brain?.core?.usage?.inputTokens, brain?.core?.usage?.outputTokens, turn]);
 
   // "Try it" on a sample flow: its message in the box, ready to edit or send
   useEffect(() => {
@@ -112,7 +142,10 @@ export default function BrainChat() {
 
   if (!brain) return null;
   const { core, say, interrupt, replay, connected, pending } = brain;
-  const status = brainStatus(core, connected);
+  const status = brainStatus(core, connected, pending.length > 0);
+  // The live "Working…" meter (elapsed + tokens this turn) and the "done" summary line
+  const working = core?.state === "working" && turn;
+  const liveTokens = working ? Math.max(0, coreTokens(core) - turn.tokensBase) : 0;
   // Sending needs "Run agents"; an API from before that feature existed (it isn't in its list) leaves it to Agents itself
   const runKnown = access?.allFeatures?.some((f) => f.id === "agents_run") ?? true;
   const mayRun = runKnown ? can("agents_run") : can("agents");
@@ -157,7 +190,19 @@ export default function BrainChat() {
           <span className="brain-chat-what">Brain</span>
           {status.label}
         </span>
-        <span className="brain-chat-hint">{status.hint}</span>
+        {working ? (
+          <span className="brain-chat-meter">
+            {elapsed(turn.start, now)}
+            {liveTokens > 0 ? ` · ${fmtTok(liveTokens)} tokens` : ""}
+          </span>
+        ) : core?.state === "idle" && lastDone ? (
+          <span className="brain-chat-meter is-done">
+            done {clock(lastDone.at)} · {elapsed(lastDone.at - lastDone.ms, lastDone.at)}
+            {lastDone.tokens > 0 ? ` · ${fmtTok(lastDone.tokens)} tokens` : ""}
+          </span>
+        ) : (
+          <span className="brain-chat-hint">{status.hint}</span>
+        )}
         {pending.length > 0 && (
           <button type="button" className="brain-link brain-chat-waiting" onClick={() => navigate("/brain", { state: { inspectorTab: "approvals" } })}>
             {pending.length} waiting on you · Open Agents ›
@@ -194,8 +239,8 @@ export default function BrainChat() {
               <span className="chat-activity-body">
                 <span className="chat-activity-label">{a.label}</span>
                 {a.detail && <span className="chat-activity-detail">{a.detail}</span>}
+                <time className="chat-activity-time">{clock(m.at)}</time>
               </span>
-              <time className="event-time">{clock(m.at)}</time>
             </li>
           );
         })}
