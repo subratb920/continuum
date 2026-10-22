@@ -231,6 +231,8 @@ services:
     environment:
       SITE_URL: http://localhost:45195
       APP_URL: http://localhost:45173
+      # The public API the site's browser beacon + lead/callback form post to (also gates the Contact us section)
+      API_URL: http://localhost:45170
 
 
 volumes:
