@@ -50,7 +50,18 @@ export default function ModelPicker({ models }) {
   }, [settings, canSplit, brainModel, workerModel, chosen, tiers.small, tiers.standard, tiers.strong, mode, tools, budget?.userCapUsd]);
 
   if (!available) return <p className="brain-hint mp-empty">The model settings aren't available here.</p>;
-  if (!draft) return <p className="brain-hint mp-empty">Loading the models…</p>;
+  // Don't sit on "Loading…" forever when the load actually failed (e.g. the brain relay is down) — say so, and offer to retry
+  if (!draft)
+    return error ? (
+      <p className="model-settings-error mp-empty" role="alert">
+        {error}{" "}
+        <button type="button" className="brain-link" onClick={() => refresh?.()}>
+          Try again
+        </button>
+      </p>
+    ) : (
+      <p className="brain-hint mp-empty">Loading the models…</p>
+    );
 
   const disabled = saving || !changeable;
 
