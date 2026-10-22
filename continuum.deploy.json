@@ -8,6 +8,9 @@
     {
       "name": "continuum-api",
       "path": "continuum-api",
+      "env": {
+        "PUBLIC_SITE_ORIGINS": "https://continuum-console.one,https://www.continuum-console.one"
+      },
       "clientInfo": true,
       "dockerfile": "continuum-api/Dockerfile.cloud",
       "dependsOn": [
@@ -61,6 +64,12 @@
     {
       "name": "continuum-site-app",
       "path": "continuum-site",
+      "env": {
+        "API_URL": "${continuum-api.url}"
+      },
+      "dependsOn": [
+        "continuum-api"
+      ],
       "clientInfo": true,
       "port": 45195,
       "scale": {
