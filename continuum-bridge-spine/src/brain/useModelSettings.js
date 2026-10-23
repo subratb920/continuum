@@ -73,6 +73,8 @@ export function useModelSettings() {
     allowedModels: settings?.allowedModels ?? [],
     concurrencyCap: settings?.concurrencyCap ?? null,
     maxAgentSize: settings?.maxAgentSize ?? null,
+    brainSize: settings?.brainSize ?? null,
+    brainSizeDefault: settings?.brainSizeDefault ?? null,
     sizeNames: settings?.sizeNames ?? [],
     /** The space this is for, and whether you may change it ({ kind, orgRole, canManage }). Personal/old brain: manageable. */
     space: settings?.space ?? { kind: "user", orgRole: null, canManage: true },

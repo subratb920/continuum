@@ -10,10 +10,11 @@ const SIZE_LABEL = { small: "Small", standard: "Standard", large: "Large" };
  * space has no shared policy). Talks to the brain through the model settings hook.
  */
 export default function WorkspacePolicy({ models }) {
-  const { list, allowedModels, maxAgentSize, concurrencyCap, sizeNames, space, canManage, save } = models;
+  const { list, allowedModels, maxAgentSize, brainSize, brainSizeDefault, concurrencyCap, sizeNames, space, canManage, save } = models;
   const [open, setOpen] = useState(false);
   const [allowed, setAllowed] = useState([]);
   const [maxSize, setMaxSize] = useState("");
+  const [brain, setBrain] = useState("");
   const [cap, setCap] = useState("");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null); // { ok, text }
@@ -27,6 +28,7 @@ export default function WorkspacePolicy({ models }) {
   const begin = () => {
     setAllowed(allowedModels ?? []);
     setMaxSize(maxAgentSize ?? "");
+    setBrain(brainSize ?? "");
     setCap(concurrencyCap != null ? String(concurrencyCap) : "");
     setMsg(null);
     setOpen(true);
@@ -38,7 +40,7 @@ export default function WorkspacePolicy({ models }) {
     setSaving(true);
     setMsg(null);
     try {
-      await save({ allowedModels: allowed.length ? allowed : null, maxAgentSize: maxSize || null, concurrencyCap: cap.trim() ? Number(cap) : null });
+      await save({ allowedModels: allowed.length ? allowed : null, maxAgentSize: maxSize || null, brainSize: brain || null, concurrencyCap: cap.trim() ? Number(cap) : null });
       setMsg({ ok: true, text: "Workspace policy saved." });
       setOpen(false);
     } catch (err) {
@@ -57,6 +59,8 @@ export default function WorkspacePolicy({ models }) {
           <dd>{allowedModels?.length ? `${allowedModels.length} allowed` : "Every model"}</dd>
           <dt>Largest agent</dt>
           <dd>{maxAgentSize ? SIZE_LABEL[maxAgentSize] ?? maxAgentSize : "No cap"}</dd>
+          <dt>Brain size</dt>
+          <dd>{brainSize ? SIZE_LABEL[brainSize] ?? brainSize : `Default${brainSizeDefault ? ` (${SIZE_LABEL[brainSizeDefault] ?? brainSizeDefault})` : ""}`}</dd>
           <dt>Most at once</dt>
           <dd>{concurrencyCap ?? "Server default"}</dd>
         </dl>
@@ -84,6 +88,17 @@ export default function WorkspacePolicy({ models }) {
             Largest agent size
             <select value={maxSize} onChange={(e) => setMaxSize(e.target.value)} disabled={saving}>
               <option value="">No cap (any size)</option>
+              {sizes.map((s) => (
+                <option key={s} value={s}>
+                  {SIZE_LABEL[s] ?? s}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="workspace-policy-field">
+            Brain size <span className="brain-hint">· CPU/memory for the brain; takes effect on its next start, no redeploy</span>
+            <select value={brain} onChange={(e) => setBrain(e.target.value)} disabled={saving}>
+              <option value="">Server default{brainSizeDefault ? ` (${SIZE_LABEL[brainSizeDefault] ?? brainSizeDefault})` : ""}</option>
               {sizes.map((s) => (
                 <option key={s} value={s}>
                   {SIZE_LABEL[s] ?? s}
