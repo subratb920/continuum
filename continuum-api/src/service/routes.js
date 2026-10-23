@@ -23,7 +23,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
 import { PROJECT_COLLECTION } from "../models/project.model.js";
-import { personalProjectFilter } from "../spaces/projectAccess.js";
+import { personalSpace, projectFilter, SPACE_HEADER } from "../spaces/projectAccess.js";
 import { BRIDGE_COLLECTION } from "../models/bridge.model.js";
 import { bridgeFor, mineFilter } from "../services/bridgeAccess.js";
 import { EXECUTION_COLLECTION } from "../models/execution.model.js";
@@ -105,7 +105,7 @@ export function createServiceRouter(opts = {}) {
     res.json({ saved });
   });
 
-  router.use((req, res, next) => {
+  router.use(async (req, res, next) => {
     const expected = opts.token ?? process.env.CONTINUUM_SERVICE_TOKEN;
     if (!expected) return res.status(503).json({ error: "The brain's access isn't set up here." });
     const header = req.get("authorization") ?? "";
@@ -114,17 +114,35 @@ export function createServiceRouter(opts = {}) {
     const user = req.get("x-continuum-user") ?? "";
     if (!/^[a-f0-9]{24}$/.test(user)) return res.status(400).json({ error: "X-Continuum-User must be a user ID." });
     req.serviceUser = new ObjectId(user);
+    // The tenant (Space) the brain is acting in: an agent in an org space sees that org's projects.
+    // No X-Continuum-Space (or an older brain) means the user's personal space, exactly as before —
+    // and that case needs no directory lookup (every call stays a single round-trip, as before).
+    const spaceHeader = req.get(SPACE_HEADER);
+    if (!spaceHeader) {
+      req.serviceSpace = personalSpace(user);
+    } else {
+      try {
+        // Load the directory lazily (only org-space calls need it; keeps the personal path and its tests free of it).
+        const resolve = opts.resolveSpace ?? (await import("../directory/directory.js")).dir.resolveSpace;
+        req.serviceSpace = await resolve(user, spaceHeader);
+      } catch (err) {
+        return res.status(err?.statusCode ?? 403).json({ error: err?.message ?? "Not allowed in that space.", code: err?.code });
+      }
+    }
     res.set("Cache-Control", "no-store");
     next();
   });
 
+  /** Projects the brain may read in the active space (an org's, scoped by role and departments; else the user's personal ones). */
+  const visibleProjects = (req) => projectFilter(req.serviceSpace, req.serviceUser);
+
   async function ownProject(req) {
     if (!ObjectId.isValid(req.params.id) || !/^[a-f0-9]{24}$/.test(req.params.id)) return null;
-    return db().collection(PROJECT_COLLECTION).findOne({ _id: new ObjectId(req.params.id), ...personalProjectFilter(req.serviceUser) }, { projection: { "contents.entries": 0 } });
+    return db().collection(PROJECT_COLLECTION).findOne({ _id: new ObjectId(req.params.id), ...visibleProjects(req) }, { projection: { "contents.entries": 0 } });
   }
 
   router.get("/projects", async (req, res) => {
-    const list = await db().collection(PROJECT_COLLECTION).find(personalProjectFilter(req.serviceUser), { projection: { "contents.entries": 0 } }).sort({ createdAt: -1 }).limit(500).toArray();
+    const list = await db().collection(PROJECT_COLLECTION).find(visibleProjects(req), { projection: { "contents.entries": 0 } }).sort({ createdAt: -1 }).limit(500).toArray();
     res.json(list.map(projectView));
   });
 
@@ -177,7 +195,7 @@ export function createServiceRouter(opts = {}) {
 
   router.get("/interval", async (req, res) => {
     const state = await db().collection(EXECUTION_COLLECTION).findOne({ userId: req.serviceUser });
-    const project = state?.activeProjectId ? await db().collection(PROJECT_COLLECTION).findOne({ _id: state.activeProjectId, ...personalProjectFilter(req.serviceUser) }, { projection: { "contents.entries": 0 } }) : null;
+    const project = state?.activeProjectId ? await db().collection(PROJECT_COLLECTION).findOne({ _id: state.activeProjectId, ...visibleProjects(req) }, { projection: { "contents.entries": 0 } }) : null;
     // The user's own running interval on it (another person's never)
     const bridge = project ? await db().collection(BRIDGE_COLLECTION).findOne({ projectId: project._id, status: "draft", ...mineFilter(req.serviceUser, true) }, { sort: { createdAt: -1 } }) : null;
     res.json({ activeProject: project ? projectView(project) : null, bridge: bridge ? bridgeView(bridge) : null });
