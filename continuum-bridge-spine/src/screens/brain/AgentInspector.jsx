@@ -41,7 +41,7 @@ export default function AgentInspector() {
 }
 
 function Activity() {
-  const { agents, workers, events, pending, selectedId, select, stop, retry, replay } = useBrain();
+  const { agents, workers, events, pending, selectedId, select, stop, replay } = useBrain();
   const agent = selectedId ? agents[selectedId] : null;
   const shown = (agent ? events.filter((e) => e.agentId === agent._id) : events).filter((e) => e.kind !== "state" || agent).slice(-150).reverse();
   const asks = agent ? pending.filter((e) => e.agentId === agent._id) : [];
@@ -72,11 +72,6 @@ function Activity() {
           <WorkerWork agent={agent} />
           {replay.live && agent.kind === "worker" && ACTIVE_STATES.includes(agent.state) && agent.state !== "stopping" && (
             <button type="button" className="brain-btn is-danger" onClick={() => stop(agent._id)}>Stop worker</button>
-          )}
-          {replay.live && agent.state === "failed" && !agent.retriedBy && (
-            <button type="button" className="brain-btn is-primary" onClick={() => retry(agent._id)} title="A fresh worker on the same task (and goal)">
-              ↻ Retry with a new worker
-            </button>
           )}
           {agent.retriedBy && (
             <button type="button" className="brain-link" onClick={() => select(agent.retriedBy)}>

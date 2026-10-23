@@ -106,6 +106,8 @@
 
 .agent-spawn-open { width: 100%; }
 
+.agent-skills-open { width: 100%; }
+
 .agent-spawn {
   display: flex;
   flex-direction: column;

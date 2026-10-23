@@ -3,38 +3,30 @@ import { useBrain } from "../../brain/brainContext";
 import { ACTIVE_STATES, STATE_LABEL } from "../../brain/brainTypes";
 import { BRAIN_IS_MOCK } from "../../brain/brainClient";
 import { agentName, elapsed, runningModel, useNow } from "./agentDisplay";
+import SkillsDialog from "./SkillsDialog";
 import "./brain.css";
 
+/** When an agent started, as a number for sorting (0 if unknown). */
+const startedMs = (a) => (a.startedAt ? new Date(a.startedAt).getTime() : 0) || 0;
+/** Workers newest first (most recently started at the top), without mutating the source. */
+const latestFirst = (list) => [...list].sort((a, b) => startedMs(b) - startedMs(a));
+
 /**
- * Agents pane (left): the core, then its workers, each with its state, task,
- * the interval goal it works on, branch and running time. Spawn starts a
- * worker through the core (on one of the running interval's goals, if you
- * pick one); a failed worker can be retried. Model: the one model your brain
- * and every worker run on. While replaying, the actions wait.
+ * Agents pane (left): the core (your brain), then its workers, newest first —
+ * each with its state, task, the interval goal it works on, branch and running
+ * time. The brain starts, retries and stops workers itself as it does the work
+ * you give it in Chat; you can stop a worker here. Model: the one model your
+ * brain and every worker run on. While replaying, the actions wait.
  */
 export default function AgentRoster() {
   const brain = useBrain();
   const now = useNow();
-  const [spawning, setSpawning] = useState(false);
-  const [task, setTask] = useState("");
-  const [goalId, setGoalId] = useState("");
+  const [skillsOpen, setSkillsOpen] = useState(false);
 
   if (!brain) return null;
-  const { core, workers, pending, selectedId, select, stop, retry, replay, interval } = brain;
+  const { core, workers, pending, selectedId, select, stop, replay } = brain;
   const asking = new Set(pending.map((e) => e.agentId));
   const clockNow = replay.live ? now : replay.at;
-  const goals = interval?.goals ?? [];
-
-  function submit(e) {
-    e.preventDefault();
-    const goal = goals.find((g) => g.id === goalId);
-    const text = task.trim() || goal?.text;
-    if (!text) return;
-    brain.spawn(text, { goal: goal ? { bridgeId: interval.bridgeId, goalId: goal.id, text: goal.text } : null });
-    setTask("");
-    setGoalId("");
-    setSpawning(false);
-  }
 
   const row = (a) => {
     const active = ACTIVE_STATES.includes(a.state);
@@ -68,11 +60,6 @@ export default function AgentRoster() {
                 {runningModel(a)}
               </span>
             )}
-            {replay.live && a.state === "failed" && !a.retriedBy && (
-              <button type="button" className="brain-btn agent-row-retry" onClick={(e) => (e.stopPropagation(), retry(a._id))}>
-                ↻ Retry
-              </button>
-            )}
           </span>
           {replay.live && a.kind === "worker" && active && a.state !== "stopping" && (
             <button
@@ -99,52 +86,27 @@ export default function AgentRoster() {
         {BRAIN_IS_MOCK && <span className="brain-sim" title="Simulated agents until brain-api is connected (VITE_BRAIN_MODE=live)">Simulated</span>}
       </div>
 
-      {spawning ? (
-        <form className="agent-spawn" onSubmit={submit}>
-          {goals.length > 0 && (
-            <select value={goalId} onChange={(e) => setGoalId(e.target.value)} aria-label="Interval goal">
-              <option value="">No interval goal</option>
-              {goals.map((g) => (
-                <option key={g.id} value={g.id}>
-                  ◎ {g.text}
-                </option>
-              ))}
-            </select>
-          )}
-          <textarea
-            autoFocus
-            rows={3}
-            placeholder={goalId ? "Anything to add? (the goal is the task)" : "What should the worker do?"}
-            value={task}
-            onChange={(e) => setTask(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") setSpawning(false);
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(e);
-            }}
-          />
-          <div className="agent-spawn-actions">
-            <button type="button" className="brain-btn" onClick={() => setSpawning(false)}>Cancel</button>
-            <button type="submit" className="brain-btn is-primary" disabled={!task.trim() && !goalId}>Start worker</button>
-          </div>
-        </form>
-      ) : (
-        <button type="button" className="brain-btn agent-spawn-open" onClick={() => setSpawning(true)} disabled={!replay.live || (BRAIN_IS_MOCK && !core)} title={replay.live ? undefined : "Go live to start a worker"}>
-          ＋ Spawn worker
+      {/* Skills: the know-how your brain and workers load when the work fits (real brain only). */}
+      {brain.skills && (
+        <button type="button" className="brain-btn agent-skills-open" onClick={() => setSkillsOpen(true)} title="Know-how your agents load when the work fits">
+          ✦ Manage skills
         </button>
       )}
 
       {core ? (
         <ul className="agent-list">{row(core)}</ul>
       ) : (
-        // The real brain starts with your first message (Chat, or a worker to start)
-        <p className="brain-empty">{BRAIN_IS_MOCK ? "Waking the brain…" : "Your brain starts with your first message."}</p>
+        // The brain starts with your first message in Chat; it starts workers itself from there.
+        <p className="brain-empty">{BRAIN_IS_MOCK ? "Waking the brain…" : "Your brain starts with your first message in Chat, and starts workers itself from there."}</p>
       )}
       {(core || !BRAIN_IS_MOCK) && (
         <>
           <h3 className="agent-list-label">Workers</h3>
-          {workers.length ? <ul className="agent-list">{workers.map(row)}</ul> : <p className="brain-empty">No workers yet.</p>}
+          {workers.length ? <ul className="agent-list">{latestFirst(workers).map(row)}</ul> : <p className="brain-empty">No workers yet — the brain starts them as it works on what you ask in Chat.</p>}
         </>
       )}
+
+      {skillsOpen && <SkillsDialog brain={brain} onClose={() => setSkillsOpen(false)} />}
     </div>
   );
 }

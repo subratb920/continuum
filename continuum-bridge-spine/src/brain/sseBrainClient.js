@@ -78,9 +78,8 @@ export function createSseBrainClient(base = import.meta.env.VITE_BRAIN_API_URL) 
       }, onMessage);
     },
 
-    // A goal is sent as its ids: brain-api takes its text (and the project) from Continuum
-    // idempotencyKey: if this exact spawn is delivered twice (a retry), the brain makes one worker, not two
-    spawn: (task, { repo, goal } = {}) => call("POST", "/brain/agents", { task, repo, ...(goal ? { goal: { bridgeId: goal.bridgeId, goalId: goal.goalId } } : {}), idempotencyKey: crypto.randomUUID() }),
+    // Workers aren't started from here anymore: the brain starts them itself (its spawn_agent tool)
+    // as it does the work you give it in Chat. The UI only reads, stops and replies.
     models: () => call("GET", "/brain/models"),
     settings: () => call("GET", "/brain/settings"),
     saveSettings: (changes) => call("PUT", "/brain/settings", changes),

@@ -7,9 +7,7 @@
 //                                           sent events; after= an event's seq; EventSource can't send
 //                                           headers, so this route also takes the sign-in token as ?token=)
 //   GET    /brain/pending                   what waits on you: requests not yet answered, oldest first
-//   POST   /brain/agents {task, projectId? | goal?: {bridgeId, goalId} | repo?}  (on your one model)
-//                                           a worker: on that project, interval goal or repository;
-//                                           with none of them, your brain picks the project
+//   (no spawn route: the brain starts workers itself as it does your work — talk to it at /brain/core/messages)
 //   POST   /brain/agents/:id/stop   DELETE /brain/agents/:id
 //   GET    /brain/agents/:id/changes        what a worker changed on its branch (with diffs)
 //   GET    /brain/agents/:id/file?path=     one file of its working copy (written into your own folder)
@@ -158,22 +156,8 @@ export function createBrainRouter(opts = {}) {
     res.set("Cache-Control", "no-store").json((await brain(req, "GET", "/pending")).map(toEvent));
   });
 
-  router.post("/agents", async (req, res) => {
-    const task = typeof req.body?.task === "string" ? req.body.task.trim() : "";
-    if (!task && !req.body?.goal) throw new AppError("Say what the worker should do.", 400, "VALIDATION_ERROR");
-    const { projectId, repo, goal } = req.body ?? {};
-    // A retried or double-clicked spawn with the same key makes one worker, not two
-    const idempotencyKey = typeof req.body?.idempotencyKey === "string" && req.body.idempotencyKey ? req.body.idempotencyKey.slice(0, 200) : undefined;
-    // Started directly: on a project, an interval goal (its project, from Continuum) or a repository (a retry)
-    if (projectId || goal || repo) {
-      const where = goal ? { goal: { bridgeId: goal.bridgeId, goalId: goal.goalId } } : projectId ? { projectId } : { repo };
-      // No model: your brain and every worker run on one model (Models, /brain/settings)
-      return res.status(201).json(toAgent(await brain(req, "POST", "/agents", { ...where, task, ...(idempotencyKey ? { idempotencyKey } : {}) })));
-    }
-    // Nothing given: your brain picks the project (and asks you when it isn't clear)
-    const text = `Start a worker agent for this task. Pick the right project with your tools; if it isn't clear which one, ask me first.\n\nTask: ${task}`;
-    res.status(202).json(toAgent(await brain(req, "POST", "/brain/messages", { text })));
-  });
+  // Workers aren't started from the UI anymore: the brain starts them itself as it does the
+  // work you give it in Chat (POST /brain/core/messages). There's no user-facing spawn route.
 
   router.post("/agents/:id/stop", async (req, res) => {
     res.json(toAgent(await brain(req, "POST", `/agents/${agentId(req)}/stop`)));

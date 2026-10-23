@@ -264,12 +264,10 @@ export function BrainProvider({ children }) {
       seek: (t) => dispatch({ type: "replay", replay: t == null ? { at: null, playing: false } : { at: t } }),
       playReplay: (play) => dispatch({ type: "replay", replay: { playing: play, ...(play && state.replay.at == null && first != null && { at: first }) } }),
       setReplaySpeed: (s) => dispatch({ type: "replay", replay: { speed: s } }),
-      spawn: (task, opts) => client.spawn(task, opts),
       /** An agent interval started: the brain is given its goals and works them to the end. */
       startAgentInterval: (bridgeId) => client.startAgentInterval?.(bridgeId),
+      // Workers are the brain's to start, retry and stop as it does your work; you can only stop one here.
       stop: (id) => client.stop(id),
-      // brain-api has no retry yet: then a new worker gets the same task
-      retry: (id) => (client.retry ? client.retry(id) : client.spawn(state.agents[id].task, { repo: state.agents[id].repo, goal: state.agents[id].goal })),
       /**
        * Your answer to a request. Once it goes through (or it turns out it was
        * answered already, or no longer waits), the request leaves the list at
