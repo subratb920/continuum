@@ -1063,3 +1063,35 @@ button.goal-agent:hover { background: rgb(var(--c-rgb, var(--agent-off-rgb)) / 0
 .agent-stage-box.is-sample {
   background-image: radial-gradient(circle at 50% 45%, rgb(var(--brand-rgb) / 0.06), transparent 60%);
 }
+
+/* Workspace policy (org spaces): allowed models, max agent size, concurrency cap */
+.workspace-policy {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--brain-border, rgba(127, 127, 127, 0.2));
+}
+.workspace-policy-title {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.workspace-policy-summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+}
+.workspace-policy-summary dt {
+  color: var(--brain-muted, #888);
+}
+.workspace-policy-summary dd {
+  margin: 0;
+}
+.workspace-policy-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  margin-top: 8px;
+}

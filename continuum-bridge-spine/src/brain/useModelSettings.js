@@ -69,6 +69,14 @@ export function useModelSettings() {
     /** Why the model can't change right now (an agent awake, a request waiting), or null. */
     locked: settings?.locked ?? null,
     changeable: settings ? settings.changeable !== false : false,
+    /** Tenant policy an org admin sets (a brain from before Phase 2: empty/null). */
+    allowedModels: settings?.allowedModels ?? [],
+    concurrencyCap: settings?.concurrencyCap ?? null,
+    maxAgentSize: settings?.maxAgentSize ?? null,
+    sizeNames: settings?.sizeNames ?? [],
+    /** The space this is for, and whether you may change it ({ kind, orgRole, canManage }). Personal/old brain: manageable. */
+    space: settings?.space ?? { kind: "user", orgRole: null, canManage: true },
+    canManage: settings ? settings.space?.canManage !== false : true,
     refresh,
     save,
   };
