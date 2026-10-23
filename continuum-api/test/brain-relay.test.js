@@ -11,6 +11,7 @@ const QUE = "f".repeat(24);
 /** A fake brain-api: records calls, answers like the real one. */
 function fakeBrain() {
   const calls = [];
+  const spaces = [];
   const events = [
     { id: PER, agentId: W, kind: "permission", text: "edit: src/footer.html", data: { id: "per_1", type: "edit", detail: "--- a\n+++ b\n@@\n-old\n+new\n+more" } },
     { id: QUE, agentId: W, kind: "question", text: "Which colour?", data: { id: "que_1", questions: [{ question: "Which colour?", options: ["Blue", "Red"] }] } },
@@ -18,7 +19,9 @@ function fakeBrain() {
   const agent = { id: W, kind: "worker", state: "working" };
   return {
     calls,
-    call: async (userId, method, path, body) => {
+    spaces,
+    call: async ({ userId, spaceId }, method, path, body) => {
+      spaces.push(spaceId);
       calls.push(`${userId} ${method} ${path}${body ? ` ${JSON.stringify(body)}` : ""}`);
       if (path === "/agents" && method === "GET") return { status: 200, data: [agent] };
       if (path === "/brain") return { status: 200, data: { brain: { id: "c".repeat(24), kind: "core", state: "idle" }, events: [] } };
@@ -27,7 +30,8 @@ function fakeBrain() {
       if (path === "/agents" && body?.projectId === "nope") return { status: 404, data: { error: { code: "NOT_FOUND", message: "No such project." } } };
       return { status: 200, data: agent };
     },
-    send: async (userId, path, bytes) => {
+    send: async ({ userId, spaceId }, path, bytes) => {
+      spaces.push(spaceId);
       // The route now streams the upload straight through, so `bytes` is a readable stream (drain it to size it)
       let len = 0;
       if (bytes && typeof bytes[Symbol.asyncIterator] === "function") for await (const c of bytes) len += c.length;
@@ -36,7 +40,8 @@ function fakeBrain() {
       if (path.startsWith(`/projects/${"e".repeat(24)}`)) return { status: 404, data: { error: { code: "NOT_FOUND", message: "No such project." } } };
       return { status: 201, data: { id: "s".repeat(24), files: 3, bytes: len } };
     },
-    stream: async (_u, query) => {
+    stream: async (caller, query) => {
+      spaces.push(caller?.spaceId);
       calls.push(`stream ${new URLSearchParams(query)}`);
       const body = new ReadableStream({
         start(c) {
@@ -101,6 +106,8 @@ test("brain relay: your brain and workers; a worker on a project, or your brain 
   assert.deepEqual([refused.status, (await refused.json()).error], [404, "No such project."]);
   assert.equal((await s.call("POST", "/agents", { task: " " })).status, 400);
   assert.ok(b.calls.every((c) => c.startsWith("1".repeat(24)) || c.startsWith("stream")), "always as the signed-in user");
+  // With no active org space, the tenant is the user's personal space ("u:<userId>"), forwarded on every call
+  assert.ok(b.spaces.every((sp) => sp === `u:${"1".repeat(24)}`), "the personal space is forwarded as X-Continuum-Space");
   s.close();
 });
 

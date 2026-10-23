@@ -82,12 +82,13 @@ export function createBrainRouter(opts = {}) {
     next();
   });
 
-  const uid = (req) => String(req.user.id);
+  // Who the relayed call acts as: the signed-in user, and the tenant (Space) they're working in (personal unless an org space is active).
+  const caller = (req) => ({ userId: String(req.user.id), spaceId: req.space?.id ?? `u:${req.user.id}` });
   /** One call; brain-api's refusals pass on as they are (status, code, message). */
   async function brain(req, method, path, body) {
     let r;
     try {
-      r = await client.call(uid(req), method, path, body);
+      r = await client.call(caller(req), method, path, body);
     } catch (e) {
       if (e instanceof BrainUnavailableError) throw new AppError(e.message, 503, "BRAIN_UNAVAILABLE");
       throw e;
@@ -111,7 +112,7 @@ export function createBrainRouter(opts = {}) {
     req.on("close", () => ctl.abort());
     let upstream;
     try {
-      upstream = await client.stream(uid(req), CURSOR.test(after) ? { after } : { history: "1" }, ctl.signal);
+      upstream = await client.stream(caller(req), CURSOR.test(after) ? { after } : { history: "1" }, ctl.signal);
     } catch (e) {
       if (e instanceof BrainUnavailableError) throw new AppError(e.message, 503, "BRAIN_UNAVAILABLE");
       throw e;
@@ -242,7 +243,7 @@ export function createBrainRouter(opts = {}) {
     const contentType = typeof req.headers["content-type"] === "string" ? req.headers["content-type"] : "application/gzip";
     let r;
     try {
-      r = await client.send(uid(req), `/projects/${projectId}/snapshots`, req, contentType);
+      r = await client.send(caller(req), `/projects/${projectId}/snapshots`, req, contentType);
     } catch (e) {
       if (e instanceof BrainUnavailableError) throw new AppError(e.message, 503, "BRAIN_UNAVAILABLE");
       throw e;

@@ -21,7 +21,12 @@ const num = (name, dflt) => {
 
 export function brainClient(baseUrl, token, fetchImpl = fetch) {
   const base = baseUrl.replace(/\/+$/, "");
-  const headers = (userId, json) => ({ "X-Brain-Token": token, "X-Continuum-User": String(userId), ...(json ? { "Content-Type": "application/json" } : {}) });
+  // caller: { userId, spaceId } — spaceId is the tenant (Space) the call is scoped to; omitted falls back to the user's personal space.
+  const headers = (caller, json) => {
+    const userId = typeof caller === "object" ? caller.userId : caller; // back-compat: a bare userId still works
+    const spaceId = typeof caller === "object" && caller.spaceId ? caller.spaceId : `u:${userId}`;
+    return { "X-Brain-Token": token, "X-Continuum-User": String(userId), "X-Continuum-Space": String(spaceId), ...(json ? { "Content-Type": "application/json" } : {}) };
+  };
 
   // A bounded keep-alive pool for short calls (reused connections, bounded per origin); the SSE stream stays on the default pool
   const dispatcher = new Agent({ connections: num("BRAIN_POOL_CONNECTIONS", 64), keepAliveTimeout: 10_000, keepAliveMaxTimeout: 60_000 });
@@ -40,11 +45,11 @@ export function brainClient(baseUrl, token, fetchImpl = fetch) {
   }
 
   /** { status, data } of one call. */
-  async function call(userId, method, path, body, timeoutMs = 30_000) {
+  async function call(caller, method, path, body, timeoutMs = 30_000) {
     return withSlot(async () => {
       let res;
       try {
-        res = await fetchImpl(`${base}${path}`, { method, headers: headers(userId, body !== undefined), body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(timeoutMs), dispatcher });
+        res = await fetchImpl(`${base}${path}`, { method, headers: headers(caller, body !== undefined), body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(timeoutMs), dispatcher });
       } catch {
         throw new BrainUnavailableError("The brain isn't reachable right now. Try again in a moment.");
       }
@@ -58,12 +63,12 @@ export function brainClient(baseUrl, token, fetchImpl = fetch) {
    * may be a Buffer, or a readable stream to pipe straight through (so a 60 MB
    * upload isn't held in memory before it's forwarded).
    */
-  async function send(userId, path, bytes, contentType = "application/gzip", timeoutMs = 120_000) {
+  async function send(caller, path, bytes, contentType = "application/gzip", timeoutMs = 120_000) {
     return withSlot(async () => {
       let res;
       try {
         const streamed = bytes && typeof bytes.pipe === "function"; // a Node readable (fetch needs duplex for a streaming body)
-        res = await fetchImpl(`${base}${path}`, { method: "POST", headers: { ...headers(userId, false), "Content-Type": contentType }, body: bytes, signal: AbortSignal.timeout(timeoutMs), dispatcher, ...(streamed ? { duplex: "half" } : {}) });
+        res = await fetchImpl(`${base}${path}`, { method: "POST", headers: { ...headers(caller, false), "Content-Type": contentType }, body: bytes, signal: AbortSignal.timeout(timeoutMs), dispatcher, ...(streamed ? { duplex: "half" } : {}) });
       } catch {
         throw new BrainUnavailableError("The brain isn't reachable right now. Try again in a moment.");
       }
@@ -73,9 +78,9 @@ export function brainClient(baseUrl, token, fetchImpl = fetch) {
   }
 
   /** The user's live events (server-sent events), until `signal` aborts. Long-lived: kept off the short-call pool. */
-  async function stream(userId, query, signal) {
+  async function stream(caller, query, signal) {
     try {
-      return await fetchImpl(`${base}/events?${new URLSearchParams(query)}`, { headers: { ...headers(userId, false), Accept: "text/event-stream" }, signal });
+      return await fetchImpl(`${base}/events?${new URLSearchParams(query)}`, { headers: { ...headers(caller, false), Accept: "text/event-stream" }, signal });
     } catch {
       throw new BrainUnavailableError("The brain isn't reachable right now. Try again in a moment.");
     }
