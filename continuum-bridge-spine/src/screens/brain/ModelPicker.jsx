@@ -28,7 +28,7 @@ const sel = (v) => v ?? "";
  * Older brains that don't split models fall back to a single model select.
  */
 export default function ModelPicker({ models }) {
-  const { available, canSplit, list, settings, error, chosen, brainModel, workerModel, defaultModel, defaultBrainModel, defaultWorkerModel, tiers, tierNames, autoRoute, budget, mode, modes, tools, toolsets, locked, changeable, refresh, save } = models;
+  const { available, canSplit, list, settings, error, chosen, brainModel, workerModel, defaultModel, defaultBrainModel, defaultWorkerModel, tiers, tierNames, autoRoute, budget, mode, modes, tools, toolsets, locked, changeable, canManage, refresh, save } = models;
 
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState(null); // built from settings on open
@@ -63,7 +63,9 @@ export default function ModelPicker({ models }) {
       <p className="brain-hint mp-empty">Loading the models…</p>
     );
 
-  const disabled = saving || !changeable;
+  // In an org space, only owners/admins change the shared model/speed/budget (the relay refuses others anyway).
+  const noManage = canManage === false;
+  const disabled = saving || !changeable || noManage;
 
   // What changed, in the shape the API takes (model when the server doesn't split; brain/worker when it does)
   function changes() {
@@ -132,7 +134,7 @@ export default function ModelPicker({ models }) {
     <form className="mp" onSubmit={submit}>
       {canSplit && (
         <label className="mp-auto" title="Continuum picks each worker's tier from your prompt and the session goals">
-          <input type="checkbox" checked={autoRoute !== false} disabled={saving || !changeable} onChange={(e) => toggleAuto(e.target.checked)} />
+          <input type="checkbox" checked={autoRoute !== false} disabled={saving || !changeable || noManage} onChange={(e) => toggleAuto(e.target.checked)} />
           <span className="mp-auto-text">Auto‑route<span className="brain-hint"> · Continuum picks the model per task</span></span>
         </label>
       )}
@@ -226,6 +228,7 @@ export default function ModelPicker({ models }) {
         </div>
       </div>
 
+      {noManage && <p className="brain-hint mp-locked">Your organization's owners and admins manage the model, speed and budget.</p>}
       {locked && <p className="brain-hint mp-locked">{locked}</p>}
       {error && <p className="model-settings-error" role="alert">{error}</p>}
       {message && <p className={message.ok ? "brain-hint" : "model-settings-error"} role={message.ok ? "status" : "alert"}>{message.text}</p>}

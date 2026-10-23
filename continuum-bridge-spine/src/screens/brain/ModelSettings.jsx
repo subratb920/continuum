@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useBrain } from "../../brain/brainContext";
 import { runningModel } from "./agentDisplay";
 import SkillsDialog from "./SkillsDialog";
-import WorkspacePolicy from "./WorkspacePolicy";
 import "./brain.css";
 
 const PROVIDER_LABEL = { ollama: "Ollama (this computer)", anthropic: "Claude", openai: "OpenAI", opencode: "OpenCode Zen", compat: "OpenAI-compatible" };
@@ -67,10 +66,8 @@ export default function ModelSettings({ models }) {
   const [skillsOpen, setSkillsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null); // { ok, text }
-  const { list, settings, error, model, chosen, defaultModel, save, refresh, available, mode, modes, tools, toolsets, canManage } = models;
+  const { list, settings, error, model, chosen, defaultModel, save, refresh, available, mode, modes, tools, toolsets } = models;
   if (!available) return null;
-  // In an org space, only owners/admins change the shared model and speed (the relay refuses others anyway).
-  const noManage = canManage === false ? "Your organization's owners and admins manage the model and speed." : null;
 
   // Now, from the agents themselves (live, even while replaying)
   const live = brain?.live ?? { agentList: [], pending: [] };
@@ -173,9 +170,9 @@ export default function ModelSettings({ models }) {
             type="button"
             className="model-change"
             onClick={begin}
-            disabled={!!lockedWhy || !!noManage}
+            disabled={!!lockedWhy}
             aria-label="Change the model"
-            title={noManage ?? lockedWhy ?? "Change the model every agent runs on"}
+            title={lockedWhy ?? "Change the model every agent runs on"}
           >
             {/* Two arrows trading places: swap the model */}
             <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
@@ -185,7 +182,6 @@ export default function ModelSettings({ models }) {
         )}
       </div>
       {!open && lockedWhy && <p className="brain-hint">{lockedWhy}</p>}
-      {!open && noManage && <p className="brain-hint">{noManage}</p>}
       {brain?.skills && (
         <button type="button" className="brain-link model-skills" onClick={() => setSkillsOpen(true)}>
           Skills…
@@ -194,7 +190,7 @@ export default function ModelSettings({ models }) {
       {skillsOpen && <SkillsDialog brain={brain} onClose={() => setSkillsOpen(false)} />}
       {settings && "localHelpers" in settings && (
         <label className="model-helpers" title="A worker may ask the brain for helpers that take part of its task. On a local model they mostly wait their turn (it answers one request at a time).">
-          <input type="checkbox" checked={!!settings.localHelpers} disabled={saving || !!noManage} onChange={(e) => toggleHelpers(e.target.checked)} />
+          <input type="checkbox" checked={!!settings.localHelpers} disabled={saving} onChange={(e) => toggleHelpers(e.target.checked)} />
           Helpers on local models
         </label>
       )}
@@ -251,7 +247,6 @@ export default function ModelSettings({ models }) {
         </form>
       )}
       {message && <p className={message.ok ? "brain-hint" : "model-settings-error"} role={message.ok ? "status" : "alert"}>{message.text}</p>}
-      <WorkspacePolicy models={models} />
     </section>
   );
 }

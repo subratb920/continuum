@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { useModelSettings } from "../brain/useModelSettings";
+import WorkspacePolicy from "../screens/brain/WorkspacePolicy";
 import ModelPicker from "../screens/brain/ModelPicker";
 import "./ModelSettingsBar.css";
 
@@ -100,6 +101,8 @@ export default function ModelSettingsBar() {
               <ModelPicker models={models} />
             </div>
           </div>
+          {/* The organization workspace policy (shown only in an org space; read-only unless you're an admin) */}
+          <WorkspacePolicy models={models} />
         </div>
       </div>
     </div>
