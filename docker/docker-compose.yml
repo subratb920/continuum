@@ -86,6 +86,8 @@ services:
       DIRECTORY_MODULE: /continuum-directory/server/src/index.js
       DIRECTORY_DATABASE_URL: postgres://continuum_directory:continuum_directory_dev_pw@continuum-directory-db:45193/directory
       DIRECTORY_APP_URL: http://localhost:45194
+      # The public website's origin, so its visitor beacon and lead form are allowed (CORS)
+      PUBLIC_SITE_ORIGINS: http://localhost:45195
       # Sign in with Google: where Google sends people back (registered on the OAuth client); the client ID and secret are in .env.local
       GOOGLE_CALLBACK_URL: http://localhost:45170/auth/google/callback
 
