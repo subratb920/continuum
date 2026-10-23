@@ -12,6 +12,8 @@ import { getBrainClient } from "./brainClient";
 export function useModelSettings() {
   const client = getBrainClient();
   const [state, setState] = useState({ list: null, settings: null, error: "" });
+  // The live GCP machine catalog, loaded on demand (when the policy editor opens) and cached: null = not yet asked.
+  const [catalog, setCatalog] = useState(null);
   const can = !!(client?.settings && client?.models);
 
   // Each on its own: the model in use shows at once; the list (a cloud provider's catalogue) can take longer
@@ -22,6 +24,15 @@ export function useModelSettings() {
     client.models().then((list) => setState((s) => ({ ...s, list })), failed);
   }, [client, can]);
   useEffect(refresh, [refresh]);
+
+  /** Fetches the live GCP machine catalog once (cached). Safe to call repeatedly; no-op without a live brain. */
+  const loadCatalog = useCallback(() => {
+    if (catalog !== null || !client?.computeCatalog) return;
+    client.computeCatalog().then(
+      (c) => setCatalog(c ?? { available: false, reason: "no catalog" }),
+      () => setCatalog({ available: false, reason: "the catalog couldn't be loaded" })
+    );
+  }, [client, catalog]);
 
   /** Changes the models and/or speed/tools/routing. Throws when refused. */
   const save = useCallback(
@@ -75,12 +86,23 @@ export function useModelSettings() {
     maxAgentSize: settings?.maxAgentSize ?? null,
     brainSize: settings?.brainSize ?? null,
     brainSizeDefault: settings?.brainSizeDefault ?? null,
+    agentSizeDefault: settings?.agentSizeDefault ?? null,
     sizeNames: settings?.sizeNames ?? [],
+    /** The exact CPU/memory behind each size, and the inference server's defaults, so the picker shows real numbers on the fallback. */
+    sizeSpecs: settings?.sizeSpecs ?? null,
+    inferenceDefaults: settings?.inferenceDefaults ?? null,
     /** Self-hosted open models on the tenant's own GPU (and which GPU). */
     selfHostedModels: settings?.selfHostedModels === true,
     gpuType: settings?.gpuType ?? null,
     gpuTypes: settings?.gpuTypes ?? [],
     gpuTypeDefault: settings?.gpuTypeDefault ?? null,
+    /** Exact compute picked from the live GCP catalog (null: use the size tier). */
+    workerMachine: settings?.workerMachine ?? null,
+    brainMachine: settings?.brainMachine ?? null,
+    inferenceMachine: settings?.inferenceMachine ?? null,
+    /** The live GCP machine catalog ({ available, cpuMachines, gpuMachines, region, … }); null until loadCatalog() runs. */
+    catalog,
+    loadCatalog,
     /** The space this is for, and whether you may change it ({ kind, orgRole, canManage }). Personal/old brain: manageable. */
     space: settings?.space ?? { kind: "user", orgRole: null, canManage: true },
     canManage: settings ? settings.space?.canManage !== false : true,

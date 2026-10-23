@@ -257,6 +257,11 @@ export function createMockBrainClient({ speed = 1 } = {}) {
       return structuredClone(MODELS);
     },
 
+    // No live GCP here: the picker falls back to the size tiers.
+    async computeCatalog() {
+      return { available: false, reason: "the pretend brain has no Google Cloud" };
+    },
+
     async settings() {
       const awake = [...agents.values()].some((a) => ["queued", "starting", "working", "stopping"].includes(a.state)) || waiting.size > 0;
       return {

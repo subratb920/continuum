@@ -1095,3 +1095,33 @@ button.goal-agent:hover { background: rgb(var(--c-rgb, var(--agent-off-rgb)) / 0
   font-size: 0.85rem;
   margin-top: 8px;
 }
+
+/* The collapsed "Advanced · agent & brain compute" disclosure. */
+.workspace-policy-advanced {
+  margin-top: 8px;
+  border-top: 1px solid var(--line, rgba(127, 127, 127, 0.25));
+  padding-top: 8px;
+}
+.workspace-policy-advanced > summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* A row of exact-number inputs (CPU / Memory / GPUs) inside a compute fieldset. */
+.workspace-policy-nums {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.workspace-policy-nums label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.8rem;
+  flex: 1 1 5rem;
+}
+.workspace-policy-nums input {
+  width: 100%;
+}

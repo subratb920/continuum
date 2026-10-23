@@ -22,6 +22,7 @@
 //   POST   /brain/projects/:id/snapshot     your project folder (.tar.gz, from your computer): workers of
 //                                           an interval that works in your folder start from it
 //   GET    /brain/models   GET|PUT /brain/settings {model?, mode?}   the one model all your agents run on, and its speed
+//   GET    /brain/compute-catalog           the live GCP machine catalog (machine shapes, GPUs, quota) for the compute picker
 //   GET|POST /brain/workflows[?bridgeId=]   GET|PUT|DELETE /brain/workflows/:id   POST …/{use|approve|cancel|template}   POST …/steps/:stepId/{approve|send-back}
 //   GET|POST /brain/skills   PUT|DELETE /brain/skills/:id   your own skills
 //   GET    /brain/reviews?bridgeId=   POST /brain/reviews/:id/{approvals|decisions|changes|applied}   the final review (works in your folder)
@@ -323,6 +324,8 @@ export function createBrainRouter(opts = {}) {
   router.post("/reviews/:id/applied", async (req, res) => res.json(await brain(req, "POST", `/reviews/${reviewId(req)}/applied`, { kept: req.body?.kept })));
 
   router.get("/models", async (req, res) => res.json(await brain(req, "GET", "/models")));
+  // The live GCP machine catalog for the compute picker (cluster-wide; { available:false } off Google Cloud).
+  router.get("/compute-catalog", async (req, res) => res.set("Cache-Control", "no-store").json(await brain(req, "GET", "/compute-catalog")));
   // Observability: the user's agent activity over a period (counts, outcomes, cost, latency)
   router.get("/stats", async (req, res) => {
     const qs = new URLSearchParams();

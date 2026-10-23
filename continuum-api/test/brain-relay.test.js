@@ -23,6 +23,7 @@ function fakeBrain() {
     call: async ({ userId, spaceId }, method, path, body) => {
       spaces.push(spaceId);
       calls.push(`${userId} ${method} ${path}${body ? ` ${JSON.stringify(body)}` : ""}`);
+      if (path === "/compute-catalog" && method === "GET") return { status: 200, data: { available: true, region: "us-central1", cpuMachines: [{ name: "n2-standard-8", vCPU: 8, memoryGb: 32, allowedByQuota: true }], gpuMachines: [], gpus: [], quotas: [] } };
       if (path === "/agents" && method === "GET") return { status: 200, data: [agent] };
       if (path === "/brain") return { status: 200, data: { brain: { id: "c".repeat(24), kind: "core", state: "idle" }, events: [] } };
       if (path.endsWith("/events")) return { status: 200, data: events };
@@ -108,6 +109,17 @@ test("brain relay: your brain and workers; a worker on a project, or your brain 
   assert.ok(b.calls.every((c) => c.startsWith("1".repeat(24)) || c.startsWith("stream")), "always as the signed-in user");
   // With no active org space, the tenant is the user's personal space ("u:<userId>"), forwarded on every call
   assert.ok(b.spaces.every((sp) => sp === `u:${"1".repeat(24)}`), "the personal space is forwarded as X-Continuum-Space");
+  s.close();
+});
+
+test("brain relay: the live GCP machine catalog passes through, scoped to the space", async () => {
+  const b = fakeBrain();
+  const s = await serve(b);
+  const cat = await (await s.call("GET", "/compute-catalog")).json();
+  assert.equal(cat.available, true);
+  assert.equal(cat.cpuMachines[0].name, "n2-standard-8");
+  assert.match(b.calls.at(-1), /^1{24} GET \/compute-catalog$/);
+  assert.equal(b.spaces.at(-1), `u:${"1".repeat(24)}`);
   s.close();
 });
 

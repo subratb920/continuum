@@ -84,6 +84,8 @@ export function createSseBrainClient(base = import.meta.env.VITE_BRAIN_API_URL) 
     models: () => call("GET", "/brain/models"),
     settings: () => call("GET", "/brain/settings"),
     saveSettings: (changes) => call("PUT", "/brain/settings", changes),
+    // The live GCP machine catalog for the compute picker ({ available:false } off Google Cloud).
+    computeCatalog: () => call("GET", "/brain/compute-catalog"),
     stop: (agentId) => call("POST", `/brain/agents/${agentId}/stop`),
     // A worker's changes on its branch, one file of its copy, and pushing them to its own branch on GitHub
     changes: (agentId) => call("GET", `/brain/agents/${agentId}/changes`),
