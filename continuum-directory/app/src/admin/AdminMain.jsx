@@ -5,6 +5,7 @@ import "./admin.css";
 
 const Callbacks = lazy(() => import("./Callbacks"));
 const Visitors = lazy(() => import("./Visitors"));
+const BrainControl = lazy(() => import("./BrainControl"));
 
 /**
  * Admin (centre): the section showing — Users (search, filters, the list),
@@ -31,6 +32,11 @@ export default function AdminMain() {
       )}
       {admin.section === "changes" && <Changes />}
       {admin.section === "sync" && <ProductionSync />}
+      {admin.section === "brain" && (
+        <Suspense fallback={<p className="admin-muted">Loading…</p>}>
+          <BrainControl />
+        </Suspense>
+      )}
       {admin.section === "callbacks" && (
         <Suspense fallback={<p className="admin-muted">Loading…</p>}>
           <Callbacks />

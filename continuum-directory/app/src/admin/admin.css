@@ -277,3 +277,23 @@ html.reduce-motion .admin-switch-knob { transition: none; }
 .vz-j-topics { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
 .vz-j-topics > li { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; }
 .vz-j-path { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Brain control (operator start/stop + compute limits) ── */
+.brain-control { display: grid; gap: 16px; }
+.brain-card { border: 1px solid var(--line, rgba(127,127,127,.25)); border-radius: 10px; padding: 16px; display: grid; gap: 10px; }
+.brain-card h3 { margin: 0; display: flex; align-items: center; gap: 8px; }
+.brain-card h4 { margin: 8px 0 4px; font-size: 13px; font-weight: 600; }
+.brain-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.brain-badge.is-live { background: rgba(40,167,69,.15); color: #28a745; }
+.brain-badge.is-paused { background: rgba(220,53,69,.15); color: #dc3545; }
+.brain-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.brain-danger { background: #dc3545; border-color: #dc3545; color: #fff; }
+.brain-limits-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; align-items: end; }
+.brain-field { display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; }
+.brain-field input { width: 100%; }
+.brain-check { display: flex; align-items: center; gap: 6px; font-size: 12.5px; }
+.brain-lookup { display: flex; gap: 8px; flex-wrap: wrap; }
+.brain-lookup input { flex: 1 1 16rem; }
+.brain-row-actions { display: flex; gap: 10px; }
+.brain-control .admin-table tr.is-paused td { opacity: .7; }
+.brain-editor { border-color: var(--accent, #4a7); }

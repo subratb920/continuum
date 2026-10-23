@@ -21,6 +21,7 @@ import meRoutes from "./routes/me.routes.js";
 import { createWorkspacesRouter } from "./workspaces/routes.js";
 import { createServiceRouter } from "./service/routes.js";
 import { createBrainRouter, streamToken } from "./brain/routes.js";
+import { createAdminBrainRouter } from "./brain/adminRoutes.js";
 import { dataEngine } from "./data/engine.js";
 import { createSyncAdminRouter, createSyncCodeRoute, createSyncPublicRouter } from "./sync/sync.routes.js";
 import { directory } from "./directory/directory.js";
@@ -76,6 +77,8 @@ app.use("/me", authed, meRoutes); // you: your access, and your preferences (the
 app.use("/workspaces", authed, requireFeature("workspaces"), requireFeatureFor(WORKSPACES_RULES), uses("workspaces"), createWorkspacesRouter()); // development servers per project (continuum-workspaces)
 // Production sync: Preview and Merge (admins; from the Directory's page too). Users, roles and sign-ins are the directory's
 app.use("/admin/sync", requireAuthOrDirectoryToken, withAccess(), requireFeature("admin"), createSyncAdminRouter());
+// Operator brain control (start/stop + compute limits, global and per-user); admins only, from the Directory's "Brain control" page
+app.use("/admin/brain", requireAuthOrDirectoryToken, withAccess(), requireFeature("admin"), createAdminBrainRouter());
 app.use("/service", createServiceRouter({ recordVisit: directory.api.recordVisit })); // data for continuum-brain + the site's visit batches (service token only)
 app.use("/brain", streamToken, authed, requireFeature("agents"), requireFeatureFor(AGENTS_RULES), uses("agents"), createBrainRouter()); // the Agents screen, relayed to continuum-brain
 if (dataEngine) app.use("/data", dataEngine.router({ auth: [...authed, requireFeature("data"), requireFeatureFor(DATA_RULES), uses("data")] })); // datasets: sources, versions, pipelines (continuum-data)

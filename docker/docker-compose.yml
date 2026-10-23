@@ -73,7 +73,7 @@ services:
       # Continuum Data (datasets): off unless DATA_ENABLED=true in docker/.env.
       # Its code is mounted from ../continuum-data; files live in
       # ~/.continuum/data-store; steps run through continuum-data-runner-proxy.
-      DATA_ENABLED: ${DATA_ENABLED:-false}
+      DATA_ENABLED: ${DATA_ENABLED:-true}
       DATA_MODULE: /continuum-data/src/index.js
       DATA_STORE_PATH: /store
       DATA_RUNNER_URL: http://continuum-data-runner-proxy:45191
@@ -114,7 +114,7 @@ services:
       PORT: 45173
       VITE_PORT: 45173
       VITE_API_BASE_URL: http://localhost:45170
-      VITE_DATA_ENABLED: ${DATA_ENABLED:-false}
+      VITE_DATA_ENABLED: ${DATA_ENABLED:-true}
       # Continuum Directory's page (Admin in the profile menu opens it in a new tab)
       VITE_DIRECTORY_URL: http://localhost:45194
       # Live brain (real brain-api via continuum-api's /brain relay) — for the end-to-end test pass

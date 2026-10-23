@@ -16,6 +16,7 @@ export const ADMIN_SECTIONS = [
   ["changes", "Admin changes", "📝"],
   ["callbacks", "Callback requests", "☎"],
   ["sync", "Production sync", "⇅"],
+  ["brain", "Brain control", "🧠"],
 ];
 
 const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
