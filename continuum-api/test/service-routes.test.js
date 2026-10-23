@@ -10,9 +10,20 @@ const P1 = new ObjectId("c".repeat(24));
 const P2 = new ObjectId("d".repeat(24));
 const TOKEN = "s".repeat(40);
 
-/** Just enough of MongoDB for these routes: equality filters on top-level fields. */
+/** Just enough of MongoDB for these routes: equality + $or/$in/$exists/null, plus countDocuments and a tiny aggregate. */
+function matchVal(docVal, cond) {
+  if (cond === null) return docVal === null;
+  if (cond && typeof cond === "object" && !(cond instanceof ObjectId) && !(cond instanceof Date)) {
+    if ("$exists" in cond) return (docVal !== undefined) === cond.$exists;
+    if ("$in" in cond) return cond.$in.some((v) => String(docVal) === String(v));
+    return false;
+  }
+  return String(docVal) === String(cond);
+}
+function match(doc, filter) {
+  return Object.entries(filter).every(([k, v]) => (k === "$or" ? v.some((sub) => match(doc, sub)) : matchVal(doc[k], v)));
+}
 function fakeDb(data) {
-  const match = (doc, filter) => Object.entries(filter).every(([k, v]) => String(doc[k]) === String(v));
   return {
     collection: (name) => ({
       find: (filter) => {
@@ -21,6 +32,23 @@ function fakeDb(data) {
         return cursor;
       },
       findOne: async (filter) => (data[name] ?? []).find((d) => match(d, filter)) ?? null,
+      countDocuments: async (filter) => (data[name] ?? []).filter((d) => match(d, filter)).length,
+      // Supports [{ $match }, { $group: { _id: "$field", n: { $sum: 1 } } }] only.
+      aggregate: (pipeline) => ({
+        toArray: async () => {
+          let rows = data[name] ?? [];
+          for (const stage of pipeline) {
+            if (stage.$match) rows = rows.filter((d) => match(d, stage.$match));
+            else if (stage.$group) {
+              const field = String(stage.$group._id).slice(1);
+              const groups = new Map();
+              for (const d of rows) groups.set(String(d[field]), (groups.get(String(d[field])) ?? 0) + 1);
+              rows = [...groups].map(([_id, n]) => ({ _id, n }));
+            }
+          }
+          return rows;
+        },
+      }),
       updateOne: async (filter, { $set }) => {
         const doc = (data[name] ?? []).find((d) => match(d, filter));
         if (!doc) return { matchedCount: 0 };
@@ -105,6 +133,44 @@ test("service routes: the user's own projects, bridges and interval only; read-o
   const none = await (await s.get("/interval", { user: String(OTHER) })).json();
   assert.deepEqual(none, { activeProject: null, bridge: null });
   s.close();
+});
+
+test("service routes: on a shared org project, each user sees only their own bridges and a per-user bridgeCount (legacy ownerless bridges count only for the owner)", async () => {
+  const PO = new ObjectId("7".repeat(24));
+  const ORG = "o:org1";
+  const orgData = {
+    projects: [{ _id: PO, userId: ME, spaceId: ORG, name: "Team app", source: "local", bridgeCount: 99, createdAt: new Date("2026-02-01") }],
+    bridges: [
+      { _id: new ObjectId("2".repeat(24)), projectId: PO, index: 1, status: "draft" }, // legacy, ownerless → the owner's
+      { _id: new ObjectId("3".repeat(24)), projectId: PO, userId: ME, index: 2, status: "draft" },
+      { _id: new ObjectId("4".repeat(24)), projectId: PO, userId: OTHER, index: 3, status: "draft" },
+    ],
+    execution_state: [{ userId: ME, activeBySpace: { [ORG]: PO } }, { userId: OTHER, activeBySpace: { [ORG]: PO } }],
+    users: [],
+  };
+  const resolveSpace = async () => ({ id: ORG, kind: "org", orgRole: "admin", departmentIds: [] });
+  const app = express();
+  app.use(express.json());
+  app.use("/service", createServiceRouter({ db: fakeDb(orgData), token: TOKEN, resolveSpace }));
+  const server = app.listen(0);
+  const base = `http://127.0.0.1:${server.address().port}/service`;
+  const get = (path, user) => fetch(`${base}${path}`, { headers: { Authorization: `Bearer ${TOKEN}`, "X-Continuum-User": user, "X-Continuum-Space": ORG } });
+
+  // OTHER is an org admin but NOT the project owner: only their own bridge, and no legacy ownerless one.
+  const otherBridges = await (await get(`/projects/${PO}/bridges`, String(OTHER))).json();
+  assert.deepEqual(otherBridges.map((b) => b.index), [3], "non-owner sees only their own bridge, never the ownerless (owner's) one");
+  const otherProjects = await (await get("/projects", String(OTHER))).json();
+  assert.equal(otherProjects[0].bridgeCount, 1, "per-user count for the non-owner, not the project-wide total");
+  const otherInterval = await (await get("/interval", String(OTHER))).json();
+  assert.equal(otherInterval.activeProject.bridgeCount, 1);
+  assert.equal(otherInterval.bridge.index, 3, "the non-owner's own draft, never another user's");
+
+  // ME owns the project: their own bridge plus the legacy ownerless one (count 2), never OTHER's.
+  const meBridges = await (await get(`/projects/${PO}/bridges`, String(ME))).json();
+  assert.deepEqual(meBridges.map((b) => b.index).sort(), [1, 2], "owner sees their own + the legacy ownerless bridge");
+  const meProjects = await (await get("/projects", String(ME))).json();
+  assert.equal(meProjects[0].bridgeCount, 2, "owner's per-user count includes the ownerless bridge, excludes OTHER's");
+  server.close();
 });
 
 test("service routes: the GitHub sign-in and commit name, for the named user only; never cached", async () => {

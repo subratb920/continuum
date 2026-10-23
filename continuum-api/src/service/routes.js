@@ -38,13 +38,17 @@ export function sameSecret(given, expected) {
   return timingSafeEqual(a, b) && String(given).length === String(expected).length;
 }
 
-export function projectView(p) {
+// bridgeCount: the caller's own count on the project (passed in by the routes below). The
+// denormalized project.bridgeCount is a project-wide total across all users, which would leak
+// other members' activity on a shared org project — the brain reads a per-user bridge list, so it
+// gets a per-user count to match. Falls back to the stored total only when a count isn't passed.
+export function projectView(p, bridgeCount) {
   return {
     id: String(p._id),
     name: p.name,
     source: p.source ?? "local",
     repo: repoOf(p),
-    bridgeCount: p.bridgeCount ?? 0,
+    bridgeCount: bridgeCount ?? p.bridgeCount ?? 0,
     createdAt: p.createdAt ?? null,
   };
 }
@@ -141,21 +145,43 @@ export function createServiceRouter(opts = {}) {
     return db().collection(PROJECT_COLLECTION).findOne({ _id: new ObjectId(req.params.id), ...visibleProjects(req) }, { projection: { "contents.entries": 0 } });
   }
 
+  /** Does the service user own this project? (a legacy ownerless bridge belongs to the project's owner). */
+  const ownsP = (p, user) => Boolean(p.userId?.equals(user));
+
+  /** The caller's own bridge count on one project — per-user, not the project-wide total. */
+  async function myBridgeCount(p, user) {
+    return db().collection(BRIDGE_COLLECTION).countDocuments({ projectId: p._id, ...mineFilter(user, ownsP(p, user)) });
+  }
+
+  /** The caller's own bridge count on each project, as Map(projectId string → count), in two aggregations. */
+  async function myBridgeCounts(projects, user) {
+    const ids = projects.map((p) => p._id);
+    const ownedIds = projects.filter((p) => ownsP(p, user)).map((p) => p._id);
+    const col = db().collection(BRIDGE_COLLECTION);
+    const counts = new Map();
+    const add = (rows) => rows.forEach((r) => counts.set(String(r._id), (counts.get(String(r._id)) ?? 0) + r.n));
+    // The user's own bridges on every project, plus legacy ownerless bridges only on the projects they own.
+    if (ids.length) add(await col.aggregate([{ $match: { projectId: { $in: ids }, userId: user } }, { $group: { _id: "$projectId", n: { $sum: 1 } } }]).toArray());
+    if (ownedIds.length) add(await col.aggregate([{ $match: { projectId: { $in: ownedIds }, userId: { $exists: false } } }, { $group: { _id: "$projectId", n: { $sum: 1 } } }]).toArray());
+    return counts;
+  }
+
   router.get("/projects", async (req, res) => {
     const list = await db().collection(PROJECT_COLLECTION).find(visibleProjects(req), { projection: { "contents.entries": 0 } }).sort({ createdAt: -1 }).limit(500).toArray();
-    res.json(list.map(projectView));
+    const counts = await myBridgeCounts(list, req.serviceUser);
+    res.json(list.map((p) => projectView(p, counts.get(String(p._id)) ?? 0)));
   });
 
   router.get("/projects/:id", async (req, res) => {
     const p = await ownProject(req);
     if (!p) return res.status(404).json({ error: "No such project." });
-    res.json(projectView(p));
+    res.json(projectView(p, await myBridgeCount(p, req.serviceUser)));
   });
 
   router.get("/projects/:id/bridges", async (req, res) => {
     const p = await ownProject(req);
     if (!p) return res.status(404).json({ error: "No such project." });
-    const bridges = await db().collection(BRIDGE_COLLECTION).find({ projectId: p._id, ...mineFilter(req.serviceUser, true) }).sort({ index: 1 }).limit(500).toArray();
+    const bridges = await db().collection(BRIDGE_COLLECTION).find({ projectId: p._id, ...mineFilter(req.serviceUser, ownsP(p, req.serviceUser)) }).sort({ index: 1 }).limit(500).toArray();
     res.json(bridges.map(bridgeView));
   });
 
@@ -195,10 +221,13 @@ export function createServiceRouter(opts = {}) {
 
   router.get("/interval", async (req, res) => {
     const state = await db().collection(EXECUTION_COLLECTION).findOne({ userId: req.serviceUser });
-    const project = state?.activeProjectId ? await db().collection(PROJECT_COLLECTION).findOne({ _id: state.activeProjectId, ...visibleProjects(req) }, { projection: { "contents.entries": 0 } }) : null;
-    // The user's own running interval on it (another person's never)
-    const bridge = project ? await db().collection(BRIDGE_COLLECTION).findOne({ projectId: project._id, status: "draft", ...mineFilter(req.serviceUser, true) }, { sort: { createdAt: -1 } }) : null;
-    res.json({ activeProject: project ? projectView(project) : null, bridge: bridge ? bridgeView(bridge) : null });
+    // The active project is one per space: an org space's is activeBySpace["o:<id>"]; a personal space's is activeProjectId (as the brain read before spaces).
+    const space = req.serviceSpace;
+    const activeId = space?.kind === "org" ? (state?.activeBySpace?.[space.id] ?? null) : (state?.activeProjectId ?? null);
+    const project = activeId ? await db().collection(PROJECT_COLLECTION).findOne({ _id: activeId, ...visibleProjects(req) }, { projection: { "contents.entries": 0 } }) : null;
+    // The user's own running interval on it (another person's never); ownsP widens to legacy ownerless bridges only when they own the project.
+    const bridge = project ? await db().collection(BRIDGE_COLLECTION).findOne({ projectId: project._id, status: "draft", ...mineFilter(req.serviceUser, ownsP(project, req.serviceUser)) }, { sort: { createdAt: -1 } }) : null;
+    res.json({ activeProject: project ? projectView(project, await myBridgeCount(project, req.serviceUser)) : null, bridge: bridge ? bridgeView(bridge) : null });
   });
 
   // Only the user's name for commits (work in their folder never touches GitHub)

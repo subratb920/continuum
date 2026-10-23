@@ -1,6 +1,7 @@
 import { getDB } from "../config/db.js";
 import { createBridgeService } from "../services/bridge.service.js";
 import { createExecutionService } from "../services/execution.service.js";
+import { findProject } from "../spaces/projectAccess.js";
 
 export async function startBridge(req, res) {
   const db = getDB();
@@ -99,7 +100,9 @@ export async function getProjectBridges(req, res) {
     "Listing project bridges"
   );
 
-  if (!/^[a-f0-9]{24}$/.test(String(projectId))) return res.status(404).json({ error: "No such project.", code: "NOT_FOUND" });
+  // Only list bridges on a project visible in the caller's current space (throws AppError 404 for an
+  // invalid id or a project not in this space). listBridges itself only ever returns the caller's own bridges.
+  await findProject(db, req.space, req.user.id, projectId);
   const bridges = await bridgeService.listBridges(req.user.id, projectId);
 
   req.log.info(

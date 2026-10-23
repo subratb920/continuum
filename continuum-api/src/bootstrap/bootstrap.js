@@ -1,6 +1,7 @@
 import { ensureCollections } from "./ensureCollections.js";
 import { ensureIndexes } from "./ensureIndexes.js";
 import { validateInvariants } from "./validateInvariants.js";
+import { backfillBridgeCounts } from "./backfillBridgeCounts.js";
 import { directory, dir } from "../directory/directory.js";
 import { withSystemContext } from "../logging/childLogger.js";
 
@@ -14,6 +15,8 @@ export async function bootstrapSystem(db) {
   const invResult = await validateInvariants(db);
   // Projects by space (personal, or an organization's)
   await db.collection("projects").createIndex({ spaceId: 1 }, { name: "spaceId", sparse: true });
+  // One-time: recompute project.bridgeCount from bridges (it stopped being maintained after the monolith split)
+  await backfillBridgeCounts(db);
   // The directory (continuum-directory, its own Postgres): users, roles, organizations, sign-ins.
   // Its first start fills it from what this MongoDB kept (read only); the owner is made admin.
   await directory.start();

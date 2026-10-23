@@ -1,6 +1,7 @@
 import { ObjectId } from "mongodb";
 import crypto from "crypto";
 import { BRIDGE_COLLECTION } from "../models/bridge.model.js";
+import { PROJECT_COLLECTION } from "../models/project.model.js";
 import { withSystemContext } from "../logging/childLogger.js";
 import { finish, kindOf } from "./agentBridge.js";
 import { bridgeFor, mineFilter, ownsProject } from "./bridgeAccess.js";
@@ -91,6 +92,8 @@ export function createBridgeService(db) {
     };
 
     const { insertedId } = await bridgeCol.insertOne(doc);
+    // Keep the project's bridge count current (read by projectView and the brain); the per-user counter above is the index, not this total.
+    await db.collection(PROJECT_COLLECTION).updateOne({ _id: pid }, { $inc: { bridgeCount: 1 } });
 
     log.info(
       {
