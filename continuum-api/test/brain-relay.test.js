@@ -198,3 +198,36 @@ test("brain relay: your project folder (.tar.gz from your computer) goes to the 
   assert.equal((await fetch(`${s.base}/projects/${"d".repeat(24)}/snapshot`, { method: "POST", headers: { "Content-Type": "application/gzip" }, body: new Uint8Array() })).status, 400);
   s.close();
 });
+
+/** Serve the relay with a fixed space (an org role) injected, to test the org-admin settings gate. */
+async function serveInSpace(client, space) {
+  const app = express();
+  app.use(express.json());
+  app.use("/brain", (req, _res, next) => ((req.user = { id: "1".repeat(24) }), (req.space = space), next()), createBrainRouter({ client }));
+  app.use(errorMiddleware);
+  const server = app.listen(0);
+  const base = `http://127.0.0.1:${server.address().port}/brain`;
+  const call = (method, path, body) => fetch(`${base}${path}`, { method, headers: body ? { "Content-Type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
+  return { call, close: () => server.close() };
+}
+
+test("brain relay: in an org space only owners/admins may change settings; the page is told who may", async () => {
+  const ORG = `o:${"c".repeat(24)}`;
+  // A member sees the settings (read) but can't change them
+  const member = await serveInSpace(fakeBrain(), { id: ORG, kind: "org", orgRole: "member" });
+  const got = await (await member.call("GET", "/settings")).json();
+  assert.deepEqual([got.space.kind, got.space.orgRole, got.space.canManage], ["org", "member", false]);
+  const refused = await member.call("PUT", "/settings", { model: "ollama/qwen3:4b" });
+  assert.equal(refused.status, 403);
+  assert.equal((await refused.json()).code, "NOT_ORG_ADMIN");
+  member.close();
+  // An admin may change them
+  const admin = await serveInSpace(fakeBrain(), { id: ORG, kind: "org", orgRole: "admin" });
+  assert.equal((await (await admin.call("GET", "/settings")).json()).space.canManage, true);
+  assert.equal((await admin.call("PUT", "/settings", { model: "ollama/qwen3:4b" })).status, 200);
+  admin.close();
+  // A personal space is always manageable by its owner
+  const personal = await serveInSpace(fakeBrain(), { id: `u:${"1".repeat(24)}`, kind: "user" });
+  assert.equal((await personal.call("PUT", "/settings", { model: "ollama/qwen3:4b" })).status, 200);
+  personal.close();
+});

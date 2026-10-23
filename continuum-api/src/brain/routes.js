@@ -337,8 +337,18 @@ export function createBrainRouter(opts = {}) {
     const q = qs.toString();
     res.set("Cache-Control", "no-store").json(await brain(req, "GET", `/audit${q ? `?${q}` : ""}`));
   });
-  router.get("/settings", async (req, res) => res.json(await brain(req, "GET", "/settings")));
-  router.put("/settings", async (req, res) => res.json(await brain(req, "PUT", "/settings", req.body ?? {})));
+  // In an org space the settings are shared workspace config, so only its owners and admins may change them.
+  // (A personal space is always managed by its owner.) Mirrors managesOrg() in spaces/projectAccess.js.
+  const canManageSpace = (req) => req.space?.kind !== "org" || req.space.orgRole === "owner" || req.space.orgRole === "admin";
+  router.get("/settings", async (req, res) => {
+    const data = await brain(req, "GET", "/settings");
+    // Tell the page whose space this is and whether it may edit (so it can show the controls read-only to members/viewers)
+    res.json({ ...data, space: { kind: req.space?.kind ?? "user", orgRole: req.space?.orgRole ?? null, canManage: canManageSpace(req) } });
+  });
+  router.put("/settings", async (req, res) => {
+    if (!canManageSpace(req)) throw new AppError("Only the organization's owners and admins can change its workspace settings.", 403, "NOT_ORG_ADMIN");
+    res.json(await brain(req, "PUT", "/settings", req.body ?? {}));
+  });
 
   return router;
 }
