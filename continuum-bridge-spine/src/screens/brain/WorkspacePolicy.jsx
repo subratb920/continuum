@@ -10,12 +10,14 @@ const SIZE_LABEL = { small: "Small", standard: "Standard", large: "Large" };
  * space has no shared policy). Talks to the brain through the model settings hook.
  */
 export default function WorkspacePolicy({ models }) {
-  const { list, allowedModels, maxAgentSize, brainSize, brainSizeDefault, concurrencyCap, sizeNames, space, canManage, save } = models;
+  const { list, allowedModels, maxAgentSize, brainSize, brainSizeDefault, concurrencyCap, sizeNames, selfHostedModels, gpuType, gpuTypes, gpuTypeDefault, space, canManage, save } = models;
   const [open, setOpen] = useState(false);
   const [allowed, setAllowed] = useState([]);
   const [maxSize, setMaxSize] = useState("");
   const [brain, setBrain] = useState("");
   const [cap, setCap] = useState("");
+  const [selfHosted, setSelfHosted] = useState(false);
+  const [gpu, setGpu] = useState("");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null); // { ok, text }
 
@@ -30,6 +32,8 @@ export default function WorkspacePolicy({ models }) {
     setMaxSize(maxAgentSize ?? "");
     setBrain(brainSize ?? "");
     setCap(concurrencyCap != null ? String(concurrencyCap) : "");
+    setSelfHosted(selfHostedModels);
+    setGpu(gpuType ?? "");
     setMsg(null);
     setOpen(true);
   };
@@ -40,7 +44,7 @@ export default function WorkspacePolicy({ models }) {
     setSaving(true);
     setMsg(null);
     try {
-      await save({ allowedModels: allowed.length ? allowed : null, maxAgentSize: maxSize || null, brainSize: brain || null, concurrencyCap: cap.trim() ? Number(cap) : null });
+      await save({ allowedModels: allowed.length ? allowed : null, maxAgentSize: maxSize || null, brainSize: brain || null, concurrencyCap: cap.trim() ? Number(cap) : null, selfHostedModels: selfHosted, gpuType: selfHosted ? gpu || null : null });
       setMsg({ ok: true, text: "Workspace policy saved." });
       setOpen(false);
     } catch (err) {
@@ -63,6 +67,8 @@ export default function WorkspacePolicy({ models }) {
           <dd>{brainSize ? SIZE_LABEL[brainSize] ?? brainSize : `Default${brainSizeDefault ? ` (${SIZE_LABEL[brainSizeDefault] ?? brainSizeDefault})` : ""}`}</dd>
           <dt>Most at once</dt>
           <dd>{concurrencyCap ?? "Server default"}</dd>
+          <dt>Inference</dt>
+          <dd>{selfHostedModels ? `Self-hosted · ${gpuType || gpuTypeDefault || "GPU"}` : "Cloud"}</dd>
         </dl>
       )}
       {!open && canManage && (
@@ -110,6 +116,23 @@ export default function WorkspacePolicy({ models }) {
             Most agents at once
             <input type="number" min="1" max="1000" value={cap} onChange={(e) => setCap(e.target.value)} placeholder="Server default" disabled={saving} />
           </label>
+          <label className="model-helpers" title="Run this workspace's own open models on a GPU in its namespace, instead of a cloud provider.">
+            <input type="checkbox" checked={selfHosted} onChange={(e) => setSelfHosted(e.target.checked)} disabled={saving} />
+            Self-hosted models on a GPU
+          </label>
+          {selfHosted && (
+            <label className="workspace-policy-field">
+              GPU <span className="brain-hint">· scales to zero when idle; a cold start reloads the model</span>
+              <select value={gpu} onChange={(e) => setGpu(e.target.value)} disabled={saving}>
+                <option value="">Default{gpuTypeDefault ? ` (${gpuTypeDefault})` : ""}</option>
+                {(gpuTypes.length ? gpuTypes : ["nvidia-l4"]).map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <div className="agent-spawn-actions">
             <button type="button" className="brain-btn" onClick={() => setOpen(false)} disabled={saving}>
               Cancel

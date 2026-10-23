@@ -76,6 +76,11 @@ export function useModelSettings() {
     brainSize: settings?.brainSize ?? null,
     brainSizeDefault: settings?.brainSizeDefault ?? null,
     sizeNames: settings?.sizeNames ?? [],
+    /** Self-hosted open models on the tenant's own GPU (and which GPU). */
+    selfHostedModels: settings?.selfHostedModels === true,
+    gpuType: settings?.gpuType ?? null,
+    gpuTypes: settings?.gpuTypes ?? [],
+    gpuTypeDefault: settings?.gpuTypeDefault ?? null,
     /** The space this is for, and whether you may change it ({ kind, orgRole, canManage }). Personal/old brain: manageable. */
     space: settings?.space ?? { kind: "user", orgRole: null, canManage: true },
     canManage: settings ? settings.space?.canManage !== false : true,
