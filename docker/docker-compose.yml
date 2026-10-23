@@ -205,6 +205,29 @@ services:
       retries: 20
       start_period: 10s
 
+  # The brain's memory (RAG): Postgres + pgvector, one `memories` table per space.
+  # Reached by continuum-brain's brain-api over the shared docker_default network.
+  # (The brain also needs an Ollama with `nomic-embed-text` pulled, for embeddings.)
+  continuum-memory-db:
+    image: pgvector/pgvector:pg16
+    container_name: continuum-memory-db
+    restart: unless-stopped
+    command: ["postgres", "-p", "45196"]
+    ports:
+      - "127.0.0.1:45196:45196"
+    environment:
+      POSTGRES_DB: continuum_memory
+      POSTGRES_USER: continuum_memory
+      POSTGRES_PASSWORD: continuum_memory_dev_pw
+    volumes:
+      - continuum-memory-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-p", "45196", "-U", "continuum_memory", "-d", "continuum_memory"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
 
   # Continuum Directory's page: your organizations, and Continuum's users, roles
   # and sign-ins (admins). Signs in through Continuum; opened in a new tab.
@@ -240,6 +263,7 @@ services:
 volumes:
   mongo_data:
   continuum-directory-db:
+  continuum-memory-db:
 
 secrets:
   mongo_keyfile:
